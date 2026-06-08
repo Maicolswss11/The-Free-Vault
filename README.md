@@ -91,3 +91,8 @@ Prima sincronizzazione manuale:
 ```text
 Actions → Sync Epic Catalog → Run workflow
 ```
+
+
+### v2.3.1
+
+Corretto il percorso GraphQL Epic e aggiunto fallback automatico tra endpoint.

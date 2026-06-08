@@ -16,7 +16,10 @@ from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
-CATALOG_GRAPHQL_URL = "https://graphql.epicgames.com/graphql"
+CATALOG_GRAPHQL_URLS: tuple[str, ...] = (
+    "https://graphql.epicgames.com/ue/graphql",
+    "https://graphql.epicgames.com/graphql",
+)
 
 SEARCH_STORE_QUERY = r"""
 query searchStoreQuery(
@@ -120,26 +123,47 @@ def fetch_catalog_page(
         "User-Agent": C.HTTP_USER_AGENT,
     }
 
+    last_error: Exception | None = None
+
     try:
-        response = session.post(
-            CATALOG_GRAPHQL_URL,
-            json=payload,
-            headers=headers,
-            timeout=(C.HTTP_CONNECT_TIMEOUT, C.HTTP_READ_TIMEOUT),
-        )
-        response.raise_for_status()
-        data = response.json()
-    except (requests.RequestException, ValueError) as exc:
-        raise CatalogClientError(f"Fetch catalogo fallito allo start={start}: {exc}") from exc
+        for endpoint in CATALOG_GRAPHQL_URLS:
+            try:
+                response = session.post(
+                    endpoint,
+                    json=payload,
+                    headers=headers,
+                    timeout=(C.HTTP_CONNECT_TIMEOUT, C.HTTP_READ_TIMEOUT),
+                )
+
+                if response.status_code == 404:
+                    logger.warning("Endpoint GraphQL non disponibile: %s", endpoint)
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                if not isinstance(data, dict):
+                    raise CatalogClientError(
+                        f"Risposta GraphQL non valida da {endpoint}"
+                    )
+                if data.get("errors"):
+                    raise CatalogClientError(
+                        f"Epic GraphQL errors da {endpoint}: {data['errors']}"
+                    )
+
+                logger.info("Endpoint catalogo attivo: %s", endpoint)
+                return data
+
+            except (requests.RequestException, ValueError, CatalogClientError) as exc:
+                last_error = exc
+                logger.warning("Tentativo catalogo fallito su %s: %s", endpoint, exc)
+
+        raise CatalogClientError(
+            f"Nessun endpoint catalogo Epic disponibile allo start={start}"
+        ) from last_error
     finally:
         if owns_session:
             session.close()
-
-    if not isinstance(data, dict):
-        raise CatalogClientError("Risposta GraphQL non valida")
-    if data.get("errors"):
-        raise CatalogClientError(f"Epic GraphQL errors: {data['errors']}")
-    return data
 
 
 def iter_catalog_pages(
