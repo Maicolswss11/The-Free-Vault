@@ -2,69 +2,163 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111318">
-  <meta name="description" content="Tracker dei giochi gratuiti su Epic Games Store">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <meta name="description" content="The Free Vault: giochi gratis, prossime uscite e libreria personale.">
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
-  <title>Epic Free Games Tracker</title>
+  <title>The Free Vault</title>
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">EPIC GAMES STORE</p>
-      <h1>Free Games Tracker</h1>
-      <p id="updated-at" class="muted">Aggiornamento in corso…</p>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigazione principale">
+      <a class="brand" href="#home" aria-label="The Free Vault">
+        <span class="brand-mark">V</span>
+        <span><strong>The Free Vault</strong><small>Epic Games tracker</small></span>
+      </a>
+
+      <nav class="main-nav">
+        <button class="nav-item is-active" data-view="home" type="button"><span>⌂</span> Home</button>
+        <button class="nav-item" data-view="current" type="button"><span>◉</span> Gratis ora</button>
+        <button class="nav-item" data-view="upcoming" type="button"><span>◷</span> In arrivo</button>
+        <button class="nav-item" data-view="history" type="button"><span>▤</span> Cronologia</button>
+        <button class="nav-item" data-view="library" type="button"><span>◆</span> La mia libreria</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sync-card">
+          <span class="status-dot"></span>
+          <div><strong>Tracker attivo</strong><small id="sidebar-update">In attesa dei dati</small></div>
+        </div>
+        <p>I dati personali restano su questo dispositivo.</p>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button id="menu-button" class="icon-button menu-button" type="button" aria-label="Apri menu">☰</button>
+        <div class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input id="search-input" type="search" placeholder="Cerca un gioco, publisher o descrizione…" autocomplete="off">
+          <kbd>/</kbd>
+        </div>
+        <div class="topbar-actions">
+          <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati" aria-label="Aggiorna dati">↻</button>
+          <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <section id="hero" class="hero" aria-labelledby="hero-title" hidden>
+          <img id="hero-image" class="hero-image" alt="">
+          <div class="hero-scrim"></div>
+          <div class="hero-content">
+            <span class="hero-kicker">IN EVIDENZA · GRATIS ORA</span>
+            <h1 id="hero-title"></h1>
+            <p id="hero-description"></p>
+            <div class="hero-meta">
+              <span id="hero-price"></span>
+              <span id="hero-countdown"></span>
+            </div>
+            <div class="hero-actions">
+              <a id="hero-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Riscatta su Epic</a>
+              <button id="hero-library" class="button button-glass" type="button">Aggiungi alla libreria</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-grid" aria-label="Riepilogo">
+          <article class="stat-card"><span class="stat-icon blue">◉</span><div><strong id="stat-current">0</strong><span>Gratis adesso</span></div></article>
+          <article class="stat-card"><span class="stat-icon purple">◷</span><div><strong id="stat-upcoming">0</strong><span>In arrivo</span></div></article>
+          <article class="stat-card"><span class="stat-icon green">◆</span><div><strong id="stat-library">0</strong><span>Nella libreria</span></div></article>
+          <article class="stat-card"><span class="stat-icon amber">€</span><div><strong id="stat-saved">0 €</strong><span>Valore riscattato</span></div></article>
+        </section>
+
+        <div class="content-toolbar">
+          <div>
+            <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
+            <h2 id="view-title">Scopri i giochi gratuiti</h2>
+          </div>
+          <div class="toolbar-controls">
+            <select id="status-filter" aria-label="Filtra per stato">
+              <option value="all">Tutti</option>
+              <option value="current">Gratis ora</option>
+              <option value="upcoming">In arrivo</option>
+              <option value="saved">In libreria</option>
+              <option value="favorite">Preferiti</option>
+            </select>
+            <select id="sort-select" aria-label="Ordina giochi">
+              <option value="relevance">Più rilevanti</option>
+              <option value="title">Titolo A–Z</option>
+              <option value="date">Data più vicina</option>
+              <option value="value">Valore più alto</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="status-message" class="notice" hidden></div>
+        <section id="games-grid" class="games-grid" aria-live="polite"></section>
+      </main>
     </div>
-    <button id="refresh-button" class="secondary-button" type="button">Aggiorna</button>
-  </header>
+  </div>
 
-  <main>
-    <section aria-labelledby="current-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">DISPONIBILI ORA</p>
-          <h2 id="current-title">Gratis adesso</h2>
-        </div>
-        <span id="current-count" class="count-badge">0</span>
+  <nav class="mobile-nav" aria-label="Navigazione mobile">
+    <button class="mobile-nav-item is-active" data-view="home"><span>⌂</span>Home</button>
+    <button class="mobile-nav-item" data-view="current"><span>◉</span>Gratis</button>
+    <button class="mobile-nav-item" data-view="upcoming"><span>◷</span>In arrivo</button>
+    <button class="mobile-nav-item" data-view="library"><span>◆</span>Libreria</button>
+  </nav>
+
+  <dialog id="game-dialog" class="game-dialog">
+    <button id="dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
+    <img id="dialog-image" alt="">
+    <div class="dialog-content">
+      <span id="dialog-badge" class="pill"></span>
+      <h2 id="dialog-title"></h2>
+      <p id="dialog-publisher" class="muted"></p>
+      <p id="dialog-description"></p>
+      <div id="dialog-meta" class="dialog-meta"></div>
+      <div class="dialog-actions">
+        <a id="dialog-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
+        <button id="dialog-library" class="button button-secondary" type="button"></button>
+        <button id="dialog-favorite" class="button button-secondary" type="button"></button>
       </div>
-      <div id="current-games" class="games-grid"></div>
-    </section>
-
-    <section aria-labelledby="upcoming-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">IN ARRIVO</p>
-          <h2 id="upcoming-title">Prossimamente</h2>
-        </div>
-        <span id="upcoming-count" class="count-badge">0</span>
-      </div>
-      <div id="upcoming-games" class="games-grid"></div>
-    </section>
-
-    <div id="status-message" class="status-message" hidden></div>
-  </main>
+      <label class="status-field">Stato personale
+        <select id="dialog-status">
+          <option value="saved">In libreria</option>
+          <option value="playing">In gioco</option>
+          <option value="completed">Completato</option>
+          <option value="backlog">Da giocare</option>
+          <option value="abandoned">Abbandonato</option>
+        </select>
+      </label>
+    </div>
+  </dialog>
 
   <template id="game-card-template">
     <article class="game-card">
-      <div class="image-shell">
+      <button class="card-cover" type="button">
         <img class="game-image" alt="" loading="lazy">
-        <span class="game-badge"></span>
-      </div>
+        <span class="cover-gradient"></span>
+        <span class="game-badge pill"></span>
+        <span class="favorite-indicator" aria-hidden="true">♥</span>
+        <span class="card-open">Dettagli</span>
+      </button>
       <div class="game-content">
-        <div>
-          <p class="publisher"></p>
-          <h3 class="game-title"></h3>
+        <div class="title-row">
+          <div><p class="publisher"></p><h3 class="game-title"></h3></div>
+          <button class="favorite-button" type="button" aria-label="Aggiungi ai preferiti">♡</button>
         </div>
         <p class="game-description"></p>
-        <div class="price-row">
-          <span class="original-price"></span>
-          <span class="free-label">GRATIS</span>
+        <div class="game-info-row">
+          <div class="price-block"><span class="original-price"></span><strong class="free-label">GRATIS</strong></div>
+          <span class="countdown"></span>
         </div>
-        <p class="countdown"></p>
+        <div class="progress-track"><span class="progress-fill"></span></div>
         <div class="card-actions">
-          <a class="primary-button store-link" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
-          <button class="redeemed-button" type="button">Segna riscattato</button>
+          <a class="button button-primary store-link" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
+          <button class="button button-secondary library-button" type="button"></button>
         </div>
       </div>
     </article>

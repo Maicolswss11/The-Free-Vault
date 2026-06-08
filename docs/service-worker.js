@@ -1,4 +1,4 @@
-const CACHE_NAME = "epic-free-games-v1";
+const CACHE_NAME = "the-free-vault-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const APP_SHELL = [
   "./app.js",
   "./manifest.webmanifest",
   "./placeholders/game-placeholder.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -15,30 +17,41 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    )
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
+  const isData = url.pathname.endsWith("/games.json") || url.pathname.endsWith("/history.json");
+  const isCover = url.pathname.includes("/assets/covers/");
 
-  if (url.pathname.endsWith("/games.json")) {
+  if (isData) {
+    const canonicalUrl = new URL(event.request.url);
+    canonicalUrl.search = "";
+    const cacheKey = new Request(canonicalUrl.toString());
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./games.json", copy));
+          if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, response.clone()));
           return response;
         })
-        .catch(() => caches.match("./games.json"))
+        .catch(() => caches.match(cacheKey))
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
-  );
+  if (isCover) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+        if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        return response;
+      }))
+    );
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });

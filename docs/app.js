@@ -1,169 +1,487 @@
 const DATA_URL = "./games.json";
-const REDEEMED_KEY = "epic-free-games-redeemed-v1";
+const HISTORY_URL = "./history.json";
+const LIBRARY_KEY = "the-free-vault-library-v2";
+const PLACEHOLDER = "./placeholders/game-placeholder.svg";
 
-const currentContainer = document.querySelector("#current-games");
-const upcomingContainer = document.querySelector("#upcoming-games");
-const currentCount = document.querySelector("#current-count");
-const upcomingCount = document.querySelector("#upcoming-count");
-const updatedAt = document.querySelector("#updated-at");
-const statusMessage = document.querySelector("#status-message");
-const refreshButton = document.querySelector("#refresh-button");
-const cardTemplate = document.querySelector("#game-card-template");
+const state = {
+  current: [],
+  upcoming: [],
+  history: [],
+  library: loadLibrary(),
+  view: "home",
+  search: "",
+  statusFilter: "all",
+  sort: "relevance",
+  selectedGame: null,
+};
 
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const ui = {
+  grid: $("#games-grid"),
+  template: $("#game-card-template"),
+  search: $("#search-input"),
+  filter: $("#status-filter"),
+  sort: $("#sort-select"),
+  refresh: $("#refresh-button"),
+  status: $("#status-message"),
+  title: $("#view-title"),
+  eyebrow: $("#view-eyebrow"),
+  hero: $("#hero"),
+  heroImage: $("#hero-image"),
+  heroTitle: $("#hero-title"),
+  heroDescription: $("#hero-description"),
+  heroPrice: $("#hero-price"),
+  heroCountdown: $("#hero-countdown"),
+  heroLink: $("#hero-link"),
+  heroLibrary: $("#hero-library"),
+  sidebarUpdate: $("#sidebar-update"),
+  install: $("#install-button"),
+  dialog: $("#game-dialog"),
+  dialogImage: $("#dialog-image"),
+  dialogBadge: $("#dialog-badge"),
+  dialogTitle: $("#dialog-title"),
+  dialogPublisher: $("#dialog-publisher"),
+  dialogDescription: $("#dialog-description"),
+  dialogMeta: $("#dialog-meta"),
+  dialogLink: $("#dialog-link"),
+  dialogLibrary: $("#dialog-library"),
+  dialogFavorite: $("#dialog-favorite"),
+  dialogStatus: $("#dialog-status"),
+};
+
+let installPrompt = null;
 let countdownTimer = null;
 
-function loadRedeemed() {
+function loadLibrary() {
   try {
-    return new Set(JSON.parse(localStorage.getItem(REDEEMED_KEY) || "[]"));
+    const parsed = JSON.parse(localStorage.getItem(LIBRARY_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
-    return new Set();
+    return {};
   }
 }
 
-function saveRedeemed(values) {
-  localStorage.setItem(REDEEMED_KEY, JSON.stringify([...values]));
+function saveLibrary() {
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+  updateStats();
 }
 
-function promotionKey(game) {
-  return `${game.epic_id}|${game.start_date}|${game.end_date}`;
+function gameKey(game) {
+  return game.epic_id || game.promotion_key || `${game.title}|${game.start_date}`;
+}
+
+function getLibraryEntry(game) {
+  return state.library[gameKey(game)] || null;
+}
+
+function setLibraryEntry(game, patch) {
+  const key = gameKey(game);
+  const current = state.library[key] || {
+    addedAt: new Date().toISOString(),
+    status: "saved",
+    favorite: false,
+    game: snapshotGame(game),
+  };
+  state.library[key] = { ...current, ...patch, game: snapshotGame(game) };
+  saveLibrary();
+}
+
+function removeLibraryEntry(game) {
+  delete state.library[gameKey(game)];
+  saveLibrary();
+}
+
+function snapshotGame(game) {
+  return {
+    epic_id: game.epic_id,
+    title: game.title,
+    description: game.description,
+    publisher: game.publisher,
+    image_url: game.image_url,
+    store_url: game.store_url,
+    fmt_original_price: game.fmt_original_price,
+    original_price: game.original_price,
+    currency_decimals: game.currency_decimals,
+    start_date: game.start_date,
+    end_date: game.end_date,
+    is_mystery_game: game.is_mystery_game,
+    offer_type: game.offer_type,
+  };
 }
 
 function formatDate(value) {
+  if (!value) return "Data non disponibile";
   return new Intl.DateTimeFormat("it-IT", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
 
-function formatCountdown(target, mode) {
-  const diff = new Date(target).getTime() - Date.now();
-  if (diff <= 0) {
-    return mode === "upcoming" ? "Disponibile ora" : "Promozione terminata";
+function formatCurrencyValue(game) {
+  if (game.fmt_original_price) return game.fmt_original_price;
+  if (!Number.isFinite(game.original_price)) return "";
+  const decimals = Number.isFinite(game.currency_decimals) ? game.currency_decimals : 2;
+  const value = game.original_price / (10 ** decimals);
+  try {
+    return new Intl.NumberFormat("it-IT", {
+      style: "currency",
+      currency: game.currency_code || "EUR",
+    }).format(value);
+  } catch {
+    return `${value.toFixed(decimals)} ${game.currency_code || ""}`.trim();
   }
-
-  const totalMinutes = Math.floor(diff / 60000);
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const prefix = mode === "upcoming" ? "Disponibile tra" : "Scade tra";
-
-  if (days > 0) return `${prefix} ${days}g ${hours}h`;
-  return `${prefix} ${hours}h ${minutes}m`;
 }
 
-function createCard(game, mode, redeemedSet) {
-  const fragment = cardTemplate.content.cloneNode(true);
+function countdownText(game) {
+  const upcoming = getMode(game) === "upcoming";
+  const target = upcoming ? game.start_date : game.end_date;
+  const diff = new Date(target).getTime() - Date.now();
+  if (diff <= 0) return upcoming ? "Disponibile ora" : "Promozione terminata";
+  const minutes = Math.floor(diff / 60000);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  const prefix = upcoming ? "Tra" : "Scade tra";
+  return days > 0 ? `${prefix} ${days}g ${hours}h` : `${prefix} ${hours}h ${mins}m`;
+}
+
+function promotionProgress(game) {
+  const start = new Date(game.start_date).getTime();
+  const end = new Date(game.end_date).getTime();
+  const now = Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  if (now <= start) return 0;
+  if (now >= end) return 100;
+  return ((now - start) / (end - start)) * 100;
+}
+
+function getMode(game) {
+  if (game.is_current || game.promotion_type === "current") return "current";
+  if (game.is_upcoming || game.promotion_type === "upcoming") return "upcoming";
+  const now = Date.now();
+  if (new Date(game.start_date).getTime() > now) return "upcoming";
+  return new Date(game.end_date).getTime() > now ? "current" : "history";
+}
+
+function allKnownGames() {
+  const indexed = new Map();
+  [...state.history, ...state.upcoming, ...state.current].forEach((game) => {
+    indexed.set(game.promotion_key || `${gameKey(game)}|${game.start_date}|${game.end_date}`, game);
+  });
+  return [...indexed.values()];
+}
+
+function libraryGames() {
+  return Object.values(state.library)
+    .filter((entry) => entry?.game)
+    .map((entry) => ({ ...entry.game, libraryStatus: entry.status, favorite: entry.favorite }));
+}
+
+function gameMatchesSearch(game) {
+  if (!state.search) return true;
+  const haystack = [game.title, game.publisher, game.description, game.offer_type]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("it");
+  return haystack.includes(state.search.toLocaleLowerCase("it"));
+}
+
+function matchesStatusFilter(game) {
+  const entry = getLibraryEntry(game);
+  if (state.statusFilter === "all") return true;
+  if (state.statusFilter === "current" || state.statusFilter === "upcoming") {
+    return getMode(game) === state.statusFilter;
+  }
+  if (state.statusFilter === "saved") return Boolean(entry);
+  if (state.statusFilter === "favorite") return Boolean(entry?.favorite);
+  return true;
+}
+
+function gamesForView() {
+  let games;
+  switch (state.view) {
+    case "current": games = [...state.current]; break;
+    case "upcoming": games = [...state.upcoming]; break;
+    case "history": games = allKnownGames(); break;
+    case "library": games = libraryGames(); break;
+    default: games = [...state.current, ...state.upcoming];
+  }
+
+  games = games.filter(gameMatchesSearch).filter(matchesStatusFilter);
+
+  games.sort((a, b) => {
+    if (state.sort === "title") return String(a.title).localeCompare(String(b.title), "it");
+    if (state.sort === "date") {
+      const dateA = new Date(getMode(a) === "upcoming" ? a.start_date : a.end_date).getTime();
+      const dateB = new Date(getMode(b) === "upcoming" ? b.start_date : b.end_date).getTime();
+      return dateA - dateB;
+    }
+    if (state.sort === "value") return (b.original_price || 0) - (a.original_price || 0);
+    const score = (game) => (getMode(game) === "current" ? 0 : getMode(game) === "upcoming" ? 1 : 2);
+    return score(a) - score(b);
+  });
+
+  return games;
+}
+
+function setView(view) {
+  state.view = view;
+  $$("[data-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.view === view));
+  document.body.classList.remove("menu-open");
+  render();
+}
+
+function viewCopy() {
+  const copies = {
+    home: ["THE FREE VAULT", "Scopri i giochi gratuiti"],
+    current: ["DISPONIBILI ADESSO", "Gratis ora"],
+    upcoming: ["PROSSIME USCITE", "In arrivo"],
+    history: ["ARCHIVIO", "Cronologia delle offerte"],
+    library: ["COLLEZIONE PERSONALE", "La mia libreria"],
+  };
+  return copies[state.view] || copies.home;
+}
+
+function renderHero() {
+  const game = state.current[0];
+  ui.hero.hidden = state.view !== "home" || !game;
+  if (!game) return;
+
+  ui.heroImage.src = game.image_url || PLACEHOLDER;
+  ui.heroImage.onerror = () => { ui.heroImage.src = PLACEHOLDER; };
+  ui.heroImage.alt = `Immagine di ${game.title}`;
+  ui.heroTitle.textContent = game.title;
+  ui.heroDescription.textContent = game.description || "Disponibile gratuitamente per un periodo limitato.";
+  ui.heroPrice.textContent = formatCurrencyValue(game) ? `${formatCurrencyValue(game)} → GRATIS` : "GRATIS";
+  ui.heroCountdown.textContent = countdownText(game);
+  ui.heroLink.href = game.store_url;
+  updateHeroLibraryButton(game);
+  ui.heroLibrary.onclick = () => toggleLibrary(game);
+}
+
+function updateHeroLibraryButton(game) {
+  ui.heroLibrary.textContent = getLibraryEntry(game) ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
+}
+
+function createCard(game) {
+  const fragment = ui.template.content.cloneNode(true);
   const card = fragment.querySelector(".game-card");
+  const coverButton = fragment.querySelector(".card-cover");
   const image = fragment.querySelector(".game-image");
   const badge = fragment.querySelector(".game-badge");
   const title = fragment.querySelector(".game-title");
   const publisher = fragment.querySelector(".publisher");
   const description = fragment.querySelector(".game-description");
-  const originalPrice = fragment.querySelector(".original-price");
+  const price = fragment.querySelector(".original-price");
   const countdown = fragment.querySelector(".countdown");
-  const storeLink = fragment.querySelector(".store-link");
-  const redeemedButton = fragment.querySelector(".redeemed-button");
+  const progress = fragment.querySelector(".progress-fill");
+  const link = fragment.querySelector(".store-link");
+  const libraryButton = fragment.querySelector(".library-button");
+  const favoriteButton = fragment.querySelector(".favorite-button");
 
-  image.src = game.image_url || "./placeholders/game-placeholder.svg";
+  const mode = getMode(game);
+  const entry = getLibraryEntry(game);
+  const favorite = Boolean(entry?.favorite);
+
+  image.src = game.image_url || PLACEHOLDER;
   image.alt = `Copertina di ${game.title}`;
-  image.onerror = () => {
-    image.src = "./placeholders/game-placeholder.svg";
-  };
-
-  badge.textContent = game.is_mystery_game
-    ? "MYSTERY GAME"
-    : mode === "current" ? "GRATIS ORA" : "IN ARRIVO";
-
-  title.textContent = game.title;
+  image.onerror = () => { image.src = PLACEHOLDER; };
+  badge.textContent = game.is_mystery_game ? "MYSTERY GAME" : mode === "current" ? "GRATIS ORA" : mode === "upcoming" ? "IN ARRIVO" : "ARCHIVIO";
+  title.textContent = game.title || "Titolo sconosciuto";
   publisher.textContent = game.publisher || "Epic Games Store";
   description.textContent = game.description || "Nessuna descrizione disponibile.";
-  originalPrice.textContent = game.fmt_original_price || "";
-  storeLink.href = game.store_url;
+  price.textContent = formatCurrencyValue(game);
+  countdown.textContent = mode === "history" ? `Terminato il ${formatDate(game.end_date)}` : countdownText(game);
+  progress.style.width = `${mode === "current" ? promotionProgress(game) : 0}%`;
+  link.href = game.store_url || "https://store.epicgames.com/it/free-games";
+  libraryButton.textContent = entry ? "✓" : "+";
+  libraryButton.title = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
+  favoriteButton.textContent = favorite ? "♥" : "♡";
+  favoriteButton.setAttribute("aria-label", favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti");
 
-  countdown.dataset.target = mode === "current" ? game.end_date : game.start_date;
-  countdown.dataset.mode = mode;
-  countdown.textContent = formatCountdown(countdown.dataset.target, mode);
+  card.classList.toggle("is-library", Boolean(entry));
+  card.classList.toggle("is-favorite", favorite);
 
-  const key = promotionKey(game);
-  const isRedeemed = redeemedSet.has(key);
-  redeemedButton.hidden = mode !== "current";
-  redeemedButton.setAttribute("aria-pressed", String(isRedeemed));
-  redeemedButton.textContent = isRedeemed ? "Riscattato" : "Segna riscattato";
-  card.classList.toggle("is-redeemed", isRedeemed);
-
-  redeemedButton.addEventListener("click", () => {
-    if (redeemedSet.has(key)) redeemedSet.delete(key);
-    else redeemedSet.add(key);
-    saveRedeemed(redeemedSet);
-
-    const active = redeemedSet.has(key);
-    redeemedButton.setAttribute("aria-pressed", String(active));
-    redeemedButton.textContent = active ? "Riscattato" : "Segna riscattato";
-    card.classList.toggle("is-redeemed", active);
-  });
+  coverButton.addEventListener("click", () => openGameDialog(game));
+  libraryButton.addEventListener("click", () => toggleLibrary(game));
+  favoriteButton.addEventListener("click", () => toggleFavorite(game));
 
   return fragment;
 }
 
-function renderSection(container, games, mode, redeemedSet) {
-  container.replaceChildren();
+function renderGrid() {
+  const games = gamesForView();
+  ui.grid.replaceChildren();
+
   if (!games.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = mode === "current"
-      ? "Nessun gioco gratuito attivo rilevato."
-      : "Nessuna promozione futura annunciata.";
-    container.append(empty);
+    empty.innerHTML = `<strong>Nessun gioco trovato</strong><br><span>Prova a modificare ricerca o filtri.</span>`;
+    ui.grid.append(empty);
     return;
   }
 
-  for (const game of games) {
-    container.append(createCard(game, mode, redeemedSet));
+  games.forEach((game) => ui.grid.append(createCard(game)));
+}
+
+function render() {
+  const [eyebrow, title] = viewCopy();
+  ui.eyebrow.textContent = eyebrow;
+  ui.title.textContent = title;
+  renderHero();
+  renderGrid();
+  updateStats();
+}
+
+function toggleLibrary(game) {
+  if (getLibraryEntry(game)) removeLibraryEntry(game);
+  else setLibraryEntry(game, { status: "saved" });
+  render();
+  if (ui.dialog.open && state.selectedGame) populateDialog(state.selectedGame);
+}
+
+function toggleFavorite(game) {
+  const entry = getLibraryEntry(game);
+  if (!entry) setLibraryEntry(game, { favorite: true, status: "saved" });
+  else setLibraryEntry(game, { favorite: !entry.favorite });
+  render();
+  if (ui.dialog.open && state.selectedGame) populateDialog(state.selectedGame);
+}
+
+function updateStats() {
+  $("#stat-current").textContent = String(state.current.length);
+  $("#stat-upcoming").textContent = String(state.upcoming.length);
+  $("#stat-library").textContent = String(Object.keys(state.library).length);
+
+  let cents = 0;
+  Object.values(state.library).forEach((entry) => {
+    const game = entry?.game;
+    if (!game || !Number.isFinite(game.original_price)) return;
+    const decimals = Number.isFinite(game.currency_decimals) ? game.currency_decimals : 2;
+    cents += game.original_price / (10 ** decimals);
+  });
+  $("#stat-saved").textContent = `${new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(cents)} €`;
+}
+
+function openGameDialog(game) {
+  state.selectedGame = game;
+  populateDialog(game);
+  ui.dialog.showModal();
+}
+
+function populateDialog(game) {
+  const mode = getMode(game);
+  const entry = getLibraryEntry(game);
+  ui.dialogImage.src = game.image_url || PLACEHOLDER;
+  ui.dialogImage.onerror = () => { ui.dialogImage.src = PLACEHOLDER; };
+  ui.dialogImage.alt = `Immagine di ${game.title}`;
+  ui.dialogBadge.textContent = mode === "current" ? "GRATIS ORA" : mode === "upcoming" ? "IN ARRIVO" : "ARCHIVIO";
+  ui.dialogTitle.textContent = game.title;
+  ui.dialogPublisher.textContent = game.publisher || "Epic Games Store";
+  ui.dialogDescription.textContent = game.description || "Nessuna descrizione disponibile.";
+  ui.dialogMeta.replaceChildren();
+  [
+    formatCurrencyValue(game) ? `Prezzo originale: ${formatCurrencyValue(game)}` : null,
+    `Inizio: ${formatDate(game.start_date)}`,
+    `Fine: ${formatDate(game.end_date)}`,
+    game.offer_type ? `Tipo: ${game.offer_type}` : null,
+  ].filter(Boolean).forEach((text) => {
+    const span = document.createElement("span");
+    span.textContent = text;
+    ui.dialogMeta.append(span);
+  });
+  ui.dialogLink.href = game.store_url;
+  ui.dialogLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
+  ui.dialogFavorite.textContent = entry?.favorite ? "♥ Preferito" : "♡ Preferito";
+  ui.dialogStatus.disabled = !entry;
+  ui.dialogStatus.value = entry?.status || "saved";
+}
+
+async function loadJson(url, fallback) {
+  try {
+    const response = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.warn(`Caricamento fallito: ${url}`, error);
+    return fallback;
   }
 }
 
-function updateCountdowns() {
-  document.querySelectorAll(".countdown").forEach((node) => {
-    node.textContent = formatCountdown(node.dataset.target, node.dataset.mode);
-  });
-}
-
-async function loadGames() {
-  refreshButton.disabled = true;
-  statusMessage.hidden = true;
-
+async function loadData() {
+  ui.refresh.disabled = true;
+  ui.status.hidden = true;
   try {
-    const response = await fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const [data, history] = await Promise.all([
+      loadJson(DATA_URL, null),
+      loadJson(HISTORY_URL, { games: [] }),
+    ]);
+    if (!data) throw new Error("games.json non disponibile");
 
-    const data = await response.json();
-    const redeemed = loadRedeemed();
+    state.current = Array.isArray(data.current) ? data.current : [];
+    state.upcoming = Array.isArray(data.upcoming) ? data.upcoming : [];
+    state.history = Array.isArray(history.games) ? history.games : [];
 
-    renderSection(currentContainer, data.current || [], "current", redeemed);
-    renderSection(upcomingContainer, data.upcoming || [], "upcoming", redeemed);
-
-    currentCount.textContent = String((data.current || []).length);
-    upcomingCount.textContent = String((data.upcoming || []).length);
-    updatedAt.textContent = data.generated_at
-      ? `Ultimo aggiornamento: ${formatDate(data.generated_at)}`
-      : "Data aggiornamento non disponibile";
-
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(updateCountdowns, 60000);
+    ui.sidebarUpdate.textContent = data.generated_at ? formatDate(data.generated_at) : "Aggiornamento sconosciuto";
+    render();
   } catch (error) {
-    statusMessage.hidden = false;
-    statusMessage.textContent =
-      "Impossibile aggiornare i dati. Se la PWA era già stata aperta, potrebbero essere mostrati dati memorizzati nella cache.";
+    ui.status.hidden = false;
+    ui.status.textContent = "Impossibile aggiornare i dati. Potrebbero essere mostrati contenuti presenti nella cache.";
     console.error(error);
   } finally {
-    refreshButton.disabled = false;
+    ui.refresh.disabled = false;
   }
 }
 
-refreshButton.addEventListener("click", loadGames);
+ui.search.addEventListener("input", () => {
+  state.search = ui.search.value.trim();
+  renderGrid();
+});
+ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; renderGrid(); });
+ui.sort.addEventListener("change", () => { state.sort = ui.sort.value; renderGrid(); });
+ui.refresh.addEventListener("click", loadData);
+$("#menu-button").addEventListener("click", () => document.body.classList.toggle("menu-open"));
+$$("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+$("#dialog-close").addEventListener("click", () => ui.dialog.close());
+ui.dialog.addEventListener("click", (event) => {
+  const rect = ui.dialog.getBoundingClientRect();
+  if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) ui.dialog.close();
+});
+ui.dialogLibrary.addEventListener("click", () => state.selectedGame && toggleLibrary(state.selectedGame));
+ui.dialogFavorite.addEventListener("click", () => state.selectedGame && toggleFavorite(state.selectedGame));
+ui.dialogStatus.addEventListener("change", () => {
+  if (state.selectedGame && getLibraryEntry(state.selectedGame)) {
+    setLibraryEntry(state.selectedGame, { status: ui.dialogStatus.value });
+    render();
+  }
+});
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./service-worker.js").catch(console.error);
-}
+document.addEventListener("keydown", (event) => {
+  if (event.key === "/" && document.activeElement !== ui.search) {
+    event.preventDefault();
+    ui.search.focus();
+  }
+  if (event.key === "Escape" && ui.dialog.open) ui.dialog.close();
+});
 
-loadGames();
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+  ui.install.hidden = false;
+});
+ui.install.addEventListener("click", async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  ui.install.hidden = true;
+});
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(console.error);
+countdownTimer = setInterval(() => {
+  if (state.current.length || state.upcoming.length) render();
+}, 60000);
+
+loadData();
