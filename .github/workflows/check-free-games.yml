@@ -24,12 +24,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -46,7 +46,7 @@ jobs:
       - name: Commit updated data
         shell: bash
         run: |
-          git add state.json docs/games.json
+          git add state.json docs/games.json docs/history.json docs/assets/covers
 
           if git diff --cached --quiet; then
             echo "Nessuna modifica da pubblicare."
