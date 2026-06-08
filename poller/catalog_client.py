@@ -57,10 +57,6 @@ query searchStoreQuery(
         seller { id name }
         productSlug
         urlSlug
-        offerMappings { pageSlug pageType }
-        catalogNs {
-          mappings(pageType: "productHome") { pageSlug pageType }
-        }
         developerDisplayName
         publisherDisplayName
         offerType
@@ -146,11 +142,26 @@ def fetch_catalog_page(
                     raise CatalogClientError(
                         f"Risposta GraphQL non valida da {endpoint}"
                     )
-                if data.get("errors"):
-                    raise CatalogClientError(
-                        f"Epic GraphQL errors da {endpoint}: {data['errors']}"
-                    )
-
+                errors = data.get("errors")
+                
+                search_store = (
+                    data.get("data", {})
+                    .get("Catalog", {})
+                    .get("searchStore")
+                )
+                
+                if errors:
+                    if isinstance(search_store, dict):
+                        logger.warning(
+                            "Epic ha restituito errori GraphQL parziali, "
+                            "ma la pagina contiene dati utilizzabili: %s",
+                            errors,
+                        )
+                    else:
+                        raise CatalogClientError(
+                            f"Epic GraphQL errors da {endpoint}: {errors}"
+                        )
+                
                 logger.info("Endpoint catalogo attivo: %s", endpoint)
                 return data
 
