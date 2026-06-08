@@ -19,7 +19,7 @@ Web app/PWA per seguire i giochi gratuiti su Epic Games Store, ricevere notifich
 - `docs/history.json`: archivio progressivo delle promozioni;
 - `docs/assets/covers/`: cache locale delle copertine;
 - `state.json`: deduplicazione delle notifiche;
-- `IndexedDB`: libreria personale, note, valutazioni e stato di gioco del singolo browser/dispositivo.
+- `localStorage`: libreria personale del singolo browser/dispositivo.
 
 ## Configurazione GitHub
 
@@ -53,12 +53,41 @@ La libreria personale non viene inviata a GitHub né a Epic. Resta nel browser i
 
 Il tracker usa un endpoint pubblico dello storefront non formalmente documentato. Il parser è isolato perché la struttura potrebbe cambiare.
 
-## Novità v2.2
+## Novità v2.1
 
-- libreria migrata automaticamente da `localStorage` a IndexedDB;
-- fallback a `localStorage` sui browser senza IndexedDB;
-- valutazione personale da 1 a 5 stelle;
-- note personali con salvataggio automatico;
-- filtri per giochi da giocare, in corso, completati e abbandonati;
-- ricerca estesa alle note e allo stato personale;
-- pannello dettagli rifinito per desktop e mobile.
+- correzione dei badge Mystery Game rimasti dopo la rivelazione del titolo;
+- hero e ricerca mobile rifinite;
+- maggiore spazio sopra la navigazione mobile;
+- esportazione e importazione della libreria personale in JSON;
+- notifiche toast per le operazioni sulla libreria.
+
+
+## v2.3 — Catalog Foundation
+
+Il tracker gratuito resta indipendente e continua a girare ogni tre ore.
+
+È stato aggiunto un secondo flusso:
+
+```text
+Sync Epic Catalog
+```
+
+che gira una volta al giorno e aggiorna `docs/catalog.json` tramite lo storefront
+GraphQL di Epic. Questo endpoint non è una API consumer formalmente documentata,
+quindi la sincronizzazione è isolata e un suo errore non interrompe il tracker.
+
+La web app aggiunge:
+
+- catalogo Epic separato dalle promozioni;
+- ricerca su catalogo, sviluppatore e publisher;
+- scheda gioco unificata;
+- liste personalizzate locali;
+- aggiunta/rimozione giochi dalle liste;
+- liste private o predisposte come pubbliche;
+- backup unico di libreria e liste.
+
+Prima sincronizzazione manuale:
+
+```text
+Actions → Sync Epic Catalog → Run workflow
+```

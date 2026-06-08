@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07090d">
-  <meta name="description" content="The Free Vault: giochi gratis, prossime uscite e libreria personale.">
+  <meta name="description" content="The Free Vault: tracker dei giochi gratis, catalogo Epic e liste personali.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
@@ -15,14 +15,21 @@
     <aside class="sidebar" aria-label="Navigazione principale">
       <a class="brand" href="#home" aria-label="The Free Vault">
         <span class="brand-mark">V</span>
-        <span><strong>The Free Vault</strong><small>Epic Games tracker</small></span>
+        <span><strong>The Free Vault</strong><small>Tracker & game journal</small></span>
       </a>
 
+      <p class="nav-section-label">FREE TRACKER</p>
       <nav class="main-nav">
         <button class="nav-item is-active" data-view="home" type="button"><span>⌂</span> Home</button>
         <button class="nav-item" data-view="current" type="button"><span>◉</span> Gratis ora</button>
         <button class="nav-item" data-view="upcoming" type="button"><span>◷</span> In arrivo</button>
-        <button class="nav-item" data-view="history" type="button"><span>▤</span> Cronologia</button>
+        <button class="nav-item" data-view="history" type="button"><span>▤</span> Cronologia regali</button>
+      </nav>
+
+      <p class="nav-section-label">DISCOVER</p>
+      <nav class="main-nav">
+        <button class="nav-item" data-view="catalog" type="button"><span>▦</span> Catalogo Epic</button>
+        <button class="nav-item" data-view="lists" type="button"><span>☷</span> Le mie liste</button>
         <button class="nav-item" data-view="library" type="button"><span>◆</span> La mia libreria</button>
       </nav>
 
@@ -32,9 +39,9 @@
           <div><strong>Tracker attivo</strong><small id="sidebar-update">In attesa dei dati</small></div>
         </div>
         <p>I dati personali restano su questo dispositivo.</p>
-        <div class="data-tools" aria-label="Gestione libreria">
-          <button id="export-library" class="data-tool-button" type="button">Esporta libreria</button>
-          <button id="import-library" class="data-tool-button" type="button">Importa libreria</button>
+        <div class="data-tools">
+          <button id="export-library" class="data-tool-button" type="button">Esporta dati</button>
+          <button id="import-library" class="data-tool-button" type="button">Importa dati</button>
           <input id="import-library-file" type="file" accept="application/json,.json" hidden>
         </div>
       </div>
@@ -45,11 +52,11 @@
         <button id="menu-button" class="icon-button menu-button" type="button" aria-label="Apri menu">☰</button>
         <div class="search-box">
           <span aria-hidden="true">⌕</span>
-          <input id="search-input" type="search" placeholder="Cerca un gioco, publisher o descrizione…" autocomplete="off">
+          <input id="search-input" type="search" placeholder="Cerca giochi, publisher, sviluppatori…" autocomplete="off">
           <kbd>/</kbd>
         </div>
         <div class="topbar-actions">
-          <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati" aria-label="Aggiorna dati">↻</button>
+          <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati">↻</button>
           <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
         </div>
       </header>
@@ -75,12 +82,22 @@
 
         <section class="stats-grid" aria-label="Riepilogo">
           <article class="stat-card"><span class="stat-icon blue">◉</span><div><strong id="stat-current">0</strong><span>Gratis adesso</span></div></article>
-          <article class="stat-card"><span class="stat-icon purple">◷</span><div><strong id="stat-upcoming">0</strong><span>In arrivo</span></div></article>
+          <article class="stat-card"><span class="stat-icon purple">▦</span><div><strong id="stat-catalog">0</strong><span>Catalogo Epic</span></div></article>
           <article class="stat-card"><span class="stat-icon green">◆</span><div><strong id="stat-library">0</strong><span>Nella libreria</span></div></article>
-          <article class="stat-card"><span class="stat-icon amber">€</span><div><strong id="stat-saved">0 €</strong><span>Valore riscattato</span></div></article>
+          <article class="stat-card"><span class="stat-icon amber">☷</span><div><strong id="stat-lists">0</strong><span>Liste personali</span></div></article>
         </section>
 
-        <div class="content-toolbar">
+        <section id="lists-dashboard" class="lists-dashboard" hidden>
+          <div class="lists-header">
+            <div><p class="eyebrow">COLLEZIONI PERSONALI</p><h2>Le mie liste</h2></div>
+            <button id="create-list-button" class="button button-primary" type="button">Nuova lista</button>
+          </div>
+          <div id="lists-grid" class="lists-grid"></div>
+        </section>
+
+        <div id="catalog-meta" class="catalog-meta" hidden></div>
+
+        <div class="content-toolbar" id="content-toolbar">
           <div>
             <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
             <h2 id="view-title">Scopri i giochi gratuiti</h2>
@@ -92,16 +109,12 @@
               <option value="upcoming">In arrivo</option>
               <option value="saved">In libreria</option>
               <option value="favorite">Preferiti</option>
-              <option value="backlog">Da giocare</option>
-              <option value="playing">In gioco</option>
-              <option value="completed">Completati</option>
-              <option value="abandoned">Abbandonati</option>
             </select>
             <select id="sort-select" aria-label="Ordina giochi">
               <option value="relevance">Più rilevanti</option>
               <option value="title">Titolo A–Z</option>
-              <option value="date">Data più vicina</option>
-              <option value="value">Valore più alto</option>
+              <option value="date">Data più recente</option>
+              <option value="value">Prezzo più alto</option>
             </select>
           </div>
         </div>
@@ -115,7 +128,8 @@
   <nav class="mobile-nav" aria-label="Navigazione mobile">
     <button class="mobile-nav-item is-active" data-view="home"><span>⌂</span>Home</button>
     <button class="mobile-nav-item" data-view="current"><span>◉</span>Gratis</button>
-    <button class="mobile-nav-item" data-view="upcoming"><span>◷</span>In arrivo</button>
+    <button class="mobile-nav-item" data-view="catalog"><span>▦</span>Catalogo</button>
+    <button class="mobile-nav-item" data-view="lists"><span>☷</span>Liste</button>
     <button class="mobile-nav-item" data-view="library"><span>◆</span>Libreria</button>
   </nav>
 
@@ -132,33 +146,48 @@
         <a id="dialog-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
         <button id="dialog-library" class="button button-secondary" type="button"></button>
         <button id="dialog-favorite" class="button button-secondary" type="button"></button>
+        <button id="dialog-add-list" class="button button-secondary" type="button">Aggiungi a lista</button>
       </div>
-      <div class="personal-panel">
-        <label class="status-field">Stato personale
-          <select id="dialog-status">
-            <option value="saved">In libreria</option>
-            <option value="backlog">Da giocare</option>
-            <option value="playing">In gioco</option>
-            <option value="completed">Completato</option>
-            <option value="abandoned">Abbandonato</option>
-          </select>
-        </label>
+      <label class="status-field">Stato personale
+        <select id="dialog-status">
+          <option value="saved">In libreria</option>
+          <option value="backlog">Da giocare</option>
+          <option value="playing">In gioco</option>
+          <option value="completed">Completato</option>
+          <option value="abandoned">Abbandonato</option>
+        </select>
+      </label>
+    </div>
+  </dialog>
 
-        <label class="rating-field">Valutazione personale
-          <div class="rating-control" id="dialog-rating" role="radiogroup" aria-label="Valutazione da uno a cinque">
-            <button type="button" data-rating="1" aria-label="1 stella">★</button>
-            <button type="button" data-rating="2" aria-label="2 stelle">★</button>
-            <button type="button" data-rating="3" aria-label="3 stelle">★</button>
-            <button type="button" data-rating="4" aria-label="4 stelle">★</button>
-            <button type="button" data-rating="5" aria-label="5 stelle">★</button>
-          </div>
-        </label>
+  <dialog id="list-dialog" class="list-dialog">
+    <button id="list-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
+    <div class="dialog-content">
+      <p class="eyebrow">LISTA PERSONALIZZATA</p>
+      <h2 id="list-dialog-title">Nuova lista</h2>
+      <label class="status-field">Titolo
+        <input id="list-name-input" maxlength="80" placeholder="Es. Migliori horror psicologici">
+      </label>
+      <label class="status-field">Descrizione
+        <textarea id="list-description-input" maxlength="500" rows="4" placeholder="Che tipo di giochi contiene?"></textarea>
+      </label>
+      <label class="status-field">Visibilità
+        <select id="list-visibility-input">
+          <option value="private">Privata</option>
+          <option value="public">Pubblica (pronta per il futuro social)</option>
+        </select>
+      </label>
+      <button id="save-list-button" class="button button-primary" type="button">Salva lista</button>
+    </div>
+  </dialog>
 
-        <label class="notes-field">Note personali
-          <textarea id="dialog-notes" rows="4" maxlength="1000" placeholder="Scrivi impressioni, obiettivi o promemoria…"></textarea>
-        </label>
-        <p id="dialog-save-status" class="save-status" aria-live="polite"></p>
-      </div>
+  <dialog id="list-picker-dialog" class="list-dialog">
+    <button id="list-picker-close" class="dialog-close" type="button">×</button>
+    <div class="dialog-content">
+      <p class="eyebrow">AGGIUNGI A UNA LISTA</p>
+      <h2>Scegli una raccolta</h2>
+      <div id="list-picker-items" class="list-picker-items"></div>
+      <button id="picker-create-list" class="button button-secondary" type="button">Crea una nuova lista</button>
     </div>
   </dialog>
 
@@ -174,11 +203,11 @@
       <div class="game-content">
         <div class="title-row">
           <div><p class="publisher"></p><h3 class="game-title"></h3></div>
-          <button class="favorite-button" type="button" aria-label="Aggiungi ai preferiti">♡</button>
+          <button class="favorite-button" type="button" aria-label="Preferito">♡</button>
         </div>
         <p class="game-description"></p>
         <div class="game-info-row">
-          <div class="price-block"><span class="original-price"></span><strong class="free-label">GRATIS</strong></div>
+          <div class="price-block"><span class="original-price"></span><strong class="free-label"></strong></div>
           <span class="countdown"></span>
         </div>
         <div class="progress-track"><span class="progress-fill"></span></div>
@@ -191,7 +220,6 @@
   </template>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <script src="./storage.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

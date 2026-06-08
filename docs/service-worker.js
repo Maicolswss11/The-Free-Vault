@@ -1,9 +1,8 @@
-const CACHE_NAME = "the-free-vault-v2-2";
+const CACHE_NAME = "the-free-vault-v2-3-catalog-1";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
-  "./storage.js",
   "./app.js",
   "./manifest.webmanifest",
   "./placeholders/game-placeholder.svg",
