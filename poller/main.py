@@ -9,6 +9,8 @@ from typing import Any, Callable
 from . import constants as C
 from .epic_client import EpicClientError, fetch_promotions
 from .free_games_selector import FreeGamesSelection, select_free_games
+from .history_store import update_history
+from .image_cache import cache_selection_images
 from .logging_config import configure_logging, get_logger
 from .notifier import (
     NtfyNotifier,
@@ -22,6 +24,7 @@ from .state_store import State, load_state, save_state, write_games_json
 logger = get_logger(__name__)
 
 PayloadFetcher = Callable[[], dict[str, Any]]
+ImageCacher = Callable[[FreeGamesSelection], None]
 
 
 def _notification_completed(notifier: NtfyNotifier, sent: bool) -> bool:
@@ -89,6 +92,8 @@ def run(
     notifier: NtfyNotifier | None = None,
     state_path: Path = C.STATE_JSON_PATH,
     games_path: Path = C.GAMES_JSON_PATH,
+    history_path: Path | None = None,
+    image_cacher: ImageCacher | None = cache_selection_images,
 ) -> int:
     """Esegue un ciclo completo del tracker.
 
@@ -112,7 +117,15 @@ def run(
         return 1
 
     try:
+        if image_cacher is not None:
+            image_cacher(selection)
+
         write_games_json(selection, games_path, generated_at=now)
+        update_history(
+            selection,
+            history_path or games_path.with_name("history.json"),
+            updated_at=now,
+        )
 
         _process_current_notifications(selection, state, notifier)
         _process_upcoming_notifications(selection, state, notifier)

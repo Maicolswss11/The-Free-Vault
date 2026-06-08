@@ -16,6 +16,10 @@ APP_NAME: str = "Epic Free Games Tracker"
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 GAMES_JSON_PATH: Path = PROJECT_ROOT / "docs" / "games.json"
 STATE_JSON_PATH: Path = PROJECT_ROOT / "state.json"
+HISTORY_JSON_PATH: Path = PROJECT_ROOT / "docs" / "history.json"
+COVERS_DIR: Path = PROJECT_ROOT / "docs" / "assets" / "covers"
+PUBLIC_COVER_PREFIX: str = "./assets/covers"
+MAX_COVER_BYTES: int = 12 * 1024 * 1024
 
 # --- Sorgente dati Epic ---
 EPIC_PROMOTIONS_URL: str = (

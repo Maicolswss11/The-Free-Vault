@@ -84,6 +84,7 @@ def test_new_current_notification_success(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=games_path,
+        image_cacher=None,
     )
 
     assert code == 0
@@ -101,6 +102,7 @@ def test_new_upcoming_notification(tmp_path):
         notifier=notifier,
         state_path=tmp_path / "state.json",
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     )
 
     assert code == 0
@@ -118,6 +120,7 @@ def test_failed_notification_is_not_marked(tmp_path):
         notifier=notifier,
         state_path=tmp_path / "state.json",
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     )
 
     assert code == 0
@@ -133,6 +136,7 @@ def test_disabled_notifier_marks_event_handled(tmp_path):
         notifier=notifier,
         state_path=tmp_path / "state.json",
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     )
 
     assert code == 0
@@ -152,6 +156,7 @@ def test_expiry_reminder_within_24_hours(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     )
 
     assert code == 0
@@ -173,6 +178,7 @@ def test_expiry_reminder_not_duplicated(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=games_path,
+        image_cacher=None,
     ) == 0
 
     notifier.calls.clear()
@@ -183,6 +189,7 @@ def test_expiry_reminder_not_duplicated(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=games_path,
+        image_cacher=None,
     ) == 0
 
     assert notifier.calls == []
@@ -201,6 +208,7 @@ def test_fetch_failure_does_not_overwrite_games_json(tmp_path):
         notifier=FakeNotifier(),
         state_path=tmp_path / "state.json",
         games_path=games_path,
+        image_cacher=None,
     )
 
     assert code == 1
@@ -218,6 +226,7 @@ def test_already_notified_is_skipped(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=games_path,
+        image_cacher=None,
     ) == 0
 
     notifier.calls.clear()
@@ -228,6 +237,7 @@ def test_already_notified_is_skipped(tmp_path):
         notifier=notifier,
         state_path=state_path,
         games_path=games_path,
+        image_cacher=None,
     ) == 0
 
     assert notifier.calls == []
@@ -242,6 +252,7 @@ def test_last_run_is_updated(tmp_path):
         notifier=FakeNotifier(enabled=False),
         state_path=state_path,
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     ) == 0
 
     assert load_state(state_path).last_run == NOW.isoformat()
@@ -257,4 +268,5 @@ def test_invalid_payload_returns_nonzero(tmp_path):
         notifier=FakeNotifier(),
         state_path=tmp_path / "state.json",
         games_path=tmp_path / "games.json",
+        image_cacher=None,
     ) == 1
