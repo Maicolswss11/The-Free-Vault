@@ -32,6 +32,11 @@
           <div><strong>Tracker attivo</strong><small id="sidebar-update">In attesa dei dati</small></div>
         </div>
         <p>I dati personali restano su questo dispositivo.</p>
+        <div class="data-tools" aria-label="Gestione libreria">
+          <button id="export-library" class="data-tool-button" type="button">Esporta libreria</button>
+          <button id="import-library" class="data-tool-button" type="button">Importa libreria</button>
+          <input id="import-library-file" type="file" accept="application/json,.json" hidden>
+        </div>
       </div>
     </aside>
 
@@ -164,6 +169,7 @@
     </article>
   </template>
 
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="./app.js" defer></script>
 </body>
 </html>

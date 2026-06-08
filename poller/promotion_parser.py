@@ -106,23 +106,65 @@ def build_store_url(element: dict[str, Any]) -> str:
 
 
 def is_mystery_game(element: dict[str, Any]) -> bool:
-    """Riconosce un "gioco misterioso" combinando più segnali del payload."""
-    for image in element.get("keyImages") or []:
-        if isinstance(image, dict) and image.get("type") == C.VAULT_IMAGE_TYPE:
-            return True
-    url_slug = element.get("urlSlug")
-    if isinstance(url_slug, str) and C.MYSTERY_SLUG_MARKER in url_slug.lower():
-        return True
-    for category in element.get("categories") or []:
-        if isinstance(category, dict) and category.get("path") == C.VAULTED_CATEGORY:
-            return True
-    seller = element.get("seller")
-    if isinstance(seller, dict) and seller.get("name") == C.EPIC_TEST_SELLER:
-        return True
+    """Riconosce un mystery game senza mantenere badge obsoleti.
+
+    Epic può lasciare segnali tecnici come seller di test o immagini ``VaultClosed``
+    anche dopo la rivelazione del titolo. Un titolo reale e specifico ha quindi
+    precedenza sui marker residuali.
+    """
     title = element.get("title")
-    if isinstance(title, str) and "mystery game" in title.lower():
-        return True
-    return False
+    normalized_title = title.strip().lower() if isinstance(title, str) else ""
+    generic_titles = {
+        "mystery game",
+        "mystery game 1",
+        "mystery game 2",
+        "mystery game 3",
+        "mystery game 4",
+        "mystery game 5",
+        "coming soon",
+        "to be revealed",
+        "tba",
+    }
+    title_is_generic = (
+        not normalized_title
+        or normalized_title in generic_titles
+        or "mystery game" in normalized_title
+    )
+
+    url_slug = element.get("urlSlug")
+    slug_is_mystery = (
+        isinstance(url_slug, str)
+        and C.MYSTERY_SLUG_MARKER in url_slug.lower()
+    )
+
+    category_is_vaulted = any(
+        isinstance(category, dict)
+        and category.get("path") == C.VAULTED_CATEGORY
+        for category in (element.get("categories") or [])
+    )
+
+    has_vault_cover = any(
+        isinstance(image, dict)
+        and image.get("type") == C.VAULT_IMAGE_TYPE
+        for image in (element.get("keyImages") or [])
+    )
+
+    seller = element.get("seller")
+    seller_is_test = (
+        isinstance(seller, dict)
+        and seller.get("name") == C.EPIC_TEST_SELLER
+    )
+
+    # Un titolo definitivo prevale sui marker tecnici rimasti nel payload.
+    if not title_is_generic:
+        return False
+
+    return title_is_generic and (
+        slug_is_mystery
+        or category_is_vaulted
+        or has_vault_cover
+        or seller_is_test
+    )
 
 
 def _extract_price(

@@ -49,6 +49,10 @@ const ui = {
   dialogLibrary: $("#dialog-library"),
   dialogFavorite: $("#dialog-favorite"),
   dialogStatus: $("#dialog-status"),
+  exportLibrary: $("#export-library"),
+  importLibrary: $("#import-library"),
+  importLibraryFile: $("#import-library-file"),
+  toast: $("#toast"),
 };
 
 let installPrompt = null;
@@ -66,6 +70,52 @@ function loadLibrary() {
 function saveLibrary() {
   localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
   updateStats();
+}
+
+function showToast(message) {
+  ui.toast.textContent = message;
+  ui.toast.hidden = false;
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => { ui.toast.hidden = true; }, 3200);
+}
+
+function exportLibrary() {
+  const payload = {
+    app: "The Free Vault",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    library: state.library,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `the-free-vault-library-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Libreria esportata.");
+}
+
+async function importLibraryFile(file) {
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    const imported = payload?.library ?? payload;
+    if (!imported || typeof imported !== "object" || Array.isArray(imported)) {
+      throw new Error("Formato non valido");
+    }
+    state.library = { ...state.library, ...imported };
+    saveLibrary();
+    render();
+    showToast("Libreria importata e unita a quella corrente.");
+  } catch (error) {
+    console.error(error);
+    showToast("Impossibile importare il file selezionato.");
+  } finally {
+    ui.importLibraryFile.value = "";
+  }
 }
 
 function gameKey(game) {
@@ -377,7 +427,7 @@ function populateDialog(game) {
   ui.dialogImage.src = game.image_url || PLACEHOLDER;
   ui.dialogImage.onerror = () => { ui.dialogImage.src = PLACEHOLDER; };
   ui.dialogImage.alt = `Immagine di ${game.title}`;
-  ui.dialogBadge.textContent = mode === "current" ? "GRATIS ORA" : mode === "upcoming" ? "IN ARRIVO" : "ARCHIVIO";
+  ui.dialogBadge.textContent = game.is_mystery_game ? "MYSTERY GAME" : mode === "current" ? "GRATIS ORA" : mode === "upcoming" ? "IN ARRIVO" : "ARCHIVIO";
   ui.dialogTitle.textContent = game.title;
   ui.dialogPublisher.textContent = game.publisher || "Epic Games Store";
   ui.dialogDescription.textContent = game.description || "Nessuna descrizione disponibile.";
@@ -457,6 +507,9 @@ ui.dialogStatus.addEventListener("change", () => {
     render();
   }
 });
+ui.exportLibrary.addEventListener("click", exportLibrary);
+ui.importLibrary.addEventListener("click", () => ui.importLibraryFile.click());
+ui.importLibraryFile.addEventListener("change", () => importLibraryFile(ui.importLibraryFile.files?.[0]));
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "/" && document.activeElement !== ui.search) {

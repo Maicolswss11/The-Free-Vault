@@ -52,3 +52,11 @@ La libreria personale non viene inviata a GitHub né a Epic. Resta nel browser i
 ## Nota sull'endpoint Epic
 
 Il tracker usa un endpoint pubblico dello storefront non formalmente documentato. Il parser è isolato perché la struttura potrebbe cambiare.
+
+## Novità v2.1
+
+- correzione dei badge Mystery Game rimasti dopo la rivelazione del titolo;
+- hero e ricerca mobile rifinite;
+- maggiore spazio sopra la navigazione mobile;
+- esportazione e importazione della libreria personale in JSON;
+- notifiche toast per le operazioni sulla libreria.
