@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-08T18:36:59.123256+00:00",
+  "generated_at": "2026-06-08T20:32:32.258190+00:00",
   "current": [
     {
       "epic_id": "a6a2d59fa54946dbbf16f14730c2e5f0",
@@ -18,7 +18,7 @@
       "promotion_type": "current",
       "is_current": true,
       "is_upcoming": false,
-      "is_mystery_game": true,
+      "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "OTHERS",
       "publisher": "Epic Dev Test Account"
@@ -40,7 +40,7 @@
       "promotion_type": "current",
       "is_current": true,
       "is_upcoming": false,
-      "is_mystery_game": true,
+      "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "OTHERS",
       "publisher": "Epic Dev Test Account"
