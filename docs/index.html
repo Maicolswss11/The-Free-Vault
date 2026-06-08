@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="Tracker dei giochi gratuiti su Epic Games Store">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Epic Free Games Tracker</title>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">EPIC GAMES STORE</p>
+      <h1>Free Games Tracker</h1>
+      <p id="updated-at" class="muted">Aggiornamento in corso…</p>
+    </div>
+    <button id="refresh-button" class="secondary-button" type="button">Aggiorna</button>
+  </header>
+
+  <main>
+    <section aria-labelledby="current-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">DISPONIBILI ORA</p>
+          <h2 id="current-title">Gratis adesso</h2>
+        </div>
+        <span id="current-count" class="count-badge">0</span>
+      </div>
+      <div id="current-games" class="games-grid"></div>
+    </section>
+
+    <section aria-labelledby="upcoming-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">IN ARRIVO</p>
+          <h2 id="upcoming-title">Prossimamente</h2>
+        </div>
+        <span id="upcoming-count" class="count-badge">0</span>
+      </div>
+      <div id="upcoming-games" class="games-grid"></div>
+    </section>
+
+    <div id="status-message" class="status-message" hidden></div>
+  </main>
+
+  <template id="game-card-template">
+    <article class="game-card">
+      <div class="image-shell">
+        <img class="game-image" alt="" loading="lazy">
+        <span class="game-badge"></span>
+      </div>
+      <div class="game-content">
+        <div>
+          <p class="publisher"></p>
+          <h3 class="game-title"></h3>
+        </div>
+        <p class="game-description"></p>
+        <div class="price-row">
+          <span class="original-price"></span>
+          <span class="free-label">GRATIS</span>
+        </div>
+        <p class="countdown"></p>
+        <div class="card-actions">
+          <a class="primary-button store-link" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
+          <button class="redeemed-button" type="button">Segna riscattato</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
