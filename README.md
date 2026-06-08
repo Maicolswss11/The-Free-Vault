@@ -19,7 +19,7 @@ Web app/PWA per seguire i giochi gratuiti su Epic Games Store, ricevere notifich
 - `docs/history.json`: archivio progressivo delle promozioni;
 - `docs/assets/covers/`: cache locale delle copertine;
 - `state.json`: deduplicazione delle notifiche;
-- `localStorage`: libreria personale del singolo browser/dispositivo.
+- `IndexedDB`: libreria personale, note, valutazioni e stato di gioco del singolo browser/dispositivo.
 
 ## Configurazione GitHub
 
@@ -53,10 +53,12 @@ La libreria personale non viene inviata a GitHub né a Epic. Resta nel browser i
 
 Il tracker usa un endpoint pubblico dello storefront non formalmente documentato. Il parser è isolato perché la struttura potrebbe cambiare.
 
-## Novità v2.1
+## Novità v2.2
 
-- correzione dei badge Mystery Game rimasti dopo la rivelazione del titolo;
-- hero e ricerca mobile rifinite;
-- maggiore spazio sopra la navigazione mobile;
-- esportazione e importazione della libreria personale in JSON;
-- notifiche toast per le operazioni sulla libreria.
+- libreria migrata automaticamente da `localStorage` a IndexedDB;
+- fallback a `localStorage` sui browser senza IndexedDB;
+- valutazione personale da 1 a 5 stelle;
+- note personali con salvataggio automatico;
+- filtri per giochi da giocare, in corso, completati e abbandonati;
+- ricerca estesa alle note e allo stato personale;
+- pannello dettagli rifinito per desktop e mobile.

@@ -92,6 +92,10 @@
               <option value="upcoming">In arrivo</option>
               <option value="saved">In libreria</option>
               <option value="favorite">Preferiti</option>
+              <option value="backlog">Da giocare</option>
+              <option value="playing">In gioco</option>
+              <option value="completed">Completati</option>
+              <option value="abandoned">Abbandonati</option>
             </select>
             <select id="sort-select" aria-label="Ordina giochi">
               <option value="relevance">Più rilevanti</option>
@@ -129,15 +133,32 @@
         <button id="dialog-library" class="button button-secondary" type="button"></button>
         <button id="dialog-favorite" class="button button-secondary" type="button"></button>
       </div>
-      <label class="status-field">Stato personale
-        <select id="dialog-status">
-          <option value="saved">In libreria</option>
-          <option value="playing">In gioco</option>
-          <option value="completed">Completato</option>
-          <option value="backlog">Da giocare</option>
-          <option value="abandoned">Abbandonato</option>
-        </select>
-      </label>
+      <div class="personal-panel">
+        <label class="status-field">Stato personale
+          <select id="dialog-status">
+            <option value="saved">In libreria</option>
+            <option value="backlog">Da giocare</option>
+            <option value="playing">In gioco</option>
+            <option value="completed">Completato</option>
+            <option value="abandoned">Abbandonato</option>
+          </select>
+        </label>
+
+        <label class="rating-field">Valutazione personale
+          <div class="rating-control" id="dialog-rating" role="radiogroup" aria-label="Valutazione da uno a cinque">
+            <button type="button" data-rating="1" aria-label="1 stella">★</button>
+            <button type="button" data-rating="2" aria-label="2 stelle">★</button>
+            <button type="button" data-rating="3" aria-label="3 stelle">★</button>
+            <button type="button" data-rating="4" aria-label="4 stelle">★</button>
+            <button type="button" data-rating="5" aria-label="5 stelle">★</button>
+          </div>
+        </label>
+
+        <label class="notes-field">Note personali
+          <textarea id="dialog-notes" rows="4" maxlength="1000" placeholder="Scrivi impressioni, obiettivi o promemoria…"></textarea>
+        </label>
+        <p id="dialog-save-status" class="save-status" aria-live="polite"></p>
+      </div>
     </div>
   </dialog>
 
@@ -170,6 +191,7 @@
   </template>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="./storage.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

@@ -1,13 +1,12 @@
 const DATA_URL = "./games.json";
 const HISTORY_URL = "./history.json";
-const LIBRARY_KEY = "the-free-vault-library-v2";
 const PLACEHOLDER = "./placeholders/game-placeholder.svg";
 
 const state = {
   current: [],
   upcoming: [],
   history: [],
-  library: loadLibrary(),
+  library: {},
   view: "home",
   search: "",
   statusFilter: "all",
@@ -49,6 +48,9 @@ const ui = {
   dialogLibrary: $("#dialog-library"),
   dialogFavorite: $("#dialog-favorite"),
   dialogStatus: $("#dialog-status"),
+  dialogRating: $("#dialog-rating"),
+  dialogNotes: $("#dialog-notes"),
+  dialogSaveStatus: $("#dialog-save-status"),
   exportLibrary: $("#export-library"),
   importLibrary: $("#import-library"),
   importLibraryFile: $("#import-library-file"),
@@ -58,17 +60,15 @@ const ui = {
 let installPrompt = null;
 let countdownTimer = null;
 
-function loadLibrary() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LIBRARY_KEY) || "{}");
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
+async function loadLibrary() {
+  state.library = await VaultDB.loadLibrary();
 }
 
 function saveLibrary() {
-  localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+  VaultDB.saveLibrary(state.library).catch((error) => {
+    console.error("Salvataggio libreria fallito", error);
+    showToast("Impossibile salvare la libreria.");
+  });
   updateStats();
 }
 
@@ -132,6 +132,8 @@ function setLibraryEntry(game, patch) {
     addedAt: new Date().toISOString(),
     status: "saved",
     favorite: false,
+    rating: 0,
+    notes: "",
     game: snapshotGame(game),
   };
   state.library[key] = { ...current, ...patch, game: snapshotGame(game) };
@@ -226,12 +228,26 @@ function allKnownGames() {
 function libraryGames() {
   return Object.values(state.library)
     .filter((entry) => entry?.game)
-    .map((entry) => ({ ...entry.game, libraryStatus: entry.status, favorite: entry.favorite }));
+    .map((entry) => ({
+      ...entry.game,
+      libraryStatus: entry.status,
+      favorite: entry.favorite,
+      personalRating: entry.rating || 0,
+      personalNotes: entry.notes || "",
+    }));
 }
 
 function gameMatchesSearch(game) {
   if (!state.search) return true;
-  const haystack = [game.title, game.publisher, game.description, game.offer_type]
+  const entry = getLibraryEntry(game);
+  const haystack = [
+    game.title,
+    game.publisher,
+    game.description,
+    game.offer_type,
+    entry?.notes,
+    entry?.status,
+  ]
     .filter(Boolean)
     .join(" ")
     .toLocaleLowerCase("it");
@@ -246,6 +262,9 @@ function matchesStatusFilter(game) {
   }
   if (state.statusFilter === "saved") return Boolean(entry);
   if (state.statusFilter === "favorite") return Boolean(entry?.favorite);
+  if (["backlog", "playing", "completed", "abandoned"].includes(state.statusFilter)) {
+    return entry?.status === state.statusFilter;
+  }
   return true;
 }
 
@@ -447,6 +466,32 @@ function populateDialog(game) {
   ui.dialogFavorite.textContent = entry?.favorite ? "♥ Preferito" : "♡ Preferito";
   ui.dialogStatus.disabled = !entry;
   ui.dialogStatus.value = entry?.status || "saved";
+  ui.dialogNotes.disabled = !entry;
+  ui.dialogNotes.value = entry?.notes || "";
+  ui.dialogSaveStatus.textContent = entry
+    ? "Note e valutazione vengono salvate automaticamente."
+    : "Aggiungi il gioco alla libreria per usare note e valutazione.";
+  updateRatingControl(entry?.rating || 0, Boolean(entry));
+}
+
+function updateRatingControl(rating, enabled) {
+  ui.dialogRating.querySelectorAll("[data-rating]").forEach((button) => {
+    const value = Number(button.dataset.rating);
+    button.disabled = !enabled;
+    button.classList.toggle("is-active", value <= rating);
+    button.setAttribute("aria-checked", String(value === rating));
+  });
+}
+
+function updatePersonalField(patch, confirmation) {
+  if (!state.selectedGame || !getLibraryEntry(state.selectedGame)) return;
+  setLibraryEntry(state.selectedGame, patch);
+  ui.dialogSaveStatus.textContent = confirmation;
+  window.clearTimeout(updatePersonalField.timer);
+  updatePersonalField.timer = window.setTimeout(() => {
+    ui.dialogSaveStatus.textContent = "Note e valutazione vengono salvate automaticamente.";
+  }, 1800);
+  render();
 }
 
 async function loadJson(url, fallback) {
@@ -502,10 +547,23 @@ ui.dialog.addEventListener("click", (event) => {
 ui.dialogLibrary.addEventListener("click", () => state.selectedGame && toggleLibrary(state.selectedGame));
 ui.dialogFavorite.addEventListener("click", () => state.selectedGame && toggleFavorite(state.selectedGame));
 ui.dialogStatus.addEventListener("change", () => {
-  if (state.selectedGame && getLibraryEntry(state.selectedGame)) {
-    setLibraryEntry(state.selectedGame, { status: ui.dialogStatus.value });
-    render();
-  }
+  updatePersonalField({ status: ui.dialogStatus.value }, "Stato aggiornato.");
+});
+ui.dialogRating.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-rating]");
+  if (!button) return;
+  const current = getLibraryEntry(state.selectedGame)?.rating || 0;
+  const selected = Number(button.dataset.rating);
+  const rating = current === selected ? 0 : selected;
+  updatePersonalField({ rating }, rating ? `Valutazione: ${rating}/5.` : "Valutazione rimossa.");
+  updateRatingControl(rating, true);
+});
+ui.dialogNotes.addEventListener("input", () => {
+  window.clearTimeout(ui.dialogNotes.saveTimer);
+  ui.dialogSaveStatus.textContent = "Salvataggio…";
+  ui.dialogNotes.saveTimer = window.setTimeout(() => {
+    updatePersonalField({ notes: ui.dialogNotes.value.trim() }, "Note salvate.");
+  }, 450);
 });
 ui.exportLibrary.addEventListener("click", exportLibrary);
 ui.importLibrary.addEventListener("click", () => ui.importLibraryFile.click());
@@ -537,4 +595,10 @@ countdownTimer = setInterval(() => {
   if (state.current.length || state.upcoming.length) render();
 }, 60000);
 
-loadData();
+async function initializeApp() {
+  await loadLibrary();
+  updateStats();
+  await loadData();
+}
+
+initializeApp();
