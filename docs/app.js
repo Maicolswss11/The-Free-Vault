@@ -347,9 +347,49 @@ function renderCard(game) {
   publisher.textContent = game.developer || game.publisher || "Epic Games Store";
   title.textContent = game.title;
   description.textContent = game.description || "Descrizione non disponibile.";
-  originalPrice.textContent = priceText(game);
-  freeLabel.textContent = game.source_kind === "promotion" ? "GRATIS" :
-    (game.discount_price === 0 ? "FREE TO PLAY" : "EPIC");
+  if (game.source_kind === "promotion") {
+    originalPrice.hidden = !game.fmt_original_price;
+    originalPrice.textContent = game.fmt_original_price || "";
+    freeLabel.textContent = "GRATIS";
+  } else {
+    const originalValue = Number(game.original_price);
+    const discountedValue = Number(game.discount_price);
+  
+    const hasPrice = Number.isFinite(originalValue);
+    const hasDiscount =
+      Number.isFinite(originalValue) &&
+      Number.isFinite(discountedValue) &&
+      discountedValue >= 0 &&
+      discountedValue < originalValue;
+  
+    const isFreeToPlay =
+      Number.isFinite(discountedValue) &&
+      discountedValue === 0 &&
+      originalValue === 0;
+  
+    if (hasDiscount) {
+      originalPrice.hidden = false;
+      originalPrice.textContent =
+        game.fmt_original_price || "";
+  
+      freeLabel.textContent =
+        game.fmt_discount_price || "In offerta";
+    } else {
+      originalPrice.hidden = true;
+      originalPrice.textContent = "";
+  
+      if (isFreeToPlay) {
+        freeLabel.textContent = "FREE TO PLAY";
+      } else if (hasPrice) {
+        freeLabel.textContent =
+          game.fmt_discount_price ||
+          game.fmt_original_price ||
+          "Vedi prezzo";
+      } else {
+        freeLabel.textContent = "Vedi su Epic";
+      }
+    }
+  }
   countdown.textContent = countdownText(game);
   progress.hidden = game.source_kind === "catalog";
   storeLink.href = game.store_url;
@@ -645,11 +685,6 @@ ui.search.addEventListener("input", () => { state.search = ui.search.value.trim(
 ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; render(); });
 ui.sort.addEventListener("change", () => { state.sort = ui.sort.value; render(); });
 ui.refresh.addEventListener("click", loadData);
-const menuButton = $("#menu-button");
-
-if (menuButton) {
-  menuButton.hidden = true;
-}
 $("#dialog-close").addEventListener("click", () => ui.dialog.close());
 ui.dialogLibrary.addEventListener("click", () => {
   const game = state.selectedGame;
