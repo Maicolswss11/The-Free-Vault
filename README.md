@@ -121,3 +121,62 @@ La web app supporta account email/password tramite Supabase Auth e sincronizza:
 La chiave publishable/anon può stare nel frontend: la protezione dei dati è
 affidata alle policy Row Level Security incluse nello schema. Non inserire mai
 la `service_role` key.
+
+## v3.1 — Routing & Profiles
+
+La web app usa ora route hash compatibili con GitHub Pages:
+
+```text
+#/home
+#/free
+#/upcoming
+#/history
+#/catalog
+#/game/<id>
+#/library
+#/lists
+#/list/<id>
+#/profile
+#/login
+#/register
+```
+
+Le schede gioco, il login, la registrazione e il profilo sono pagine vere della
+PWA, non più finestre modali. Il tasto indietro del browser e i link condivisibili
+funzionano senza richiedere configurazione server-side.
+
+### Redirect di conferma Supabase
+
+In **Authentication → URL Configuration** imposta:
+
+```text
+Site URL:
+https://maicolswss11.github.io/The-Free-Vault/
+```
+
+Aggiungi ai Redirect URLs sia l'URL esatto sia il wildcard:
+
+```text
+https://maicolswss11.github.io/The-Free-Vault/
+https://maicolswss11.github.io/The-Free-Vault/?auth=confirmed
+https://maicolswss11.github.io/The-Free-Vault/**
+```
+
+La registrazione passa esplicitamente a Supabase un `emailRedirectTo` basato
+sull'URL di produzione corrente. Al rientro dalla conferma, l'app pulisce i
+parametri di autenticazione e apre `#/profile`.
+
+### Accesso e registrazione
+
+- Accesso: email e password.
+- Registrazione: username, email, password e conferma password.
+- Nome visualizzato e bio si compilano dalla pagina Profilo.
+
+### Dati personali aggiuntivi
+
+La scheda gioco permette di salvare nel JSON sincronizzato di `user_library`:
+
+- stato personale;
+- preferito;
+- voto da 1 a 5;
+- note personali.

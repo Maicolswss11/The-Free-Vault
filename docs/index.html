@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07090d">
-  <meta name="description" content="The Free Vault: tracker dei giochi gratis, catalogo Epic e liste personali.">
+  <meta name="description" content="The Free Vault: tracker dei giochi gratis, catalogo Epic, profili e liste personali.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
@@ -13,24 +13,29 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Navigazione principale">
-      <a class="brand" href="#home" aria-label="The Free Vault">
+      <a class="brand" href="#/home" aria-label="The Free Vault">
         <span class="brand-mark">V</span>
         <span><strong>The Free Vault</strong><small>Tracker & game journal</small></span>
       </a>
 
       <p class="nav-section-label">FREE TRACKER</p>
       <nav class="main-nav">
-        <button class="nav-item is-active" data-view="home" type="button"><span>⌂</span> Home</button>
-        <button class="nav-item" data-view="current" type="button"><span>◉</span> Gratis ora</button>
-        <button class="nav-item" data-view="upcoming" type="button"><span>◷</span> In arrivo</button>
-        <button class="nav-item" data-view="history" type="button"><span>▤</span> Cronologia regali</button>
+        <a class="nav-item is-active" data-route="home" href="#/home"><span>⌂</span> Home</a>
+        <a class="nav-item" data-route="current" href="#/free"><span>◉</span> Gratis ora</a>
+        <a class="nav-item" data-route="upcoming" href="#/upcoming"><span>◷</span> In arrivo</a>
+        <a class="nav-item" data-route="history" href="#/history"><span>▤</span> Cronologia regali</a>
       </nav>
 
       <p class="nav-section-label">DISCOVER</p>
       <nav class="main-nav">
-        <button class="nav-item" data-view="catalog" type="button"><span>▦</span> Catalogo Epic</button>
-        <button class="nav-item" data-view="lists" type="button"><span>☷</span> Le mie liste</button>
-        <button class="nav-item" data-view="library" type="button"><span>◆</span> La mia libreria</button>
+        <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo Epic</a>
+        <a class="nav-item" data-route="lists" href="#/lists"><span>☷</span> Le mie liste</a>
+        <a class="nav-item" data-route="library" href="#/library"><span>◆</span> La mia libreria</a>
+      </nav>
+
+      <p class="nav-section-label">ACCOUNT</p>
+      <nav class="main-nav">
+        <a class="nav-item" data-route="profile" href="#/profile"><span>●</span> Profilo</a>
       </nav>
 
       <div class="sidebar-foot">
@@ -38,7 +43,7 @@
           <span class="status-dot"></span>
           <div><strong>Tracker attivo</strong><small id="sidebar-update">In attesa dei dati</small></div>
         </div>
-        <p>I dati personali restano su questo dispositivo.</p>
+        <p id="sidebar-data-note">I dati personali restano su questo dispositivo.</p>
         <div class="data-tools">
           <button id="export-library" class="data-tool-button" type="button">Esporta dati</button>
           <button id="import-library" class="data-tool-button" type="button">Importa dati</button>
@@ -51,12 +56,7 @@
       <header class="topbar">
         <div class="search-box">
           <span aria-hidden="true">⌕</span>
-          <input
-            id="search-input"
-            type="search"
-            placeholder="Cerca giochi..."
-            autocomplete="off"
-          >
+          <input id="search-input" type="search" placeholder="Cerca giochi..." autocomplete="off">
           <kbd>/</kbd>
         </div>
         <div class="topbar-actions">
@@ -70,170 +70,280 @@
       </header>
 
       <main id="main-content">
-        <section id="hero" class="hero" aria-labelledby="hero-title" hidden>
-          <img id="hero-image" class="hero-image" alt="">
-          <div class="hero-scrim"></div>
-          <div class="hero-content">
-            <span class="hero-kicker">IN EVIDENZA · GRATIS ORA</span>
-            <h1 id="hero-title"></h1>
-            <p id="hero-description"></p>
-            <div class="hero-meta">
-              <span id="hero-price"></span>
-              <span id="hero-countdown"></span>
+        <section id="dashboard-page" class="route-page">
+          <section id="hero" class="hero" aria-labelledby="hero-title" hidden>
+            <img id="hero-image" class="hero-image" alt="">
+            <div class="hero-scrim"></div>
+            <div class="hero-content">
+              <span class="hero-kicker">IN EVIDENZA · GRATIS ORA</span>
+              <h1 id="hero-title"></h1>
+              <p id="hero-description"></p>
+              <div class="hero-meta">
+                <span id="hero-price"></span>
+                <span id="hero-countdown"></span>
+              </div>
+              <div class="hero-actions">
+                <a id="hero-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Riscatta su Epic</a>
+                <button id="hero-library" class="button button-glass" type="button">Aggiungi alla libreria</button>
+                <button id="hero-details" class="button button-glass" type="button">Scheda completa</button>
+              </div>
             </div>
-            <div class="hero-actions">
-              <a id="hero-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Riscatta su Epic</a>
-              <button id="hero-library" class="button button-glass" type="button">Aggiungi alla libreria</button>
+          </section>
+
+          <section class="stats-grid" aria-label="Riepilogo">
+            <article class="stat-card">
+              <span class="stat-icon blue">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="#4aa8ff" stroke-width="2.4"></circle>
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="#4aa8ff" stroke-width="2.4"></circle>
+                </svg>
+              </span>
+              <div><strong id="stat-current">0</strong><span>Gratis adesso</span></div>
+            </article>
+            <article class="stat-card">
+              <span class="stat-icon purple">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="4" y="4" width="6" height="6" rx="1" fill="#a78bfa"></rect>
+                  <rect x="14" y="4" width="6" height="6" rx="1" fill="#a78bfa"></rect>
+                  <rect x="4" y="14" width="6" height="6" rx="1" fill="#a78bfa"></rect>
+                  <rect x="14" y="14" width="6" height="6" rx="1" fill="#a78bfa"></rect>
+                </svg>
+              </span>
+              <div><strong id="stat-catalog">0</strong><span>Catalogo Epic</span></div>
+            </article>
+            <article class="stat-card">
+              <span class="stat-icon green">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 10.5 12 4l9 6.5-9 6.5-9-6.5Z" fill="#57d68d" stroke="#57d68d" stroke-width="1.8"></path>
+                  <path d="m6 14 6 4 6-4" fill="none" stroke="#57d68d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+              <div><strong id="stat-library">0</strong><span>Nella libreria</span></div>
+            </article>
+            <article class="stat-card">
+              <span class="stat-icon amber">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 6h12M8 12h12M8 18h12" fill="none" stroke="#ffbd59" stroke-width="2.2" stroke-linecap="round"></path>
+                  <circle cx="4" cy="6" r="1.5" fill="#ffbd59"></circle>
+                  <circle cx="4" cy="12" r="1.5" fill="#ffbd59"></circle>
+                  <circle cx="4" cy="18" r="1.5" fill="#ffbd59"></circle>
+                </svg>
+              </span>
+              <div><strong id="stat-lists">0</strong><span>Liste personali</span></div>
+            </article>
+          </section>
+
+          <section id="lists-dashboard" class="lists-dashboard" hidden>
+            <div class="lists-header">
+              <div><p class="eyebrow">COLLEZIONI PERSONALI</p><h2>Le mie liste</h2></div>
+              <button id="create-list-button" class="button button-primary" type="button">Nuova lista</button>
+            </div>
+            <div id="lists-grid" class="lists-grid"></div>
+          </section>
+
+          <div id="catalog-meta" class="catalog-meta" hidden></div>
+
+          <div class="content-toolbar" id="content-toolbar">
+            <div>
+              <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
+              <h2 id="view-title">Scopri i giochi gratuiti</h2>
+            </div>
+            <div class="toolbar-controls">
+              <select id="status-filter" aria-label="Filtra per stato">
+                <option value="all">Tutti</option>
+                <option value="current">Gratis ora</option>
+                <option value="upcoming">In arrivo</option>
+                <option value="saved">In libreria</option>
+                <option value="favorite">Preferiti</option>
+              </select>
+              <select id="sort-select" aria-label="Ordina giochi">
+                <option value="relevance">Più rilevanti</option>
+                <option value="title">Titolo A–Z</option>
+                <option value="date">Data più recente</option>
+                <option value="value">Prezzo più alto</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="status-message" class="notice" hidden></div>
+          <section id="games-grid" class="games-grid" aria-live="polite"></section>
+        </section>
+
+        <section id="game-page" class="route-page detail-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <article class="game-detail-shell">
+            <div class="game-detail-visual">
+              <img id="game-page-image" alt="">
+              <div class="game-detail-visual-overlay"></div>
+            </div>
+            <div class="game-detail-content">
+              <span id="game-page-badge" class="pill"></span>
+              <h1 id="game-page-title"></h1>
+              <p id="game-page-byline" class="game-detail-byline"></p>
+              <p id="game-page-description" class="game-detail-description"></p>
+              <div id="game-page-meta" class="game-detail-meta"></div>
+              <div class="game-detail-actions">
+                <a id="game-page-store-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
+                <button id="game-page-library" class="button button-secondary" type="button"></button>
+                <button id="game-page-favorite" class="button button-secondary" type="button"></button>
+                <button id="game-page-list" class="button button-secondary" type="button">Aggiungi a lista</button>
+              </div>
+            </div>
+          </article>
+
+          <div class="game-detail-grid">
+            <section class="detail-panel">
+              <p class="eyebrow">IL TUO DIARIO</p>
+              <h2>Stato personale</h2>
+              <div class="personal-fields">
+                <label>Stato
+                  <select id="game-page-status">
+                    <option value="saved">In libreria</option>
+                    <option value="backlog">Da giocare</option>
+                    <option value="playing">In gioco</option>
+                    <option value="completed">Completato</option>
+                    <option value="abandoned">Abbandonato</option>
+                  </select>
+                </label>
+                <fieldset class="rating-field">
+                  <legend>Valutazione personale</legend>
+                  <div id="game-page-rating" class="rating-control" aria-label="Valutazione da uno a cinque"></div>
+                </fieldset>
+                <label>Note personali
+                  <textarea id="game-page-notes" rows="6" maxlength="2000" placeholder="Impressioni, progresso, cose da ricordare..."></textarea>
+                </label>
+                <button id="game-page-save-notes" class="button button-primary" type="button">Salva nel diario</button>
+              </div>
+            </section>
+
+            <section class="detail-panel">
+              <p class="eyebrow">THE FREE VAULT</p>
+              <h2>Promozioni e disponibilità</h2>
+              <div id="game-page-promotions" class="promotion-timeline"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="auth-page" class="route-page auth-page" hidden>
+          <div class="auth-page-card">
+            <a class="brand auth-brand" href="#/home"><span class="brand-mark">V</span><span><strong>The Free Vault</strong><small>Il tuo profilo di gioco</small></span></a>
+            <p id="auth-page-eyebrow" class="eyebrow">ACCOUNT</p>
+            <h1 id="auth-page-title">Accedi</h1>
+            <p id="auth-page-subtitle" class="auth-page-subtitle"></p>
+            <p id="auth-config-warning" class="auth-warning" hidden>Supabase non è ancora configurato. Compila <code>docs/config.js</code>.</p>
+
+            <form id="login-form" class="auth-form page-form">
+              <label>Email
+                <input id="login-email" type="email" autocomplete="email" required>
+              </label>
+              <label>Password
+                <input id="login-password" type="password" autocomplete="current-password" minlength="8" required>
+              </label>
+              <p id="login-error" class="auth-error" hidden></p>
+              <button id="login-submit" class="button button-primary" type="submit">Accedi</button>
+              <p class="auth-switch">Non hai un account? <a href="#/register">Registrati</a></p>
+            </form>
+
+            <form id="register-form" class="auth-form page-form" hidden>
+              <label>Username
+                <input id="register-username" autocomplete="username" minlength="3" maxlength="30" required>
+              </label>
+              <label>Email
+                <input id="register-email" type="email" autocomplete="email" required>
+              </label>
+              <label>Password
+                <input id="register-password" type="password" autocomplete="new-password" minlength="8" required>
+              </label>
+              <label>Conferma password
+                <input id="register-password-confirm" type="password" autocomplete="new-password" minlength="8" required>
+              </label>
+              <p id="register-error" class="auth-error" hidden></p>
+              <button id="register-submit" class="button button-primary" type="submit">Crea account</button>
+              <p class="auth-switch">Hai già un account? <a href="#/login">Accedi</a></p>
+            </form>
+
+            <div id="auth-confirmation-message" class="auth-confirmation" hidden>
+              <strong>Email confermata.</strong>
+              <span>La sessione è stata attivata. Puoi aprire il tuo profilo.</span>
+              <a class="button button-primary" href="#/profile">Vai al profilo</a>
             </div>
           </div>
         </section>
 
-        <section class="stats-grid" aria-label="Riepilogo">
-          <article class="stat-card">
-            <span class="stat-icon blue">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="8"></circle>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-            </span>
-            <div>
-              <strong id="stat-current">0</strong>
-              <span>Gratis adesso</span>
+        <section id="profile-page" class="route-page profile-page" hidden>
+          <div id="profile-signed-out" class="auth-required" hidden>
+            <span class="account-avatar account-avatar-large">?</span>
+            <p class="eyebrow">PROFILO</p>
+            <h1>Accedi al tuo Vault</h1>
+            <p>Sincronizza libreria, liste, preferiti, voti e note su tutti i dispositivi.</p>
+            <div class="auth-required-actions">
+              <a class="button button-primary" href="#/login">Accedi</a>
+              <a class="button button-secondary" href="#/register">Registrati</a>
             </div>
-          </article>
-        
-          <article class="stat-card">
-            <span class="stat-icon purple">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4" y="4" width="6" height="6" rx="1"></rect>
-                <rect x="14" y="4" width="6" height="6" rx="1"></rect>
-                <rect x="4" y="14" width="6" height="6" rx="1"></rect>
-                <rect x="14" y="14" width="6" height="6" rx="1"></rect>
-              </svg>
-            </span>
-            <div>
-              <strong id="stat-catalog">0</strong>
-              <span>Catalogo Epic</span>
+          </div>
+
+          <div id="profile-signed-in" hidden>
+            <section class="profile-hero">
+              <span id="profile-page-avatar" class="account-avatar account-avatar-xl">?</span>
+              <div>
+                <p class="eyebrow">IL TUO PROFILO</p>
+                <h1 id="profile-page-name">Profilo</h1>
+                <p id="profile-page-handle" class="profile-handle"></p>
+                <p id="profile-page-bio" class="profile-bio"></p>
+                <p id="profile-page-email" class="muted"></p>
+              </div>
+              <div class="profile-hero-actions">
+                <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
+                <button id="logout-button" class="button button-secondary" type="button">Esci</button>
+              </div>
+            </section>
+
+            <section class="profile-stats" aria-label="Statistiche profilo">
+              <article><strong id="profile-stat-library">0</strong><span>Giochi in libreria</span></article>
+              <article><strong id="profile-stat-completed">0</strong><span>Completati</span></article>
+              <article><strong id="profile-stat-favorites">0</strong><span>Preferiti</span></article>
+              <article><strong id="profile-stat-lists">0</strong><span>Liste</span></article>
+            </section>
+
+            <div class="profile-layout">
+              <section class="detail-panel">
+                <p class="eyebrow">IMPOSTAZIONI</p>
+                <h2>Modifica profilo</h2>
+                <form id="profile-form" class="auth-form page-form">
+                  <label>Username
+                    <input id="profile-username" minlength="3" maxlength="30" required>
+                  </label>
+                  <label>Nome visualizzato
+                    <input id="profile-display-name" maxlength="60" required>
+                  </label>
+                  <label>Bio
+                    <textarea id="profile-bio" rows="5" maxlength="500"></textarea>
+                  </label>
+                  <p id="profile-error" class="auth-error" hidden></p>
+                  <button class="button button-primary" type="submit">Salva profilo</button>
+                </form>
+              </section>
+
+              <section class="detail-panel">
+                <p class="eyebrow">ATTIVITÀ</p>
+                <h2>Ultimi giochi aggiunti</h2>
+                <div id="profile-recent-games" class="profile-recent-games"></div>
+                <a class="button button-secondary" href="#/library">Apri la libreria</a>
+              </section>
             </div>
-          </article>
-        
-          <article class="stat-card">
-            <span class="stat-icon green">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3 10.5 12 4l9 6.5-9 6.5-9-6.5Z"></path>
-                <path d="m6 14 6 4 6-4"></path>
-              </svg>
-            </span>
-            <div>
-              <strong id="stat-library">0</strong>
-              <span>Nella libreria</span>
-            </div>
-          </article>
-        
-          <article class="stat-card">
-            <span class="stat-icon amber">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 6h12"></path>
-                <path d="M8 12h12"></path>
-                <path d="M8 18h12"></path>
-                <circle cx="4" cy="6" r="1"></circle>
-                <circle cx="4" cy="12" r="1"></circle>
-                <circle cx="4" cy="18" r="1"></circle>
-              </svg>
-            </span>
-            <div>
-              <strong id="stat-lists">0</strong>
-              <span>Liste personali</span>
-            </div>
-          </article>
+          </div>
         </section>
-
-        <section id="lists-dashboard" class="lists-dashboard" hidden>
-          <div class="lists-header">
-            <div><p class="eyebrow">COLLEZIONI PERSONALI</p><h2>Le mie liste</h2></div>
-            <button id="create-list-button" class="button button-primary" type="button">Nuova lista</button>
-          </div>
-          <div id="lists-grid" class="lists-grid"></div>
-        </section>
-
-        <div id="catalog-meta" class="catalog-meta" hidden></div>
-
-        <div class="content-toolbar" id="content-toolbar">
-          <div>
-            <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
-            <h2 id="view-title">Scopri i giochi gratuiti</h2>
-          </div>
-          <div class="toolbar-controls">
-            <select id="status-filter" aria-label="Filtra per stato">
-              <option value="all">Tutti</option>
-              <option value="current">Gratis ora</option>
-              <option value="upcoming">In arrivo</option>
-              <option value="saved">In libreria</option>
-              <option value="favorite">Preferiti</option>
-            </select>
-            <select id="sort-select" aria-label="Ordina giochi">
-              <option value="relevance">Più rilevanti</option>
-              <option value="title">Titolo A–Z</option>
-              <option value="date">Data più recente</option>
-              <option value="value">Prezzo più alto</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="status-message" class="notice" hidden></div>
-        <section id="games-grid" class="games-grid" aria-live="polite"></section>
       </main>
     </div>
   </div>
 
   <nav class="mobile-nav" aria-label="Navigazione mobile">
-    <button class="mobile-nav-item is-active" data-view="home">
-      <span>⌂</span>
-      Home
-    </button>
-  
-    <button class="mobile-nav-item" data-view="current">
-      <span>◉</span>
-      Gratis
-    </button>
-  
-    <button class="mobile-nav-item" data-view="catalog">
-      <span>▦</span>
-      Catalogo
-    </button>
-  
-    <button class="mobile-nav-item" data-view="library">
-      <span>◆</span>
-      Libreria
-    </button>
+    <a class="mobile-nav-item is-active" data-route="home" href="#/home"><span>⌂</span>Home</a>
+    <a class="mobile-nav-item" data-route="current" href="#/free"><span>◉</span>Gratis</a>
+    <a class="mobile-nav-item" data-route="catalog" href="#/catalog"><span>▦</span>Catalogo</a>
+    <a class="mobile-nav-item" data-route="lists" href="#/lists"><span>☷</span>Liste</a>
+    <a class="mobile-nav-item" data-route="library" href="#/library"><span>◆</span>Libreria</a>
   </nav>
-
-  <dialog id="game-dialog" class="game-dialog">
-    <button id="dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
-    <img id="dialog-image" alt="">
-    <div class="dialog-content">
-      <span id="dialog-badge" class="pill"></span>
-      <h2 id="dialog-title"></h2>
-      <p id="dialog-publisher" class="muted"></p>
-      <p id="dialog-description"></p>
-      <div id="dialog-meta" class="dialog-meta"></div>
-      <div class="dialog-actions">
-        <a id="dialog-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
-        <button id="dialog-library" class="button button-secondary" type="button"></button>
-        <button id="dialog-favorite" class="button button-secondary" type="button"></button>
-        <button id="dialog-add-list" class="button button-secondary" type="button">Aggiungi a lista</button>
-      </div>
-      <label class="status-field">Stato personale
-        <select id="dialog-status">
-          <option value="saved">In libreria</option>
-          <option value="backlog">Da giocare</option>
-          <option value="playing">In gioco</option>
-          <option value="completed">Completato</option>
-          <option value="abandoned">Abbandonato</option>
-        </select>
-      </label>
-    </div>
-  </dialog>
 
   <dialog id="list-dialog" class="list-dialog">
     <button id="list-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
@@ -249,7 +359,7 @@
       <label class="status-field">Visibilità
         <select id="list-visibility-input">
           <option value="private">Privata</option>
-          <option value="public">Pubblica (pronta per il futuro social)</option>
+          <option value="public">Pubblica</option>
         </select>
       </label>
       <button id="save-list-button" class="button button-primary" type="button">Salva lista</button>
@@ -266,63 +376,6 @@
     </div>
   </dialog>
 
-
-<dialog id="auth-dialog" class="auth-dialog">
-  <button id="auth-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
-  <div class="dialog-content">
-    <p class="eyebrow">THE FREE VAULT ACCOUNT</p>
-    <h2 id="auth-dialog-title">Accedi</h2>
-    <p id="auth-config-warning" class="auth-warning" hidden>
-      Supabase non è ancora configurato. Compila <code>docs/config.js</code>.
-    </p>
-    <form id="auth-form" class="auth-form">
-      <label id="auth-username-field" hidden>Username
-        <input id="auth-username" autocomplete="username" minlength="3" maxlength="30">
-      </label>
-      <label id="auth-display-name-field" hidden>Nome visualizzato
-        <input id="auth-display-name" autocomplete="name" maxlength="60">
-      </label>
-      <label>Email
-        <input id="auth-email" type="email" autocomplete="email" required>
-      </label>
-      <label>Password
-        <input id="auth-password" type="password" autocomplete="current-password" minlength="8" required>
-      </label>
-      <p id="auth-error" class="auth-error" hidden></p>
-      <button id="auth-submit" class="button button-primary" type="submit">Accedi</button>
-    </form>
-    <button id="auth-mode-toggle" class="auth-mode-toggle" type="button">
-      Non hai un account? Registrati
-    </button>
-  </div>
-</dialog>
-
-<dialog id="profile-dialog" class="auth-dialog">
-  <button id="profile-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
-  <div class="dialog-content">
-    <p class="eyebrow">PROFILO</p>
-    <h2 id="profile-heading">Il tuo account</h2>
-    <p id="profile-email" class="muted"></p>
-    <form id="profile-form" class="auth-form">
-      <label>Username
-        <input id="profile-username" minlength="3" maxlength="30" required>
-      </label>
-      <label>Nome visualizzato
-        <input id="profile-display-name" maxlength="60" required>
-      </label>
-      <label>Bio
-        <textarea id="profile-bio" rows="4" maxlength="500"></textarea>
-      </label>
-      <p id="profile-error" class="auth-error" hidden></p>
-      <button class="button button-primary" type="submit">Salva profilo</button>
-    </form>
-    <div class="profile-actions">
-      <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
-      <button id="logout-button" class="button button-secondary" type="button">Esci</button>
-    </div>
-  </div>
-</dialog>
-
   <template id="game-card-template">
     <article class="game-card">
       <button class="card-cover" type="button">
@@ -330,7 +383,7 @@
         <span class="cover-gradient"></span>
         <span class="game-badge pill"></span>
         <span class="favorite-indicator" aria-hidden="true">♥</span>
-        <span class="card-open">Dettagli</span>
+        <span class="card-open">Apri scheda</span>
       </button>
       <div class="game-content">
         <div class="title-row">
