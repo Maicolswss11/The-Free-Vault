@@ -610,23 +610,48 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
     flex-shrink: 0;
   }
 }
-/* Dimensione reale delle icone statistiche */
+/* Colori corretti delle icone statistiche */
 .stat-icon svg {
   display: block;
   width: 34px !important;
   height: 34px !important;
   margin: 0;
-  transform: scale(1.25);
-  transform-origin: center;
   overflow: visible;
+  color: inherit;
 }
 
-.stat-icon svg * {
+/* Gratis adesso: cerchi solo contorno */
+.stat-icon.blue svg circle {
+  fill: none;
+  stroke: currentColor;
   stroke-width: 2.4;
 }
 
-.stat-icon.purple svg {
-  transform: scale(1.12);
+/* Catalogo: quadratini pieni */
+.stat-icon.purple svg rect {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Libreria: rombo pieno e linea colorata */
+.stat-icon.green svg path:first-child {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+.stat-icon.green svg path:last-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+}
+
+/* Liste: righe e punti colorati */
+.stat-icon.amber svg path,
+.stat-icon.amber svg circle {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 2.2;
 }
 
 @media (max-width: 640px) {
