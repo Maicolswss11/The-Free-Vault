@@ -555,3 +555,25 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
     flex-shrink: 0;
   }
 }
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stat-icon.purple svg rect {
+  fill: currentColor;
+  stroke: none;
+}
+
+@media (max-width: 640px) {
+  .stat-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+}
