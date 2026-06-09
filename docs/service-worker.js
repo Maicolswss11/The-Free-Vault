@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-free-vault-v2.5-fix1";
+const CACHE_NAME = "the-free-vault-v2.5-fix1.1";
 const APP_SHELL = [
   "./",
   "./index.html",
