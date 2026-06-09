@@ -77,11 +77,37 @@ const ui = {
   saveList: $("#save-list-button"),
   listPicker: $("#list-picker-dialog"),
   listPickerItems: $("#list-picker-items"),
+  accountButton: $("#account-button"),
+  accountAvatar: $("#account-avatar"),
+  accountLabel: $("#account-label"),
+  authDialog: $("#auth-dialog"),
+  authForm: $("#auth-form"),
+  authTitle: $("#auth-dialog-title"),
+  authUsernameField: $("#auth-username-field"),
+  authDisplayNameField: $("#auth-display-name-field"),
+  authUsername: $("#auth-username"),
+  authDisplayName: $("#auth-display-name"),
+  authEmail: $("#auth-email"),
+  authPassword: $("#auth-password"),
+  authSubmit: $("#auth-submit"),
+  authModeToggle: $("#auth-mode-toggle"),
+  authError: $("#auth-error"),
+  authConfigWarning: $("#auth-config-warning"),
+  profileDialog: $("#profile-dialog"),
+  profileForm: $("#profile-form"),
+  profileUsername: $("#profile-username"),
+  profileDisplayName: $("#profile-display-name"),
+  profileBio: $("#profile-bio"),
+  profileEmail: $("#profile-email"),
+  profileError: $("#profile-error"),
+  cloudStatus: $("#cloud-status"),
 };
 
 let installPrompt = null;
 let countdownTimer = null;
 let editingListId = null;
+let authMode = "signin";
+let activeUser = null;
 
 function loadJson(key, fallback) {
   try {
@@ -108,11 +134,13 @@ function loadLibrary() {
 function saveLibrary() {
   localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
   updateStats();
+  window.VaultCloud?.schedulePush(state.library, state.lists);
 }
 
 function saveLists() {
   localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
   updateStats();
+  window.VaultCloud?.schedulePush(state.library, state.lists);
 }
 
 function showToast(message) {
@@ -166,13 +194,20 @@ function setLibraryEntry(game, patch = {}) {
     status: "saved",
     favorite: false,
   };
-  state.library[key] = { ...current, ...patch, game: snapshotGame(game) };
+  state.library[key] = {
+    ...current,
+    ...patch,
+    updatedAt: new Date().toISOString(),
+    game: snapshotGame(game),
+  };
   saveLibrary();
 }
 
 function removeLibraryEntry(game) {
-  delete state.library[gameKey(game)];
+  const key = gameKey(game);
+  delete state.library[key];
   saveLibrary();
+  window.VaultCloud?.deleteLibraryItem(key).catch(console.error);
 }
 
 function formatDate(value, withTime = false) {
@@ -485,6 +520,7 @@ function renderLists() {
       if (confirm(`Eliminare la lista “${list.name}”?`)) {
         delete state.lists[list.id];
         saveLists();
+        window.VaultCloud?.deleteList(list.id).catch(console.error);
         render();
       }
     };
@@ -680,6 +716,125 @@ async function importData(file) {
   }
 }
 
+
+function initialsForAccount(user, profile) {
+  const source = profile?.display_name || profile?.username || user?.email || "?";
+  return source.trim().slice(0, 2).toUpperCase();
+}
+
+function updateAccountUI(snapshot) {
+  activeUser = snapshot.user;
+  if (!snapshot.configured) {
+    ui.accountLabel.textContent = "Configura account";
+    ui.accountAvatar.textContent = "!";
+    return;
+  }
+  if (!snapshot.user) {
+    ui.accountLabel.textContent = "Accedi";
+    ui.accountAvatar.textContent = "?";
+    return;
+  }
+  ui.accountLabel.textContent = snapshot.profile?.display_name || snapshot.profile?.username || "Profilo";
+  ui.accountAvatar.textContent = initialsForAccount(snapshot.user, snapshot.profile);
+  ui.profileEmail.textContent = snapshot.user.email || "";
+  ui.profileUsername.value = snapshot.profile?.username || "";
+  ui.profileDisplayName.value = snapshot.profile?.display_name || "";
+  ui.profileBio.value = snapshot.profile?.bio || "";
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const signup = mode === "signup";
+  ui.authTitle.textContent = signup ? "Crea account" : "Accedi";
+  ui.authUsernameField.hidden = !signup;
+  ui.authDisplayNameField.hidden = !signup;
+  ui.authUsername.required = signup;
+  ui.authSubmit.textContent = signup ? "Registrati" : "Accedi";
+  ui.authModeToggle.textContent = signup
+    ? "Hai già un account? Accedi"
+    : "Non hai un account? Registrati";
+  ui.authPassword.autocomplete = signup ? "new-password" : "current-password";
+  ui.authError.hidden = true;
+}
+
+function openAccountDialog() {
+  if (!window.VaultAuth?.configured || !activeUser) {
+    ui.authConfigWarning.hidden = Boolean(window.VaultAuth?.configured);
+    setAuthMode("signin");
+    ui.authDialog.showModal();
+  } else {
+    ui.profileDialog.showModal();
+  }
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  ui.authError.hidden = true;
+  ui.authSubmit.disabled = true;
+  try {
+    if (authMode === "signup") {
+      const username = ui.authUsername.value.trim();
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+        throw new Error("Username: 3–30 caratteri, solo lettere, numeri e underscore.");
+      }
+      const result = await window.VaultAuth.signUp({
+        email: ui.authEmail.value.trim(),
+        password: ui.authPassword.value,
+        username,
+        displayName: ui.authDisplayName.value.trim() || username,
+      });
+      if (!result.session) {
+        showToast("Controlla la posta e conferma la registrazione.");
+      }
+    } else {
+      await window.VaultAuth.signIn({
+        email: ui.authEmail.value.trim(),
+        password: ui.authPassword.value,
+      });
+    }
+    ui.authDialog.close();
+    ui.authForm.reset();
+  } catch (error) {
+    ui.authError.textContent = error.message || "Operazione fallita.";
+    ui.authError.hidden = false;
+  } finally {
+    ui.authSubmit.disabled = false;
+  }
+}
+
+async function synchronizeSignedInUser(snapshot) {
+  updateAccountUI(snapshot);
+  if (!snapshot.user) return;
+  ui.cloudStatus.textContent = "Sincronizzazione…";
+  try {
+    const merged = await window.VaultCloud.pull(state.library, state.lists);
+    state.library = merged.library;
+    state.lists = merged.lists;
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+    localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
+    await window.VaultCloud.push(state.library, state.lists);
+    ui.cloudStatus.textContent = "Sincronizzato";
+    render();
+  } catch (error) {
+    console.error(error);
+    ui.cloudStatus.textContent = "Errore di sincronizzazione";
+    showToast("Accesso riuscito, ma la sincronizzazione cloud è fallita.");
+  }
+}
+
+async function initializeUserSystem() {
+  if (!window.VaultAuth) return;
+  window.VaultAuth.subscribe((snapshot) => {
+    synchronizeSignedInUser(snapshot);
+  });
+  try {
+    await window.VaultAuth.initialize();
+  } catch (error) {
+    console.error("Inizializzazione account fallita", error);
+    showToast("Servizio account temporaneamente non disponibile.");
+  }
+}
+
 $$("[data-view]").forEach((button) => button.addEventListener("click", () => navigate(button.dataset.view)));
 ui.search.addEventListener("input", () => { state.search = ui.search.value.trim(); render(); });
 ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; render(); });
@@ -731,7 +886,42 @@ document.addEventListener("keydown", (event) => {
     ui.search.focus();
   }
 });
+
+ui.accountButton.addEventListener("click", openAccountDialog);
+$("#auth-dialog-close").addEventListener("click", () => ui.authDialog.close());
+$("#profile-dialog-close").addEventListener("click", () => ui.profileDialog.close());
+ui.authModeToggle.addEventListener("click", () => setAuthMode(authMode === "signin" ? "signup" : "signin"));
+ui.authForm.addEventListener("submit", handleAuthSubmit);
+ui.profileForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.profileError.hidden = true;
+  try {
+    await window.VaultAuth.updateProfile({
+      username: ui.profileUsername.value,
+      display_name: ui.profileDisplayName.value,
+      bio: ui.profileBio.value,
+    });
+    showToast("Profilo aggiornato.");
+  } catch (error) {
+    ui.profileError.textContent = error.message || "Aggiornamento fallito.";
+    ui.profileError.hidden = false;
+  }
+});
+$("#logout-button").addEventListener("click", async () => {
+  try {
+    await window.VaultAuth.signOut();
+    ui.profileDialog.close();
+    showToast("Disconnessione completata.");
+  } catch (error) {
+    showToast(error.message || "Disconnessione fallita.");
+  }
+});
+window.addEventListener("tfv:sync-error", () => {
+  if (ui.cloudStatus) ui.cloudStatus.textContent = "Errore di sincronizzazione";
+});
+
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(console.error);
 
 loadData();
+initializeUserSystem();
 countdownTimer = setInterval(updateCountdowns, 60000);

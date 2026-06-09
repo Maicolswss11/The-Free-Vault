@@ -62,6 +62,10 @@
         <div class="topbar-actions">
           <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati">↻</button>
           <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
+          <button id="account-button" class="account-button" type="button">
+            <span id="account-avatar" class="account-avatar">?</span>
+            <span id="account-label">Accedi</span>
+          </button>
         </div>
       </header>
 
@@ -262,6 +266,63 @@
     </div>
   </dialog>
 
+
+<dialog id="auth-dialog" class="auth-dialog">
+  <button id="auth-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
+  <div class="dialog-content">
+    <p class="eyebrow">THE FREE VAULT ACCOUNT</p>
+    <h2 id="auth-dialog-title">Accedi</h2>
+    <p id="auth-config-warning" class="auth-warning" hidden>
+      Supabase non è ancora configurato. Compila <code>docs/config.js</code>.
+    </p>
+    <form id="auth-form" class="auth-form">
+      <label id="auth-username-field" hidden>Username
+        <input id="auth-username" autocomplete="username" minlength="3" maxlength="30">
+      </label>
+      <label id="auth-display-name-field" hidden>Nome visualizzato
+        <input id="auth-display-name" autocomplete="name" maxlength="60">
+      </label>
+      <label>Email
+        <input id="auth-email" type="email" autocomplete="email" required>
+      </label>
+      <label>Password
+        <input id="auth-password" type="password" autocomplete="current-password" minlength="8" required>
+      </label>
+      <p id="auth-error" class="auth-error" hidden></p>
+      <button id="auth-submit" class="button button-primary" type="submit">Accedi</button>
+    </form>
+    <button id="auth-mode-toggle" class="auth-mode-toggle" type="button">
+      Non hai un account? Registrati
+    </button>
+  </div>
+</dialog>
+
+<dialog id="profile-dialog" class="auth-dialog">
+  <button id="profile-dialog-close" class="dialog-close" type="button" aria-label="Chiudi">×</button>
+  <div class="dialog-content">
+    <p class="eyebrow">PROFILO</p>
+    <h2 id="profile-heading">Il tuo account</h2>
+    <p id="profile-email" class="muted"></p>
+    <form id="profile-form" class="auth-form">
+      <label>Username
+        <input id="profile-username" minlength="3" maxlength="30" required>
+      </label>
+      <label>Nome visualizzato
+        <input id="profile-display-name" maxlength="60" required>
+      </label>
+      <label>Bio
+        <textarea id="profile-bio" rows="4" maxlength="500"></textarea>
+      </label>
+      <p id="profile-error" class="auth-error" hidden></p>
+      <button class="button button-primary" type="submit">Salva profilo</button>
+    </form>
+    <div class="profile-actions">
+      <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
+      <button id="logout-button" class="button button-secondary" type="button">Esci</button>
+    </div>
+  </div>
+</dialog>
+
   <template id="game-card-template">
     <article class="game-card">
       <button class="card-cover" type="button">
@@ -291,6 +352,10 @@
   </template>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="./config.js" defer></script>
+  <script src="./auth.js" defer></script>
+  <script src="./cloud-sync.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

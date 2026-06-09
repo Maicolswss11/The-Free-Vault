@@ -96,3 +96,28 @@ Actions → Sync Epic Catalog → Run workflow
 ### v2.3.1
 
 Corretto il percorso GraphQL Epic e aggiunto fallback automatico tra endpoint.
+
+
+## v3 — Account e sincronizzazione
+
+La web app supporta account email/password tramite Supabase Auth e sincronizza:
+
+- profilo pubblico;
+- libreria personale;
+- preferiti e stati;
+- liste personalizzate.
+
+### Configurazione
+
+1. Crea un progetto Supabase.
+2. Apri **SQL Editor** ed esegui `supabase/schema.sql`.
+3. Copia `docs/config.example.js` in `docs/config.js`.
+4. Inserisci URL progetto e chiave publishable/anon.
+5. In **Authentication → URL Configuration** imposta:
+   - Site URL: URL GitHub Pages;
+   - Redirect URL: lo stesso URL con `/**`.
+6. Fai commit e deploy.
+
+La chiave publishable/anon può stare nel frontend: la protezione dei dati è
+affidata alle policy Row Level Security incluse nello schema. Non inserire mai
+la `service_role` key.
