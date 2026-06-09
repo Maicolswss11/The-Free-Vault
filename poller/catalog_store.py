@@ -96,6 +96,32 @@ def _canonical_id(title: str, developer: str | None, publisher: str | None) -> s
     return f"game:{digest}"
 
 
+def match_key_for_title(title: str) -> str:
+    """Chiave store-agnostic basata sul titolo canonico.
+
+    È volutamente separata da ``canonical_id``: serve a proporre/fare merge
+    conservativi tra listing Epic e Steam quando non sono disponibili
+    identificatori incrociati ufficiali.
+    """
+    normalized = _normalize_identity(title)
+    digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:20]
+    return f"title:{digest}"
+
+
+def canonical_title_for_listing(title: str, category_group: str = "base_game") -> tuple[str, str | None]:
+    """API pubblica condivisa dai diversi importer di store."""
+    return _canonical_title(title, category_group)
+
+
+def canonical_id_for_listing(
+    title: str,
+    developer: str | None = None,
+    publisher: str | None = None,
+) -> str:
+    """API pubblica condivisa dai diversi importer di store."""
+    return _canonical_id(title, developer, publisher)
+
+
 def _category_group(offer_type: str | None, categories: list[str]) -> str:
     normalized_offer = (offer_type or "").upper()
     category_text = " ".join(categories).casefold()
@@ -170,6 +196,7 @@ def parse_catalog_element(element: dict[str, Any]) -> StoreGame | None:
         title=title,
         canonical_title=canonical_title,
         canonical_id=_canonical_id(canonical_title, developer, publisher),
+        match_key=match_key_for_title(canonical_title),
         listing_id=listing_id,
         description=_text(element.get("description")) or "",
         developer=developer,
@@ -265,7 +292,7 @@ def write_catalog_json(
     generated_at = generated_at or datetime.now(timezone.utc)
     canonical_total = len({game.canonical_id for game in games})
     payload = {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": generated_at.isoformat(),
         "stores": ["epic"],
         "store": "epic",

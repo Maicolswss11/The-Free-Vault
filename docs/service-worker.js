@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-free-vault-v3-4-community";
+const CACHE_NAME = "the-free-vault-v4-steam";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./app.js",
   "./cloud-sync.js",
   "./social.js",
+  "./steam.js",
   "./auth.js",
   "./config.js",
   "./manifest.webmanifest",
@@ -31,7 +32,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-  const isData = ["/games.json", "/history.json", "/catalog.json"]
+  const isData = ["/games.json", "/history.json", "/catalog.json", "/steam-catalog.json"]
     .some((ending) => url.pathname.endsWith(ending));
   const isCover = url.pathname.includes("/assets/covers/");
 

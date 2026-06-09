@@ -1,0 +1,66 @@
+name: Sync Steam Catalog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC: ogni giorno alle 05:19, separato dal catalogo Epic.
+    - cron: "19 5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: steam-catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-steam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      STEAM_WEB_API_KEY: ${{ secrets.STEAM_WEB_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: poller/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r poller/requirements.txt
+
+      - name: Verify Steam secret
+        shell: bash
+        run: |
+          if [ -z "$STEAM_WEB_API_KEY" ]; then
+            echo "Manca il repository secret STEAM_WEB_API_KEY."
+            exit 1
+          fi
+
+      - name: Sync Steam catalog
+        run: python -m poller.steam_catalog_main
+
+      - name: Commit Steam catalog
+        shell: bash
+        run: |
+          git add docs/steam-catalog.json
+
+          if git diff --cached --quiet; then
+            echo "Catalogo Steam invariato."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync Steam catalog"
+          git pull --rebase origin main
+          git push origin main

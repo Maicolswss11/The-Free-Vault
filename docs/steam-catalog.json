@@ -1,0 +1,12 @@
+{
+  "schema_version": 3,
+  "generated_at": null,
+  "stores": [
+    "steam"
+  ],
+  "store": "steam",
+  "total": 0,
+  "canonical_total": 0,
+  "data_quality": "app-list",
+  "games": []
+}

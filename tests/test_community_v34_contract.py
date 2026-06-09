@@ -91,4 +91,4 @@ def test_v34_migration_has_rls_triggers_and_notifications():
 
 def test_v34_service_worker_cache_name():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
-    assert 'the-free-vault-v3-4-community' in worker
+    assert 'the-free-vault-v4-steam' in worker

@@ -28,7 +28,7 @@
 
       <p class="nav-section-label">DISCOVER</p>
       <nav class="main-nav">
-        <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo Epic</a>
+        <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo multi-store</a>
         <a class="nav-item" data-route="lists" href="#/lists"><span>☷</span> Le mie liste</a>
         <a class="nav-item" data-route="library" href="#/library"><span>◆</span> La mia libreria</a>
       </nav>
@@ -133,7 +133,7 @@
                   <rect x="14" y="14" width="6" height="6" rx="1" fill="#a78bfa"></rect>
                 </svg>
               </span>
-              <div><strong id="stat-catalog">0</strong><span>Catalogo Epic</span></div>
+              <div><strong id="stat-catalog">0</strong><span>Catalogo multi-store</span></div>
             </article>
             <article class="stat-card">
               <span class="stat-icon green">
@@ -294,6 +294,7 @@
             <section class="detail-panel">
               <p class="eyebrow">THE FREE VAULT</p>
               <h2>Promozioni e disponibilità</h2>
+              <div id="game-page-store-options" class="store-options"></div>
               <div id="game-page-promotions" class="promotion-timeline"></div>
             </section>
           </div>
@@ -650,6 +651,7 @@
               <nav class="settings-nav" aria-label="Sezioni impostazioni">
                 <a data-settings-tab="profile" href="#/settings/profile">Profilo e avatar</a>
                 <a data-settings-tab="account" href="#/settings/account">Email e password</a>
+                <a data-settings-tab="connections" href="#/settings/connections">Account collegati</a>
                 <a data-settings-tab="privacy" href="#/settings/privacy">Privacy</a>
                 <a data-settings-tab="data" href="#/settings/data">Dati e account</a>
               </nav>
@@ -704,6 +706,30 @@
                     <p id="change-password-message" class="auth-error" hidden></p>
                     <button class="button button-primary" type="submit">Modifica password</button>
                   </form>
+                </section>
+
+                <section id="settings-panel-connections" class="settings-panel" hidden>
+                  <p class="eyebrow">ACCOUNT COLLEGATI</p>
+                  <h2>Steam</h2>
+                  <p class="muted">Collega Steam per importare i giochi posseduti e il tempo di gioco. Il tracker Epic continua a funzionare indipendentemente.</p>
+                  <article id="steam-connection-card" class="steam-connection-card">
+                    <span id="steam-connection-avatar" class="steam-avatar">S</span>
+                    <div class="steam-connection-copy">
+                      <strong id="steam-connection-name">Steam non collegato</strong>
+                      <span id="steam-connection-id">Collega il tuo account tramite Steam OpenID.</span>
+                      <small id="steam-connection-status">Nessuna sincronizzazione eseguita.</small>
+                    </div>
+                    <div class="steam-connection-actions">
+                      <button id="steam-connect-button" class="button button-primary" type="button">Collega Steam</button>
+                      <button id="steam-sync-button" class="button button-secondary" type="button" hidden>Importa libreria</button>
+                      <button id="steam-disconnect-button" class="button button-secondary" type="button" hidden>Scollega</button>
+                    </div>
+                  </article>
+                  <p id="steam-sync-message" class="auth-error" hidden></p>
+                  <div class="settings-info-box">
+                    <strong>Privacy Steam</strong>
+                    <p>L’importazione funziona solo se i dettagli dei giochi del profilo Steam sono visibili. La chiave Steam Web API resta nelle Edge Functions e non viene inviata al browser.</p>
+                  </div>
                 </section>
 
                 <section id="settings-panel-privacy" class="settings-panel" hidden>
@@ -819,6 +845,7 @@
   <script src="./auth.js" defer></script>
   <script src="./cloud-sync.js" defer></script>
   <script src="./social.js" defer></script>
+  <script src="./steam.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

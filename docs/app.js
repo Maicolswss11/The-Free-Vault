@@ -1,6 +1,7 @@
 const DATA_URL = "./games.json";
 const HISTORY_URL = "./history.json";
 const CATALOG_URL = "./catalog.json";
+const STEAM_CATALOG_URL = "./steam-catalog.json";
 const LIBRARY_KEY = "the-free-vault-library-v3";
 const LEGACY_LIBRARY_KEYS = ["the-free-vault-library-v2"];
 const LISTS_KEY = "the-free-vault-lists-v1";
@@ -12,6 +13,8 @@ const state = {
   history: [],
   catalog: [],
   catalogMeta: null,
+  epicCatalogMeta: null,
+  steamCatalogMeta: null,
   gameIndex: new Map(),
   library: loadLibrary(),
   lists: loadJson(LISTS_KEY, {}),
@@ -173,6 +176,15 @@ const ui = {
   deleteAccountMessage: $("#delete-account-message"),
   deleteAccountButton: $("#delete-account-button"),
   cloudStatus: $("#cloud-status"),
+  steamConnectionCard: $("#steam-connection-card"),
+  steamConnectionStatus: $("#steam-connection-status"),
+  steamConnectionAvatar: $("#steam-connection-avatar"),
+  steamConnectionName: $("#steam-connection-name"),
+  steamConnectionId: $("#steam-connection-id"),
+  steamConnectButton: $("#steam-connect-button"),
+  steamSyncButton: $("#steam-sync-button"),
+  steamDisconnectButton: $("#steam-disconnect-button"),
+  steamSyncMessage: $("#steam-sync-message"),
   gamePageImage: $("#game-page-image"),
   gamePageBadge: $("#game-page-badge"),
   gamePageTitle: $("#game-page-title"),
@@ -188,6 +200,7 @@ const ui = {
   gamePageNotes: $("#game-page-notes"),
   gamePageSaveNotes: $("#game-page-save-notes"),
   gamePagePromotions: $("#game-page-promotions"),
+  gamePageStoreOptions: $("#game-page-store-options"),
   publicRatingAverage: $("#public-rating-average"),
   publicRatingCount: $("#public-rating-count"),
   publicReviewSignedOut: $("#public-review-signed-out"),
@@ -304,12 +317,13 @@ function escapeAttr(value) {
 }
 
 function gameKey(game) {
-  return game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
+  return game.match_key || game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
     `${game.store || "epic"}:${game.namespace || "unknown"}:${game.external_id || game.title}`;
 }
 
 function gameAliases(game) {
   return [
+    game.match_key,
     game.canonical_id,
     game.internal_id,
     game.listing_id,
@@ -330,9 +344,12 @@ function snapshotGame(game) {
   return {
     canonical_id: game.canonical_id,
     canonical_title: game.canonical_title,
+    match_key: game.match_key,
     listing_id: game.listing_id || game.internal_id,
     internal_id: game.internal_id || game.listing_id,
     store: game.store || "epic",
+    stores: game.stores || [game.store || "epic"],
+    store_listings: game.store_listings || [],
     platforms: game.platforms || ["pc"],
     external_id: game.external_id || game.epic_id,
     epic_id: game.epic_id,
@@ -484,6 +501,7 @@ function normalizePromotion(game) {
   return {
     ...game,
     canonical_id: game.canonical_id || catalogMatch?.canonical_id,
+    match_key: game.match_key || catalogMatch?.match_key,
     listing_id: game.listing_id || listingAlias,
     internal_id: game.internal_id || listingAlias,
     category_group: game.category_group || "base_game",
@@ -496,16 +514,84 @@ function normalizePromotion(game) {
 }
 
 function normalizeCatalog(game) {
+  const store = game.store || "epic";
   return {
     ...game,
     listing_id: game.listing_id || game.internal_id,
     source_kind: "catalog",
-    store: game.store || "epic",
+    store,
+    stores: game.stores || [store],
+    store_listings: game.store_listings || [],
     category_group: game.category_group || inferCategoryGroup(game),
     market_segment: game.market_segment || inferMarketSegment(game),
     release_year: game.release_year || releaseYearOf(game),
     platforms: game.platforms || ["pc"],
   };
+}
+
+
+function listingRichness(game) {
+  return [
+    game.description,
+    game.developer,
+    game.publisher,
+    game.image_url,
+    game.release_date,
+    game.fmt_discount_price,
+    game.fmt_original_price,
+  ].filter(Boolean).length + (game.store === "epic" ? 2 : 0);
+}
+
+function groupedCatalogGames() {
+  const groups = new Map();
+  for (const raw of state.catalog.map(normalizeCatalog)) {
+    const key = raw.match_key || raw.canonical_id || raw.listing_id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(raw);
+  }
+
+  return [...groups.values()].map((listings) => {
+    const ordered = [...listings].sort((a, b) => listingRichness(b) - listingRichness(a));
+    const representative = ordered[0];
+    const stores = [...new Set(ordered.map((item) => item.store))];
+    return {
+      ...representative,
+      match_key: representative.match_key || representative.canonical_id,
+      stores,
+      store_listings: ordered.map((item) => ({
+        store: item.store,
+        listing_id: item.listing_id,
+        external_id: item.external_id,
+        title: item.title,
+        store_url: item.store_url,
+        image_url: item.image_url,
+        fmt_original_price: item.fmt_original_price,
+        fmt_discount_price: item.fmt_discount_price,
+        original_price: item.original_price,
+        discount_price: item.discount_price,
+        currency_code: item.currency_code,
+        category_group: item.category_group,
+        edition_name: item.edition_name,
+      })),
+    };
+  });
+}
+
+function listingsForGame(game) {
+  const key = game.match_key || gameKey(game);
+  const direct = (game.store_listings || []).map((listing) => ({
+    ...listing,
+    source_kind: "catalog",
+    match_key: key,
+  }));
+  if (direct.length) return direct;
+
+  return state.catalog
+    .map(normalizeCatalog)
+    .filter((candidate) =>
+      (candidate.match_key && candidate.match_key === key)
+      || (!candidate.match_key && candidate.canonical_id === game.canonical_id)
+    );
 }
 
 function historyGames() {
@@ -536,6 +622,7 @@ function rebuildGameIndex() {
   };
 
   state.catalog.map(normalizeCatalog).forEach(insert);
+  groupedCatalogGames().forEach(insert);
   // Rende subito disponibili gli alias delle listing ai parser delle promozioni.
   state.gameIndex = next;
   historyGames().forEach(insert);
@@ -710,7 +797,7 @@ function allSearchText(game) {
     game.category_group,
     game.market_segment,
     (game.genres || []).join(" "),
-    storeLabel(game.store),
+    ...(game.stores || [game.store || "epic"]).map(storeLabel),
     entry?.status,
     entry?.notes,
   ].filter(Boolean).join(" ").toLocaleLowerCase("it");
@@ -746,7 +833,8 @@ function matchesAdvancedFilters(game) {
   if (!["catalog", "library", "history"].includes(route)) return true;
 
   if (route === "catalog") {
-    if (state.storeFilter !== "all" && (game.store || "epic") !== state.storeFilter) return false;
+    const stores = game.stores || [game.store || "epic"];
+    if (state.storeFilter !== "all" && !stores.includes(state.storeFilter)) return false;
     if (state.categoryFilter !== "all" && inferCategoryGroup(game) !== state.categoryFilter) return false;
     if (state.segmentFilter !== "all" && inferMarketSegment(game) !== state.segmentFilter) return false;
     if (state.priceFilter !== "all" && priceBucket(game) !== state.priceFilter) return false;
@@ -754,7 +842,8 @@ function matchesAdvancedFilters(game) {
   }
 
   if (route === "library") {
-    if (state.storeFilter !== "all" && (game.store || "epic") !== state.storeFilter) return false;
+    const stores = game.stores || [game.store || "epic"];
+    if (state.storeFilter !== "all" && !stores.includes(state.storeFilter)) return false;
     if (state.categoryFilter !== "all" && inferCategoryGroup(game) !== state.categoryFilter) return false;
     if (state.segmentFilter !== "all" && inferMarketSegment(game) !== state.segmentFilter) return false;
   }
@@ -783,7 +872,7 @@ function gamesForDashboard() {
   if (route === "current") games = state.current.map(normalizePromotion);
   if (route === "upcoming") games = state.upcoming.map(normalizePromotion);
   if (route === "history") games = historyGames();
-  if (route === "catalog") games = state.catalog.map(normalizeCatalog);
+  if (route === "catalog") games = groupedCatalogGames();
   if (route === "library") games = libraryGames();
   if (route === "list") {
     const list = state.lists[state.route.params.id];
@@ -877,7 +966,7 @@ function renderGlobalSearchResults() {
 
 function updateStats() {
   $("#stat-current").textContent = state.current.length;
-  ui.statCatalog.textContent = state.catalogMeta?.total ?? state.catalog.length;
+  ui.statCatalog.textContent = groupedCatalogGames().length;
   $("#stat-library").textContent = Object.keys(state.library).length;
   ui.statLists.textContent = Object.keys(state.lists).length;
 }
@@ -905,7 +994,10 @@ function badgeText(game) {
   if (mode === "current") return "GRATIS ORA";
   if (mode === "upcoming") return "IN ARRIVO";
   if (mode === "expired") return "REGALO PASSATO";
-  return "EPIC STORE";
+  const stores = game.stores || [game.store || "epic"];
+  return stores.length > 1
+    ? stores.map((store) => storeLabel(store).replace(" Games", "")).join(" + ").toUpperCase()
+    : `${storeLabel(stores[0]).toUpperCase()} STORE`;
 }
 
 function applyPriceToCard(game, originalPrice, priceLabel) {
@@ -930,7 +1022,7 @@ function applyPriceToCard(game, originalPrice, priceLabel) {
     originalPrice.hidden = true;
     originalPrice.textContent = "";
     if (isFreeToPlay) priceLabel.textContent = "FREE TO PLAY";
-    else priceLabel.textContent = game.fmt_discount_price || game.fmt_original_price || "Vedi su Epic";
+    else priceLabel.textContent = game.fmt_discount_price || game.fmt_original_price || `Vedi su ${storeLabel(game.store)}`;
   }
 }
 
@@ -1147,14 +1239,12 @@ function renderDashboardHeader() {
 
   if (state.route.name === "catalog") {
     const generated = state.catalogMeta?.generated_at;
-    const canonicalTotal = state.catalogMeta?.canonical_total;
-    const listingText = `${state.catalog.length.toLocaleString("it-IT")} listing`;
-    const canonicalText = canonicalTotal
-      ? ` · ${Number(canonicalTotal).toLocaleString("it-IT")} giochi canonici`
-      : "";
+    const canonicalTotal = groupedCatalogGames().length;
+    const epicTotal = Number(state.catalogMeta?.epic_total || 0);
+    const steamTotal = Number(state.catalogMeta?.steam_total || 0);
     ui.catalogMeta.textContent = state.catalog.length
-      ? `${listingText}${canonicalText} · aggiornato ${formatDate(generated, true)}`
-      : "Catalogo non ancora sincronizzato. Avvia il workflow di sincronizzazione.";
+      ? `${canonicalTotal.toLocaleString("it-IT")} giochi · ${epicTotal.toLocaleString("it-IT")} Epic · ${steamTotal.toLocaleString("it-IT")} Steam · aggiornato ${formatDate(generated, true)}`
+      : "Cataloghi non ancora sincronizzati. Avvia i workflow Epic e Steam.";
   }
 }
 
@@ -1320,6 +1410,42 @@ function renderPromotionTimeline(game) {
   }
 }
 
+
+function renderStoreOptions(game) {
+  ui.gamePageStoreOptions.replaceChildren();
+  const listings = listingsForGame(game)
+    .filter((listing) => listing?.store_url)
+    .sort((a, b) => {
+      const priority = { epic: 0, steam: 1, playstation: 2, xbox: 3 };
+      return (priority[a.store] ?? 99) - (priority[b.store] ?? 99);
+    });
+
+  if (!listings.length) {
+    ui.gamePageStoreOptions.innerHTML = '<div class="timeline-empty">Nessuna listing disponibile.</div>';
+    return;
+  }
+
+  for (const listing of listings) {
+    const card = document.createElement("article");
+    card.className = `store-option store-option-${listing.store}`;
+    const price = listing.fmt_discount_price
+      || listing.fmt_original_price
+      || (listing.store === "steam" ? "Prezzo su Steam" : "Vedi prezzo");
+    const edition = listing.edition_name || listing.title || game.title;
+    card.innerHTML = `
+      <div class="store-option-logo">${escapeHtml(storeLabel(listing.store).slice(0, 1))}</div>
+      <div class="store-option-copy">
+        <strong>${escapeHtml(storeLabel(listing.store))}</strong>
+        <span>${escapeHtml(edition)}</span>
+        <small>${escapeHtml(price)}</small>
+      </div>
+      <a class="button button-secondary" href="${escapeAttr(listing.store_url)}" target="_blank" rel="noopener noreferrer">
+        Apri
+      </a>`;
+    ui.gamePageStoreOptions.append(card);
+  }
+}
+
 function renderGamePage() {
   const game = resolveGameByKey(state.route.params.key);
   if (!game) {
@@ -1341,13 +1467,16 @@ function renderGamePage() {
   ui.gamePageImage.onerror = () => { ui.gamePageImage.src = PLACEHOLDER; };
   ui.gamePageBadge.textContent = badgeText(game);
   ui.gamePageTitle.textContent = game.title;
-  ui.gamePageByline.textContent = [game.developer, game.publisher].filter(Boolean).join(" · ") || "Epic Games Store";
+  const availableStores = game.stores || listingsForGame(game).map((listing) => listing.store);
+  ui.gamePageByline.textContent = [game.developer, game.publisher].filter(Boolean).join(" · ")
+    || [...new Set(availableStores)].map(storeLabel).join(" · ")
+    || "Store non disponibile";
   ui.gamePageDescription.textContent = game.description || "Descrizione non disponibile.";
   ui.gamePageMeta.innerHTML = [
     game.release_date ? `<span><small>USCITA</small>${escapeHtml(formatDate(game.release_date))}</span>` : "",
     priceText(game) ? `<span><small>PREZZO</small>${escapeHtml(priceText(game))}</span>` : "",
     game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type)}</span>` : "",
-    `<span><small>STORE</small>${escapeHtml(storeLabel(game.store))}</span>`,
+    `<span><small>STORE</small>${escapeHtml([...new Set(availableStores)].map(storeLabel).join(" · "))}</span>`,
   ].filter(Boolean).join("");
   ui.gamePageStoreLink.href = game.store_url;
   ui.gamePageStoreLink.textContent = `Apri su ${storeLabel(game.store)}`;
@@ -1357,6 +1486,7 @@ function renderGamePage() {
   ui.gamePageStatus.disabled = !entry;
   ui.gamePageNotes.value = entry?.notes || "";
   renderRating(game, entry);
+  renderStoreOptions(game);
   renderPromotionTimeline(game);
   void renderGameSocial(game);
 
@@ -2253,6 +2383,123 @@ function renderProfilePage() {
   renderProfileRecentGames();
 }
 
+
+async function renderSteamConnectionPanel() {
+  if (!ui.steamConnectionCard) return;
+  const user = state.auth.user;
+  ui.steamSyncMessage.hidden = true;
+
+  if (!user || !window.VaultSteam) {
+    ui.steamConnectionName.textContent = "Steam non collegato";
+    ui.steamConnectionId.textContent = "Accedi a The Free Vault per collegare Steam.";
+    ui.steamConnectionStatus.textContent = "";
+    ui.steamConnectButton.hidden = !user;
+    ui.steamSyncButton.hidden = true;
+    ui.steamDisconnectButton.hidden = true;
+    return;
+  }
+
+  try {
+    const connection = await window.VaultSteam.getConnection();
+    const linked = Boolean(connection?.steam_id);
+    ui.steamConnectButton.hidden = linked;
+    ui.steamSyncButton.hidden = !linked;
+    ui.steamDisconnectButton.hidden = !linked;
+
+    if (!linked) {
+      ui.steamConnectionAvatar.textContent = "S";
+      ui.steamConnectionAvatar.style.backgroundImage = "";
+      ui.steamConnectionName.textContent = "Steam non collegato";
+      ui.steamConnectionId.textContent = "Usa Steam OpenID per verificare il tuo SteamID.";
+      ui.steamConnectionStatus.textContent = "Nessuna libreria importata.";
+      return;
+    }
+
+    ui.steamConnectionName.textContent = connection.persona_name || "Account Steam";
+    ui.steamConnectionId.textContent = `SteamID ${connection.steam_id}`;
+    ui.steamConnectionStatus.textContent = connection.last_sync_at
+      ? `Ultima sincronizzazione: ${formatDate(connection.last_sync_at, true)}`
+      : "Account collegato, libreria non ancora importata.";
+    if (connection.avatar_url) {
+      ui.steamConnectionAvatar.textContent = "";
+      ui.steamConnectionAvatar.style.backgroundImage = `url("${connection.avatar_url}")`;
+    } else {
+      ui.steamConnectionAvatar.textContent = "S";
+      ui.steamConnectionAvatar.style.backgroundImage = "";
+    }
+  } catch (error) {
+    console.error(error);
+    ui.steamSyncMessage.textContent = error.message || "Impossibile leggere il collegamento Steam.";
+    ui.steamSyncMessage.hidden = false;
+  }
+}
+
+function importSteamLibrary(games) {
+  if (!Array.isArray(games)) return { imported: 0, unmatched: 0 };
+  const steamListings = new Map(
+    state.catalog
+      .map(normalizeCatalog)
+      .filter((game) => game.store === "steam")
+      .map((game) => [String(game.external_id), game])
+  );
+
+  let imported = 0;
+  let unmatched = 0;
+  const now = new Date().toISOString();
+
+  for (const owned of games) {
+    const appid = String(owned.appid || owned.external_id || "");
+    if (!appid) continue;
+    const listing = steamListings.get(appid);
+    const game = listing || {
+      match_key: owned.match_key,
+      canonical_id: owned.canonical_id,
+      listing_id: `steam:${appid}`,
+      internal_id: `steam:${appid}`,
+      store: "steam",
+      stores: ["steam"],
+      external_id: appid,
+      title: owned.name || `Steam App ${appid}`,
+      description: "",
+      image_url: owned.img_icon_url
+        ? `https://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${owned.img_icon_url}.jpg`
+        : `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
+      store_url: `https://store.steampowered.com/app/${appid}/`,
+      category_group: "base_game",
+      market_segment: "unclassified",
+      source_kind: "catalog",
+      platforms: ["pc"],
+    };
+
+    if (!listing) unmatched += 1;
+    const key = gameKey(game);
+    const previous = state.library[key] || {
+      addedAt: now,
+      status: "saved",
+      favorite: false,
+      rating: 0,
+      notes: "",
+    };
+    const ownedStores = new Set(previous.ownedStores || []);
+    ownedStores.add("steam");
+    state.library[key] = {
+      ...previous,
+      ownedStores: [...ownedStores],
+      steamPlaytimeMinutes: Number(owned.playtime_forever || owned.playtime_minutes || 0),
+      steamLastPlayedAt: owned.rtime_last_played
+        ? new Date(Number(owned.rtime_last_played) * 1000).toISOString()
+        : previous.steamLastPlayedAt || null,
+      updatedAt: now,
+      game: snapshotGame({ ...game, stores: [...new Set([...(game.stores || []), "steam"])] }),
+    };
+    imported += 1;
+  }
+
+  saveLibrary();
+  rebuildGameIndex();
+  return { imported, unmatched };
+}
+
 function renderSettingsPage() {
   const { user, profile, settings, configured } = state.auth;
   updateDocumentTitle("Impostazioni");
@@ -2263,7 +2510,7 @@ function renderSettingsPage() {
     return;
   }
 
-  const section = ["profile", "account", "privacy", "data"].includes(state.route.params.section)
+  const section = ["profile", "account", "connections", "privacy", "data"].includes(state.route.params.section)
     ? state.route.params.section
     : "profile";
   $$('[data-settings-tab]').forEach((link) => link.classList.toggle('is-active', link.dataset.settingsTab === section));
@@ -2280,6 +2527,7 @@ function renderSettingsPage() {
   ui.privacyLists.checked = settings?.show_lists !== false;
   ui.privacyActivity.checked = settings?.show_activity !== false;
   ui.privacyEmails.checked = settings?.email_notifications !== false;
+  if (section === "connections") void renderSteamConnectionPanel();
 }
 
 async function synchronizeSignedInUser(snapshot) {
@@ -2377,7 +2625,7 @@ function migratePersonalDataToCanonicalKeys() {
       candidate = signatureMap.get(signature);
     }
 
-    const canonicalKey = candidate?.canonical_id;
+    const canonicalKey = candidate ? gameKey(candidate) : null;
     if (!canonicalKey || canonicalKey === oldKey) continue;
 
     const existing = nextLibrary[canonicalKey];
@@ -2419,25 +2667,52 @@ function migratePersonalDataToCanonicalKeys() {
   }
 }
 
+
+async function fetchOptionalJson(url, fallback) {
+  try {
+    const response = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return fallback;
+    return await response.json();
+  } catch (error) {
+    console.warn(`Dati opzionali non disponibili: ${url}`, error);
+    return fallback;
+  }
+}
+
 async function loadData() {
   ui.refresh.disabled = true;
   ui.status.hidden = true;
   try {
-    const [promotionsResponse, historyResponse, catalogResponse] = await Promise.all([
-      fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" }),
-      fetch(`${HISTORY_URL}?v=${Date.now()}`, { cache: "no-store" }),
-      fetch(`${CATALOG_URL}?v=${Date.now()}`, { cache: "no-store" }),
-    ]);
+    const promotionsResponse = await fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" });
     if (!promotionsResponse.ok) throw new Error(`Promotions HTTP ${promotionsResponse.status}`);
-    const promotions = await promotionsResponse.json();
-    const history = historyResponse.ok ? await historyResponse.json() : { games: [] };
-    const catalog = catalogResponse.ok ? await catalogResponse.json() : { games: [], total: 0 };
+
+    const [promotions, history, epicCatalog, steamCatalog] = await Promise.all([
+      promotionsResponse.json(),
+      fetchOptionalJson(HISTORY_URL, { games: [] }),
+      fetchOptionalJson(CATALOG_URL, { games: [], total: 0, store: "epic" }),
+      fetchOptionalJson(STEAM_CATALOG_URL, { games: [], total: 0, store: "steam" }),
+    ]);
 
     state.current = promotions.current || [];
     state.upcoming = promotions.upcoming || [];
     state.history = history.games || history.history || [];
-    state.catalog = catalog.games || [];
-    state.catalogMeta = catalog;
+    state.catalog = [
+      ...(epicCatalog.games || []),
+      ...(steamCatalog.games || []),
+    ];
+    state.epicCatalogMeta = epicCatalog;
+    state.steamCatalogMeta = steamCatalog;
+    state.catalogMeta = {
+      generated_at: [epicCatalog.generated_at, steamCatalog.generated_at]
+        .filter(Boolean)
+        .sort()
+        .at(-1) || null,
+      total: state.catalog.length,
+      canonical_total: groupedCatalogGames().length,
+      stores: ["epic", "steam"],
+      epic_total: Number(epicCatalog.total || 0),
+      steam_total: Number(steamCatalog.total || 0),
+    };
     state.dataLoaded = true;
     migratePersonalDataToCanonicalKeys();
     rebuildGameIndex();
@@ -2801,6 +3076,59 @@ ui.privacyForm.addEventListener("submit", async (event) => {
     ui.privacyMessage.textContent = error.message || "Salvataggio fallito.";
     ui.privacyMessage.hidden = false;
   }
+});
+
+ui.steamConnectButton?.addEventListener("click", async () => {
+  ui.steamSyncMessage.hidden = true;
+  ui.steamConnectButton.disabled = true;
+  try {
+    await window.VaultSteam.beginLink();
+  } catch (error) {
+    ui.steamSyncMessage.textContent = error.message || "Collegamento Steam non riuscito.";
+    ui.steamSyncMessage.hidden = false;
+    ui.steamConnectButton.disabled = false;
+  }
+});
+
+ui.steamSyncButton?.addEventListener("click", async () => {
+  ui.steamSyncMessage.hidden = true;
+  ui.steamSyncButton.disabled = true;
+  ui.steamSyncButton.textContent = "Sincronizzazione…";
+  try {
+    const result = await window.VaultSteam.syncLibrary();
+    ui.steamSyncMessage.textContent = `${result.game_count || result.games?.length || 0} giochi ricevuti da Steam.`;
+    ui.steamSyncMessage.classList.add("auth-success");
+    ui.steamSyncMessage.hidden = false;
+    await renderSteamConnectionPanel();
+  } catch (error) {
+    ui.steamSyncMessage.classList.remove("auth-success");
+    ui.steamSyncMessage.textContent = error.message || "Importazione Steam fallita. Verifica la privacy della libreria.";
+    ui.steamSyncMessage.hidden = false;
+  } finally {
+    ui.steamSyncButton.disabled = false;
+    ui.steamSyncButton.textContent = "Importa libreria";
+  }
+});
+
+ui.steamDisconnectButton?.addEventListener("click", async () => {
+  if (!confirm("Scollegare l’account Steam? I giochi già importati resteranno nella libreria personale.")) return;
+  ui.steamDisconnectButton.disabled = true;
+  try {
+    await window.VaultSteam.disconnect();
+    showToast("Account Steam scollegato.");
+    await renderSteamConnectionPanel();
+  } catch (error) {
+    showToast(error.message || "Scollegamento Steam fallito.");
+  } finally {
+    ui.steamDisconnectButton.disabled = false;
+  }
+});
+
+window.addEventListener("tfv:steam-library-import", (event) => {
+  const result = importSteamLibrary(event.detail?.games || []);
+  showToast(`Importati ${result.imported} giochi Steam${result.unmatched ? `, ${result.unmatched} senza match catalogo` : ""}.`);
+  if (state.route.name === "library") renderDashboard();
+  if (state.route.name === "profile") renderProfilePage();
 });
 
 ui.settingsExportData.addEventListener("click", exportData);

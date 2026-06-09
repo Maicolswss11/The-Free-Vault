@@ -16,6 +16,7 @@ class StoreGame:
     title: str
     canonical_title: str
     canonical_id: str
+    match_key: str
     listing_id: str
     description: str
     developer: str | None
@@ -50,6 +51,7 @@ class StoreGame:
         return {
             "canonical_id": self.canonical_id,
             "canonical_title": self.canonical_title,
+            "match_key": self.match_key,
             "listing_id": self.listing_id,
             "internal_id": self.internal_id,
             "store": self.store,

@@ -334,3 +334,109 @@ per inserire direttamente notifiche o attività.
 
 Le interazioni sociali rispettano `profiles.is_public` e le preferenze
 `show_lists` / `show_activity` già presenti in `user_settings`.
+
+
+# v4.0 — Steam Integration
+
+La v4.0 aggiunge Steam come secondo store senza modificare il tracker dei giochi
+gratis Epic.
+
+## Componenti indipendenti
+
+```text
+Check Epic Free Games   → ogni 3 ore
+Sync Epic Catalog       → una volta al giorno
+Sync Steam Catalog      → una volta al giorno
+```
+
+I dati Steam sono salvati in `docs/steam-catalog.json`; i dati Epic rimangono in
+`docs/catalog.json`. La PWA li unisce in fase di visualizzazione, raggruppando
+le listing tramite `match_key`.
+
+## 1. Steam Web API key
+
+Crea una Steam Web API key e salvala in due punti:
+
+### GitHub
+
+Repository → Settings → Secrets and variables → Actions:
+
+```text
+STEAM_WEB_API_KEY
+```
+
+Serve al workflow `Sync Steam Catalog`.
+
+### Supabase
+
+Project Settings → Edge Functions → Secrets:
+
+```text
+STEAM_WEB_API_KEY=<chiave>
+APP_BASE_URL=https://maicolswss11.github.io/The-Free-Vault/
+```
+
+La chiave non deve comparire in `docs/`, `config.js` o nel repository.
+
+## 2. Migrazione Supabase
+
+Esegui nel SQL Editor:
+
+```text
+supabase/migrations/20260610_v40_steam_integration.sql
+```
+
+Crea:
+
+- `steam_accounts`;
+- `steam_link_states`;
+- `user_owned_listings`;
+- `canonical_match_queue`.
+
+## 3. Edge Functions
+
+Pubblica:
+
+```text
+steam-auth-start
+steam-auth-callback
+steam-sync-library
+```
+
+`steam-auth-callback` deve avere la verifica JWT disattivata perché viene
+richiamata direttamente da Steam dopo il login. La funzione verifica comunque
+la risposta OpenID e lo state monouso.
+
+Le altre due funzioni devono mantenere la verifica JWT attiva.
+
+## 4. Primo catalogo Steam
+
+Avvia manualmente:
+
+```text
+Actions → Sync Steam Catalog → Run workflow
+```
+
+La sincronizzazione usa l'API ufficiale
+`IStoreService/GetAppList` e scrive `docs/steam-catalog.json`.
+
+## 5. Collegamento utente
+
+Nella PWA:
+
+```text
+Impostazioni → Account collegati → Collega Steam
+```
+
+Dopo il collegamento, `Importa libreria` usa
+`IPlayerService/GetOwnedGames`. Se Steam non restituisce giochi, controlla la
+privacy del profilo e rendi visibili i dettagli dei giochi.
+
+## Limiti iniziali
+
+`GetAppList` fornisce un indice affidabile di AppID e nomi, ma non tutte le
+schede contengono subito descrizione, prezzo e data. La pagina gioco usa i dati
+Epic quando disponibili e mostra la listing Steam come disponibilità aggiuntiva.
+
+Il matching automatico usa il titolo canonico (`match_key`). I casi ambigui
+saranno gestiti in seguito tramite `canonical_match_queue`.

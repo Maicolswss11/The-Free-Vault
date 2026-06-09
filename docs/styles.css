@@ -1725,3 +1725,143 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   }
   .shared-list-actions { justify-content: start; }
 }
+
+
+/* v4.0 — Steam e disponibilità multi-store */
+.store-options {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.store-option {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .025);
+}
+
+.store-option-logo {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 13px;
+  color: #fff;
+  background: #1b2838;
+  font-weight: 950;
+  font-size: 1.1rem;
+}
+
+.store-option-epic .store-option-logo {
+  background: linear-gradient(145deg, #30343b, #111318);
+}
+
+.store-option-steam .store-option-logo {
+  background: linear-gradient(145deg, #1b6aa5, #171d25);
+}
+
+.store-option-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.store-option-copy span,
+.store-option-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.steam-connection-card {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(27, 40, 56, .92), rgba(12, 17, 24, .96));
+}
+
+.steam-avatar {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: 16px;
+  background-color: #1b2838;
+  background-position: center;
+  background-size: cover;
+  color: #66c0f4;
+  font-size: 1.45rem;
+  font-weight: 950;
+}
+
+.steam-connection-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.steam-connection-copy span,
+.steam-connection-copy small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.steam-connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settings-info-box {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(74, 168, 255, .22);
+  border-radius: 13px;
+  background: rgba(74, 168, 255, .06);
+}
+
+.settings-info-box p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .store-option {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .store-option > .button {
+    grid-column: 1 / -1;
+  }
+
+  .steam-connection-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .steam-avatar {
+    width: 54px;
+    height: 54px;
+  }
+
+  .steam-connection-actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .steam-connection-actions .button {
+    flex: 1 1 140px;
+  }
+}
