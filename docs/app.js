@@ -645,7 +645,11 @@ ui.search.addEventListener("input", () => { state.search = ui.search.value.trim(
 ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; render(); });
 ui.sort.addEventListener("change", () => { state.sort = ui.sort.value; render(); });
 ui.refresh.addEventListener("click", loadData);
-$("#menu-button").addEventListener("click", () => document.body.classList.toggle("sidebar-open"));
+const menuButton = $("#menu-button");
+
+if (menuButton) {
+  menuButton.hidden = true;
+}
 $("#dialog-close").addEventListener("click", () => ui.dialog.close());
 ui.dialogLibrary.addEventListener("click", () => {
   const game = state.selectedGame;
