@@ -21,6 +21,7 @@ const state = {
   sort: "relevance",
   pendingListGame: null,
   auth: { configured: false, user: null, profile: null },
+  social: { gameReviews: [], myReview: null, publicProfile: null, publicProfileContent: null, sharedList: null },
   dataLoaded: false,
 };
 
@@ -32,6 +33,8 @@ const ui = {
   gamePage: $("#game-page"),
   authPage: $("#auth-page"),
   profilePage: $("#profile-page"),
+  publicProfilePage: $("#public-profile-page"),
+  sharedListPage: $("#shared-list-page"),
   settingsPage: $("#settings-page"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
@@ -158,6 +161,43 @@ const ui = {
   gamePageNotes: $("#game-page-notes"),
   gamePageSaveNotes: $("#game-page-save-notes"),
   gamePagePromotions: $("#game-page-promotions"),
+  publicRatingAverage: $("#public-rating-average"),
+  publicRatingCount: $("#public-rating-count"),
+  publicReviewSignedOut: $("#public-review-signed-out"),
+  publicReviewForm: $("#public-review-form"),
+  publicReviewRating: $("#public-review-rating"),
+  publicReviewTitle: $("#public-review-title"),
+  publicReviewBody: $("#public-review-body"),
+  publicReviewSpoilers: $("#public-review-spoilers"),
+  publicReviewError: $("#public-review-error"),
+  publicReviewSubmit: $("#public-review-submit"),
+  publicReviewDelete: $("#public-review-delete"),
+  publicReviewsList: $("#public-reviews-list"),
+  publicProfileLoading: $("#public-profile-loading"),
+  publicProfileNotFound: $("#public-profile-not-found"),
+  publicProfileContent: $("#public-profile-content"),
+  publicProfileAvatar: $("#public-profile-avatar"),
+  publicProfileName: $("#public-profile-name"),
+  publicProfileHandle: $("#public-profile-handle"),
+  publicProfileBio: $("#public-profile-bio"),
+  publicProfileMemberSince: $("#public-profile-member-since"),
+  publicProfileShare: $("#public-profile-share"),
+  publicProfileStatReviews: $("#public-profile-stat-reviews"),
+  publicProfileStatAverage: $("#public-profile-stat-average"),
+  publicProfileStatLists: $("#public-profile-stat-lists"),
+  publicProfileReviews: $("#public-profile-reviews"),
+  publicProfileLists: $("#public-profile-lists"),
+  sharedListLoading: $("#shared-list-loading"),
+  sharedListNotFound: $("#shared-list-not-found"),
+  sharedListContent: $("#shared-list-content"),
+  sharedListVisibility: $("#shared-list-visibility"),
+  sharedListTitle: $("#shared-list-title"),
+  sharedListDescription: $("#shared-list-description"),
+  sharedListAuthor: $("#shared-list-author"),
+  sharedListMeta: $("#shared-list-meta"),
+  sharedListShare: $("#shared-list-share"),
+  sharedListGames: $("#shared-list-games"),
+  viewPublicProfile: $("#view-public-profile"),
 };
 
 let installPrompt = null;
@@ -402,6 +442,9 @@ function parseRoute() {
   if (first === "list" && segments[1]) {
     return { name: "list", params: { id: decodeURIComponent(segments[1]) }, query };
   }
+  if (first === "user" && segments[1]) {
+    return { name: "public-profile", params: { username: decodeURIComponent(segments.slice(1).join("/")) }, query };
+  }
   if (first === "auth" && segments[1] === "callback") {
     return { name: "auth-callback", params: {}, query };
   }
@@ -412,7 +455,7 @@ function parseRoute() {
 }
 
 function routeToDashboardView(routeName) {
-  return ["home", "current", "upcoming", "history", "catalog", "library", "lists", "list"].includes(routeName);
+  return ["home", "current", "upcoming", "history", "catalog", "library", "lists"].includes(routeName);
 }
 
 function setPageVisibility(page) {
@@ -420,6 +463,8 @@ function setPageVisibility(page) {
   ui.gamePage.hidden = page !== "game";
   ui.authPage.hidden = page !== "auth";
   ui.profilePage.hidden = page !== "profile";
+  ui.publicProfilePage.hidden = page !== "public-profile";
+  ui.sharedListPage.hidden = page !== "shared-list";
   ui.settingsPage.hidden = page !== "settings";
 }
 
@@ -428,7 +473,7 @@ function updateDocumentTitle(label) {
 }
 
 function setActiveNavigation(routeName) {
-  const normalized = routeName === "list" ? "lists" : routeName === "settings" ? "settings" : routeName;
+  const normalized = routeName === "list" ? "lists" : routeName === "public-profile" ? "profile" : routeName === "settings" ? "settings" : routeName;
   $$('[data-route]').forEach((node) => {
     node.classList.toggle("is-active", node.dataset.route === normalized);
   });
@@ -449,9 +494,15 @@ function handleRoute() {
   if (routeToDashboardView(state.route.name)) {
     setPageVisibility("dashboard");
     renderDashboard();
+  } else if (state.route.name === "list") {
+    setPageVisibility("shared-list");
+    void renderSharedListPage();
   } else if (state.route.name === "game") {
     setPageVisibility("game");
     renderGamePage();
+  } else if (state.route.name === "public-profile") {
+    setPageVisibility("public-profile");
+    void renderPublicProfilePage();
   } else if (["login", "register", "forgot-password", "reset-password", "auth-callback"].includes(state.route.name)) {
     setPageVisibility("auth");
     renderAuthPage();
@@ -873,6 +924,7 @@ function renderGamePage() {
   ui.gamePageNotes.value = entry?.notes || "";
   renderRating(game, entry);
   renderPromotionTimeline(game);
+  void renderGameSocial(game);
 
   ui.gamePageLibrary.onclick = () => {
     if (getLibraryEntry(game)) removeLibraryEntry(game);
@@ -893,6 +945,233 @@ function renderGamePage() {
     showToast("Diario aggiornato.");
     renderGamePage();
   };
+}
+
+
+function starsText(rating) {
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  return `${"★".repeat(value)}${"☆".repeat(5 - value)}`;
+}
+
+function profileRoute(username) {
+  return `#/user/${encodeURIComponent(username)}`;
+}
+
+async function copyCurrentUrl(successMessage) {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    showToast(successMessage);
+  } catch {
+    window.prompt("Copia questo link:", window.location.href);
+  }
+}
+
+function reviewCard(review, { showGame = false } = {}) {
+  const article = document.createElement("article");
+  article.className = "public-review-card";
+  const author = review.author || {};
+  const authorName = author.display_name || author.username || "Utente The Free Vault";
+  const authorLink = author.username ? profileRoute(author.username) : "#/home";
+  const avatarStyle = author.avatar_url
+    ? `style="background-image:url('${escapeAttr(author.avatar_url)}')"`
+    : "";
+  const avatarText = author.avatar_url ? "" : escapeHtml(authorName.slice(0, 2).toUpperCase());
+  const body = review.body
+    ? `<p class="review-body${review.contains_spoilers ? " is-spoiler" : ""}">${escapeHtml(review.body)}</p>`
+    : `<p class="muted">Voto senza recensione testuale.</p>`;
+  const gameBlock = showGame
+    ? `<a class="review-game-link" href="${gameRoute({ internal_id: review.game_key })}">
+         <img src="${escapeAttr(review.game_image_url || PLACEHOLDER)}" alt="">
+         <span>${escapeHtml(review.game_title || "Gioco")}</span>
+       </a>`
+    : "";
+
+  article.innerHTML = `
+    ${gameBlock}
+    <header class="review-card-header">
+      <a class="review-author" href="${authorLink}">
+        <span class="account-avatar review-avatar" ${avatarStyle}>${avatarText}</span>
+        <span><strong>${escapeHtml(authorName)}</strong><small>${author.username ? `@${escapeHtml(author.username)}` : ""}</small></span>
+      </a>
+      <div class="review-score"><strong>${starsText(review.rating)}</strong><span>${Number(review.rating).toFixed(0)}/5</span></div>
+    </header>
+    ${review.title ? `<h3>${escapeHtml(review.title)}</h3>` : ""}
+    ${body}
+    ${review.contains_spoilers && review.body ? `<button class="spoiler-reveal" type="button">Mostra spoiler</button>` : ""}
+    <footer><span>${formatDate(review.updated_at || review.created_at, true)}</span></footer>`;
+
+  const spoiler = article.querySelector(".is-spoiler");
+  const reveal = article.querySelector(".spoiler-reveal");
+  if (spoiler && reveal) {
+    reveal.onclick = () => {
+      spoiler.classList.toggle("is-revealed");
+      reveal.textContent = spoiler.classList.contains("is-revealed") ? "Nascondi spoiler" : "Mostra spoiler";
+    };
+  }
+  return article;
+}
+
+async function renderGameSocial(game) {
+  const key = gameKey(game);
+  ui.publicReviewsList.innerHTML = `<div class="route-loading">Caricamento recensioni…</div>`;
+  ui.publicReviewError.hidden = true;
+
+  if (!window.VaultSocial || !state.auth.configured) {
+    ui.publicRatingAverage.textContent = "—";
+    ui.publicRatingCount.textContent = "Community non configurata";
+    ui.publicReviewForm.hidden = true;
+    ui.publicReviewSignedOut.hidden = false;
+    ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Configura Supabase per abilitare recensioni e voti pubblici.</div>`;
+    return;
+  }
+
+  try {
+    const [reviews, myReview] = await Promise.all([
+      window.VaultSocial.getGameReviews(key),
+      window.VaultSocial.getMyReview(key),
+    ]);
+    if (state.route.name !== "game" || state.route.params.key !== key) return;
+    state.social.gameReviews = reviews;
+    state.social.myReview = myReview;
+    const summary = window.VaultSocial.summarizeRatings(reviews);
+    ui.publicRatingAverage.textContent = summary.count ? summary.average.toFixed(1) : "—";
+    ui.publicRatingCount.textContent = summary.count === 1 ? "1 voto pubblico" : `${summary.count} voti pubblici`;
+
+    const signedIn = Boolean(state.auth.user);
+    ui.publicReviewSignedOut.hidden = signedIn;
+    ui.publicReviewForm.hidden = !signedIn;
+    if (signedIn) {
+      ui.publicReviewRating.value = myReview?.rating ? String(myReview.rating) : "";
+      ui.publicReviewTitle.value = myReview?.title || "";
+      ui.publicReviewBody.value = myReview?.body || "";
+      ui.publicReviewSpoilers.checked = Boolean(myReview?.contains_spoilers);
+      ui.publicReviewSubmit.textContent = myReview ? "Aggiorna recensione" : "Pubblica recensione";
+      ui.publicReviewDelete.hidden = !myReview;
+    }
+
+    ui.publicReviewsList.replaceChildren();
+    if (!reviews.length) {
+      ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Nessuna recensione pubblica. Puoi essere il primo.</div>`;
+    } else {
+      for (const review of reviews) ui.publicReviewsList.append(reviewCard(review));
+    }
+  } catch (error) {
+    console.error("Caricamento recensioni fallito", error);
+    ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Recensioni temporaneamente non disponibili. Verifica di aver eseguito la migrazione v3.3.</div>`;
+  }
+}
+
+async function renderPublicProfilePage() {
+  const username = state.route.params.username;
+  updateDocumentTitle(`@${username}`);
+  ui.publicProfileLoading.hidden = false;
+  ui.publicProfileNotFound.hidden = true;
+  ui.publicProfileContent.hidden = true;
+
+  if (!window.VaultSocial || !state.auth.configured) {
+    ui.publicProfileLoading.hidden = true;
+    ui.publicProfileNotFound.hidden = false;
+    return;
+  }
+
+  try {
+    const profile = await window.VaultSocial.getPublicProfile(username);
+    if (!profile || state.route.name !== "public-profile") {
+      ui.publicProfileLoading.hidden = true;
+      ui.publicProfileNotFound.hidden = false;
+      return;
+    }
+    const content = await window.VaultSocial.getPublicProfileContent(profile.id);
+    if (state.route.name !== "public-profile" || state.route.params.username.toLocaleLowerCase() !== username.toLocaleLowerCase()) return;
+
+    state.social.publicProfile = profile;
+    state.social.publicProfileContent = content;
+    ui.publicProfileLoading.hidden = true;
+    ui.publicProfileContent.hidden = false;
+    applyAvatar(ui.publicProfileAvatar, null, profile);
+    ui.publicProfileName.textContent = profile.display_name || profile.username;
+    ui.publicProfileHandle.textContent = `@${profile.username}`;
+    ui.publicProfileBio.textContent = profile.bio || "Nessuna bio pubblica.";
+    ui.publicProfileMemberSince.textContent = `Nel Vault dal ${formatDate(profile.created_at)}`;
+
+    const summary = window.VaultSocial.summarizeRatings(content.reviews);
+    ui.publicProfileStatReviews.textContent = content.reviews.length;
+    ui.publicProfileStatAverage.textContent = summary.count ? summary.average.toFixed(1) : "—";
+    ui.publicProfileStatLists.textContent = content.lists.length;
+
+    ui.publicProfileReviews.replaceChildren();
+    if (!content.reviews.length) ui.publicProfileReviews.innerHTML = `<div class="timeline-empty">Nessuna recensione pubblica.</div>`;
+    else for (const review of content.reviews) ui.publicProfileReviews.append(reviewCard({ ...review, author: profile }, { showGame: true }));
+
+    ui.publicProfileLists.replaceChildren();
+    if (!content.lists.length) ui.publicProfileLists.innerHTML = `<div class="timeline-empty">Nessuna lista pubblica.</div>`;
+    else for (const list of content.lists) {
+      const link = document.createElement("a");
+      link.className = "public-list-link";
+      link.href = listRoute(list.id);
+      link.innerHTML = `<span><strong>${escapeHtml(list.name)}</strong><small>${escapeHtml(list.description || "Nessuna descrizione")}</small></span><b>${(list.game_keys || []).length} giochi →</b>`;
+      ui.publicProfileLists.append(link);
+    }
+  } catch (error) {
+    console.error("Profilo pubblico non disponibile", error);
+    ui.publicProfileLoading.hidden = true;
+    ui.publicProfileNotFound.hidden = false;
+  }
+}
+
+async function renderSharedListPage() {
+  const id = state.route.params.id;
+  updateDocumentTitle("Lista");
+  ui.sharedListLoading.hidden = false;
+  ui.sharedListNotFound.hidden = true;
+  ui.sharedListContent.hidden = true;
+  ui.sharedListGames.replaceChildren();
+
+  try {
+    let list = state.lists[id]
+      ? {
+          id,
+          user_id: state.auth.user?.id || null,
+          name: state.lists[id].name,
+          description: state.lists[id].description,
+          visibility: state.lists[id].visibility,
+          game_keys: state.lists[id].games || [],
+          created_at: state.lists[id].createdAt,
+          updated_at: state.lists[id].updatedAt,
+          author: state.auth.profile || null,
+        }
+      : null;
+
+    if (!list && window.VaultSocial && state.auth.configured) list = await window.VaultSocial.getSharedList(id);
+    if (!list || state.route.name !== "list" || state.route.params.id !== id) {
+      ui.sharedListLoading.hidden = true;
+      ui.sharedListNotFound.hidden = false;
+      return;
+    }
+
+    state.social.sharedList = list;
+    ui.sharedListLoading.hidden = true;
+    ui.sharedListContent.hidden = false;
+    ui.sharedListVisibility.textContent = list.visibility === "public" ? "LISTA PUBBLICA" : "LISTA PRIVATA";
+    ui.sharedListTitle.textContent = list.name;
+    ui.sharedListDescription.textContent = list.description || "Nessuna descrizione.";
+    ui.sharedListMeta.textContent = `${(list.game_keys || []).length} giochi · aggiornata ${formatDate(list.updated_at || list.created_at, true)}`;
+    const authorName = list.author?.display_name || list.author?.username || "Il tuo profilo";
+    ui.sharedListAuthor.textContent = list.author?.username ? `Creata da ${authorName} · @${list.author.username}` : `Creata da ${authorName}`;
+    ui.sharedListAuthor.href = list.author?.username ? profileRoute(list.author.username) : "#/profile";
+    updateDocumentTitle(list.name);
+
+    const games = (list.game_keys || []).map(resolveGameByKey).filter(Boolean);
+    if (!games.length) {
+      ui.sharedListGames.innerHTML = `<div class="empty-state"><strong>Lista vuota</strong><span>I giochi potrebbero non essere ancora presenti nel catalogo locale.</span></div>`;
+    } else {
+      for (const game of games) ui.sharedListGames.append(renderCard(game));
+    }
+  } catch (error) {
+    console.error("Lista condivisa non disponibile", error);
+    ui.sharedListLoading.hidden = true;
+    ui.sharedListNotFound.hidden = false;
+  }
 }
 
 function initialsForAccount(user, profile) {
@@ -1036,6 +1315,8 @@ function renderProfilePage() {
   ui.profilePageBio.textContent = profile?.bio || "Nessuna bio inserita.";
   ui.profilePageEmail.textContent = user.email || "";
   ui.profileVisibilityBadge.textContent = profile?.is_public === false ? "Profilo privato" : "Profilo pubblico";
+  ui.viewPublicProfile.hidden = !profile?.username || profile?.is_public === false;
+  if (profile?.username) ui.viewPublicProfile.href = profileRoute(profile.username);
   ui.profileUsername.value = profile?.username || "";
   ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
   ui.profileBio.value = profile?.bio || "";
@@ -1082,6 +1363,9 @@ async function synchronizeSignedInUser(snapshot) {
   if (!snapshot.user) {
     if (state.route.name === "profile") renderProfilePage();
     if (state.route.name === "settings") renderSettingsPage();
+    if (state.route.name === "game") renderGamePage();
+    if (state.route.name === "public-profile") void renderPublicProfilePage();
+    if (state.route.name === "list") void renderSharedListPage();
     return;
   }
   ui.cloudStatus.textContent = "Sincronizzazione…";
@@ -1096,6 +1380,9 @@ async function synchronizeSignedInUser(snapshot) {
     ui.cloudStatus.textContent = "Sincronizzato";
     if (state.route.name === "profile") renderProfilePage();
     if (state.route.name === "settings") renderSettingsPage();
+    if (state.route.name === "game") renderGamePage();
+    if (state.route.name === "public-profile") void renderPublicProfilePage();
+    if (state.route.name === "list") void renderSharedListPage();
     if (routeToDashboardView(state.route.name)) renderDashboard();
   } catch (error) {
     console.error(error);
@@ -1306,6 +1593,46 @@ ui.registerForm.addEventListener("submit", async (event) => {
     ui.registerSubmit.disabled = false;
   }
 });
+
+
+ui.publicReviewForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.publicReviewError.hidden = true;
+  const game = resolveGameByKey(state.route.params.key);
+  if (!game) return;
+  ui.publicReviewSubmit.disabled = true;
+  try {
+    await window.VaultSocial.saveReview({
+      game,
+      rating: ui.publicReviewRating.value,
+      title: ui.publicReviewTitle.value,
+      body: ui.publicReviewBody.value,
+      containsSpoilers: ui.publicReviewSpoilers.checked,
+    });
+    showToast("Recensione pubblicata.");
+    await renderGameSocial(game);
+  } catch (error) {
+    ui.publicReviewError.textContent = error.message || "Pubblicazione fallita.";
+    ui.publicReviewError.hidden = false;
+  } finally {
+    ui.publicReviewSubmit.disabled = false;
+  }
+});
+
+ui.publicReviewDelete.addEventListener("click", async () => {
+  const game = resolveGameByKey(state.route.params.key);
+  if (!game || !confirm("Eliminare la tua recensione pubblica?")) return;
+  try {
+    await window.VaultSocial.deleteReview(gameKey(game));
+    showToast("Recensione eliminata.");
+    await renderGameSocial(game);
+  } catch (error) {
+    showToast(error.message || "Eliminazione fallita.");
+  }
+});
+
+ui.publicProfileShare.addEventListener("click", () => copyCurrentUrl("Link del profilo copiato."));
+ui.sharedListShare.addEventListener("click", () => copyCurrentUrl("Link della lista copiato."));
 
 ui.profileForm.addEventListener("submit", async (event) => {
   event.preventDefault();

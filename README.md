@@ -220,3 +220,22 @@ supabase functions deploy delete-account
 
 La `service_role` resta esclusivamente nell’ambiente server della Edge Function e non viene mai
 inserita nel frontend.
+
+
+## v3.3 — Social Foundation
+
+La release aggiunge:
+
+- voti pubblici da 1 a 5;
+- recensioni pubbliche con supporto spoiler;
+- media voto e conteggio sulla pagina gioco;
+- profili pubblici raggiungibili con `#/user/<username>`;
+- recensioni e liste pubbliche nel profilo;
+- pagine lista condivisibili tramite `#/list/<uuid>`;
+- privacy RLS collegata alle preferenze di profilo, liste e attività.
+
+Prima del deploy eseguire nel SQL Editor Supabase:
+
+```text
+supabase/migrations/20260609_social_v33.sql
+```

@@ -1,10 +1,11 @@
-const CACHE_NAME = "the-free-vault-v3-2-account-complete";
+const CACHE_NAME = "the-free-vault-v3-3-social";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./cloud-sync.js",
+  "./social.js",
   "./auth.js",
   "./config.js",
   "./manifest.webmanifest",

@@ -223,6 +223,62 @@
               <div id="game-page-promotions" class="promotion-timeline"></div>
             </section>
           </div>
+
+          <section class="game-social-section">
+            <header class="social-section-header">
+              <div>
+                <p class="eyebrow">COMMUNITY</p>
+                <h2>Voti e recensioni</h2>
+              </div>
+              <div class="rating-summary">
+                <strong id="public-rating-average">—</strong>
+                <span id="public-rating-count">Nessun voto</span>
+              </div>
+            </header>
+
+            <div class="game-social-grid">
+              <section class="detail-panel review-editor-panel">
+                <div id="public-review-signed-out" class="review-auth-callout">
+                  <strong>Condividi la tua opinione</strong>
+                  <span>Accedi per pubblicare un voto o una recensione.</span>
+                  <a class="button button-primary" href="#/login">Accedi</a>
+                </div>
+
+                <form id="public-review-form" class="public-review-form" hidden>
+                  <p class="eyebrow">LA TUA RECENSIONE PUBBLICA</p>
+                  <label>Voto
+                    <select id="public-review-rating" required>
+                      <option value="">Seleziona</option>
+                      <option value="1">★☆☆☆☆ · 1</option>
+                      <option value="2">★★☆☆☆ · 2</option>
+                      <option value="3">★★★☆☆ · 3</option>
+                      <option value="4">★★★★☆ · 4</option>
+                      <option value="5">★★★★★ · 5</option>
+                    </select>
+                  </label>
+                  <label>Titolo facoltativo
+                    <input id="public-review-title" maxlength="120" placeholder="Riassumi la tua opinione">
+                  </label>
+                  <label>Recensione facoltativa
+                    <textarea id="public-review-body" rows="7" maxlength="5000" placeholder="Cosa ne pensi del gioco?"></textarea>
+                  </label>
+                  <label class="checkbox-row">
+                    <input id="public-review-spoilers" type="checkbox">
+                    <span>Questa recensione contiene spoiler</span>
+                  </label>
+                  <p id="public-review-error" class="auth-error" hidden></p>
+                  <div class="review-editor-actions">
+                    <button id="public-review-submit" class="button button-primary" type="submit">Pubblica recensione</button>
+                    <button id="public-review-delete" class="button button-secondary" type="button" hidden>Elimina</button>
+                  </div>
+                </form>
+              </section>
+
+              <section class="detail-panel">
+                <div id="public-reviews-list" class="public-reviews-list"></div>
+              </section>
+            </div>
+          </section>
         </section>
 
         <section id="auth-page" class="route-page auth-page" hidden>
@@ -318,6 +374,7 @@
               <div class="profile-hero-actions">
                 <span id="profile-visibility-badge" class="cloud-status">Profilo pubblico</span>
                 <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
+                <a id="view-public-profile" class="button button-secondary" href="#/profile">Vedi profilo pubblico</a>
                 <a class="button button-primary" href="#/settings/profile">Impostazioni</a>
                 <button id="logout-button" class="button button-secondary" type="button">Esci</button>
               </div>
@@ -349,6 +406,74 @@
                 <a class="button button-secondary" href="#/library">Apri la libreria</a>
               </section>
             </div>
+          </div>
+        </section>
+
+        <section id="public-profile-page" class="route-page public-profile-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <div id="public-profile-loading" class="route-loading">Caricamento profilo…</div>
+          <div id="public-profile-not-found" class="auth-required" hidden>
+            <span class="account-avatar account-avatar-large">?</span>
+            <p class="eyebrow">PROFILO</p>
+            <h1>Profilo non disponibile</h1>
+            <p>L’utente non esiste oppure ha impostato il profilo come privato.</p>
+            <a class="button button-primary" href="#/home">Torna alla Home</a>
+          </div>
+          <div id="public-profile-content" hidden>
+            <section class="profile-hero">
+              <span id="public-profile-avatar" class="account-avatar account-avatar-xl">?</span>
+              <div>
+                <p class="eyebrow">PROFILO PUBBLICO</p>
+                <h1 id="public-profile-name"></h1>
+                <p id="public-profile-handle" class="profile-handle"></p>
+                <p id="public-profile-bio" class="profile-bio"></p>
+                <p id="public-profile-member-since" class="muted"></p>
+              </div>
+              <div class="profile-hero-actions">
+                <button id="public-profile-share" class="button button-secondary" type="button">Condividi profilo</button>
+              </div>
+            </section>
+            <section class="profile-stats" aria-label="Statistiche profilo pubblico">
+              <article><strong id="public-profile-stat-reviews">0</strong><span>Recensioni</span></article>
+              <article><strong id="public-profile-stat-average">—</strong><span>Voto medio</span></article>
+              <article><strong id="public-profile-stat-lists">0</strong><span>Liste pubbliche</span></article>
+            </section>
+            <div class="public-profile-layout">
+              <section class="detail-panel">
+                <p class="eyebrow">RECENSIONI</p>
+                <h2>Attività recente</h2>
+                <div id="public-profile-reviews" class="public-reviews-list"></div>
+              </section>
+              <section class="detail-panel">
+                <p class="eyebrow">LISTE</p>
+                <h2>Liste pubbliche</h2>
+                <div id="public-profile-lists" class="public-list-links"></div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="shared-list-page" class="route-page shared-list-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <div id="shared-list-loading" class="route-loading">Caricamento lista…</div>
+          <div id="shared-list-not-found" class="auth-required" hidden>
+            <p class="eyebrow">LISTA</p>
+            <h1>Lista non disponibile</h1>
+            <p>La lista non esiste, è privata oppure l’autore ha limitato la visibilità.</p>
+            <a class="button button-primary" href="#/lists">Apri le tue liste</a>
+          </div>
+          <div id="shared-list-content" hidden>
+            <header class="shared-list-header">
+              <div>
+                <span id="shared-list-visibility" class="pill"></span>
+                <h1 id="shared-list-title"></h1>
+                <p id="shared-list-description"></p>
+                <a id="shared-list-author" class="shared-list-author" href="#"></a>
+                <p id="shared-list-meta" class="muted"></p>
+              </div>
+              <button id="shared-list-share" class="button button-secondary" type="button">Condividi lista</button>
+            </header>
+            <section id="shared-list-games" class="games-grid"></section>
           </div>
         </section>
 
@@ -543,6 +668,7 @@
   <script src="./config.js" defer></script>
   <script src="./auth.js" defer></script>
   <script src="./cloud-sync.js" defer></script>
+  <script src="./social.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
