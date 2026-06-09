@@ -27,7 +27,18 @@ const state = {
   sort: "relevance",
   pendingListGame: null,
   auth: { configured: false, user: null, profile: null },
-  social: { gameReviews: [], myReview: null, publicProfile: null, publicProfileContent: null, sharedList: null },
+  social: {
+    gameReviews: [],
+    myReview: null,
+    publicProfile: null,
+    publicProfileContent: null,
+    sharedList: null,
+    feed: [],
+    feedFollowingOnly: true,
+    notifications: [],
+    unreadNotifications: 0,
+    exploreUsers: [],
+  },
   dataLoaded: false,
 };
 
@@ -42,6 +53,9 @@ const ui = {
   publicProfilePage: $("#public-profile-page"),
   sharedListPage: $("#shared-list-page"),
   settingsPage: $("#settings-page"),
+  feedPage: $("#feed-page"),
+  explorePage: $("#explore-page"),
+  notificationsPage: $("#notifications-page"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
@@ -210,6 +224,27 @@ const ui = {
   sharedListMeta: $("#shared-list-meta"),
   sharedListShare: $("#shared-list-share"),
   sharedListGames: $("#shared-list-games"),
+  sharedListLike: $("#shared-list-like"),
+  sharedListLikeCount: $("#shared-list-like-count"),
+  sharedListCommentCount: $("#shared-list-comment-count"),
+  sharedListComments: $("#shared-list-comments"),
+  publicProfileFollow: $("#public-profile-follow"),
+  publicProfileLoginToFollow: $("#public-profile-login-to-follow"),
+  publicProfileStatFollowers: $("#public-profile-stat-followers"),
+  publicProfileStatFollowing: $("#public-profile-stat-following"),
+  notificationButton: $("#notification-button"),
+  notificationBadge: $("#notification-badge"),
+  sidebarNotificationBadge: $("#sidebar-notification-badge"),
+  feedFollowingTab: $("#feed-following-tab"),
+  feedPublicTab: $("#feed-public-tab"),
+  feedShowPublic: $("#feed-show-public"),
+  feedAuthRequired: $("#feed-auth-required"),
+  feedList: $("#feed-list"),
+  exploreUsersSearch: $("#explore-users-search"),
+  exploreUsersGrid: $("#explore-users-grid"),
+  notificationsAuthRequired: $("#notifications-auth-required"),
+  notificationsList: $("#notifications-list"),
+  notificationsMarkAll: $("#notifications-mark-all"),
   viewPublicProfile: $("#view-public-profile"),
 };
 
@@ -542,6 +577,9 @@ function parseRoute() {
     library: "library",
     lists: "lists",
     profile: "profile",
+    feed: "feed",
+    explore: "explore",
+    notifications: "notifications",
     login: "login",
     register: "register",
     "forgot-password": "forgot-password",
@@ -577,6 +615,9 @@ function setPageVisibility(page) {
   ui.publicProfilePage.hidden = page !== "public-profile";
   ui.sharedListPage.hidden = page !== "shared-list";
   ui.settingsPage.hidden = page !== "settings";
+  ui.feedPage.hidden = page !== "feed";
+  ui.explorePage.hidden = page !== "explore";
+  ui.notificationsPage.hidden = page !== "notifications";
 }
 
 function updateDocumentTitle(label) {
@@ -584,8 +625,14 @@ function updateDocumentTitle(label) {
 }
 
 function setActiveNavigation(routeName) {
-  const normalized = routeName === "list" ? "lists" : routeName === "public-profile" ? "profile" : routeName === "settings" ? "settings" : routeName;
-  $$('[data-route]').forEach((node) => {
+  const normalized = routeName === "list"
+    ? "lists"
+    : routeName === "public-profile"
+      ? "profile"
+      : routeName === "settings"
+        ? "settings"
+        : routeName;
+  $$("[data-route]").forEach((node) => {
     node.classList.toggle("is-active", node.dataset.route === normalized);
   });
 }
@@ -626,6 +673,15 @@ function handleRoute() {
   } else if (state.route.name === "public-profile") {
     setPageVisibility("public-profile");
     void renderPublicProfilePage();
+  } else if (state.route.name === "feed") {
+    setPageVisibility("feed");
+    void renderFeedPage();
+  } else if (state.route.name === "explore") {
+    setPageVisibility("explore");
+    void renderExplorePage();
+  } else if (state.route.name === "notifications") {
+    setPageVisibility("notifications");
+    void renderNotificationsPage();
   } else if (["login", "register", "forgot-password", "reset-password", "auth-callback"].includes(state.route.name)) {
     setPageVisibility("auth");
     renderAuthPage();
@@ -1344,6 +1400,420 @@ async function copyCurrentUrl(successMessage) {
   }
 }
 
+function relativeTime(value) {
+  const date = new Date(value);
+  const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+  const formatter = new Intl.RelativeTimeFormat("it", { numeric: "auto" });
+  const units = [
+    ["year", 31536000],
+    ["month", 2592000],
+    ["week", 604800],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  for (const [unit, size] of units) {
+    if (Math.abs(seconds) >= size) return formatter.format(Math.round(seconds / size), unit);
+  }
+  return formatter.format(seconds, "second");
+}
+
+function socialTargetRoute(targetType, targetId, metadata = {}) {
+  if (targetType === "profile" && metadata.following_username) {
+    return profileRoute(metadata.following_username);
+  }
+  if (targetType === "review" && metadata.game_key) {
+    return gameRoute({ internal_id: metadata.game_key });
+  }
+  if (targetType === "list") return listRoute(targetId);
+  return "#/feed";
+}
+
+function commentElement(comment, onDeleted = null) {
+  const article = document.createElement("article");
+  article.className = "comment-item";
+  const author = comment.author || {};
+  const authorName = author.display_name || author.username || "Utente";
+  const own = Boolean(state.auth.user && state.auth.user.id === comment.user_id);
+  article.innerHTML = `
+    <a class="comment-author" href="${author.username ? profileRoute(author.username) : "#/home"}">
+      <span class="account-avatar comment-avatar">${author.avatar_url ? "" : escapeHtml(authorName.slice(0, 2).toUpperCase())}</span>
+      <span><strong>${escapeHtml(authorName)}</strong><small>${author.username ? `@${escapeHtml(author.username)}` : ""}</small></span>
+    </a>
+    <p>${escapeHtml(comment.body)}</p>
+    <footer>
+      <span>${relativeTime(comment.created_at)}</span>
+      ${own ? `<button class="comment-delete" type="button">Elimina</button>` : ""}
+    </footer>`;
+  const avatar = article.querySelector(".comment-avatar");
+  if (author.avatar_url) avatar.style.backgroundImage = `url("${author.avatar_url}")`;
+  const deleteButton = article.querySelector(".comment-delete");
+  if (deleteButton) {
+    deleteButton.onclick = async () => {
+      if (!confirm("Eliminare il commento?")) return;
+      try {
+        await window.VaultSocial.deleteComment(comment.id);
+        if (onDeleted) await onDeleted();
+        else article.remove();
+      } catch (error) {
+        showToast(error.message || "Eliminazione commento fallita.");
+      }
+    };
+  }
+  return article;
+}
+
+async function renderCommentThread(container, targetType, targetId, onCountChange = null) {
+  container.hidden = false;
+  container.innerHTML = `<div class="route-loading">Caricamento commenti…</div>`;
+  try {
+    const comments = await window.VaultSocial.getComments(targetType, targetId);
+    container.replaceChildren();
+
+    const list = document.createElement("div");
+    list.className = "comment-list";
+    if (!comments.length) {
+      list.innerHTML = `<div class="timeline-empty">Nessun commento. Inizia la conversazione.</div>`;
+    } else {
+      for (const comment of comments) {
+        list.append(commentElement(comment, async () => {
+          await renderCommentThread(container, targetType, targetId, onCountChange);
+        }));
+      }
+    }
+    container.append(list);
+
+    if (state.auth.user) {
+      const form = document.createElement("form");
+      form.className = "comment-form";
+      form.innerHTML = `
+        <textarea rows="3" maxlength="2000" placeholder="Scrivi un commento…" required></textarea>
+        <button class="button button-primary" type="submit">Pubblica</button>`;
+      form.onsubmit = async (event) => {
+        event.preventDefault();
+        const textarea = form.querySelector("textarea");
+        const button = form.querySelector("button");
+        button.disabled = true;
+        try {
+          await window.VaultSocial.addComment(targetType, targetId, textarea.value);
+          await renderCommentThread(container, targetType, targetId, onCountChange);
+          if (onCountChange) onCountChange(comments.length + 1);
+        } catch (error) {
+          showToast(error.message || "Commento non pubblicato.");
+        } finally {
+          button.disabled = false;
+        }
+      };
+      container.append(form);
+    } else {
+      const callout = document.createElement("p");
+      callout.className = "comment-login-callout";
+      callout.innerHTML = `Accedi per commentare. <a href="#/login">Vai all’accesso</a>`;
+      container.append(callout);
+    }
+
+    if (onCountChange) onCountChange(comments.length);
+  } catch (error) {
+    console.error("Caricamento commenti fallito", error);
+    container.innerHTML = `<div class="timeline-empty">Commenti non disponibili. Verifica la migrazione v3.4.</div>`;
+  }
+}
+
+function wireReviewEngagement(article, review) {
+  const likeButton = article.querySelector(".review-like-button");
+  const commentsButton = article.querySelector(".review-comments-button");
+  const thread = article.querySelector(".review-comment-thread");
+
+  const updateLike = () => {
+    likeButton.classList.toggle("is-active", Boolean(review.liked_by_me));
+    likeButton.innerHTML = `${review.liked_by_me ? "♥" : "♡"} <span>${review.like_count || 0}</span>`;
+  };
+  updateLike();
+
+  likeButton.onclick = async () => {
+    if (!state.auth.user) {
+      navigate("#/login");
+      return;
+    }
+    likeButton.disabled = true;
+    try {
+      const liked = await window.VaultSocial.toggleReviewLike(review.id, Boolean(review.liked_by_me));
+      review.liked_by_me = liked;
+      review.like_count = Math.max(0, Number(review.like_count || 0) + (liked ? 1 : -1));
+      updateLike();
+    } catch (error) {
+      showToast(error.message || "Operazione non riuscita.");
+    } finally {
+      likeButton.disabled = false;
+    }
+  };
+
+  commentsButton.onclick = async () => {
+    if (!thread.hidden) {
+      thread.hidden = true;
+      return;
+    }
+    await renderCommentThread(thread, "review", review.id, (count) => {
+      review.comment_count = count;
+      commentsButton.innerHTML = `💬 <span>${count}</span>`;
+    });
+  };
+}
+
+function activityCard(activity) {
+  const article = document.createElement("article");
+  article.className = "activity-card";
+  const author = activity.author || {};
+  const authorName = author.display_name || author.username || "Utente";
+  const metadata = activity.metadata || {};
+  const messages = {
+    followed_user: `ha iniziato a seguire ${metadata.following_display_name || metadata.following_username || "un utente"}`,
+    review_published: `ha recensito ${metadata.game_title || "un gioco"}`,
+    list_published: `ha pubblicato la lista ${metadata.name || "senza titolo"}`,
+    comment_published: `ha commentato ${metadata.label || "un contenuto"}`,
+  };
+  const route = socialTargetRoute(activity.target_type, activity.target_id, metadata);
+  article.innerHTML = `
+    <a class="activity-avatar-link" href="${author.username ? profileRoute(author.username) : "#/home"}">
+      <span class="account-avatar activity-avatar">${author.avatar_url ? "" : escapeHtml(authorName.slice(0, 2).toUpperCase())}</span>
+    </a>
+    <div class="activity-body">
+      <p><a href="${author.username ? profileRoute(author.username) : "#/home"}"><strong>${escapeHtml(authorName)}</strong></a> ${escapeHtml(messages[activity.activity_type] || "ha aggiornato il profilo")}</p>
+      <span>${relativeTime(activity.created_at)}</span>
+      <a class="activity-target-link" href="${route}">Apri contenuto →</a>
+    </div>`;
+  const avatar = article.querySelector(".activity-avatar");
+  if (author.avatar_url) avatar.style.backgroundImage = `url("${author.avatar_url}")`;
+  return article;
+}
+
+function userExploreCard(profile) {
+  const article = document.createElement("article");
+  article.className = "user-explore-card";
+  const name = profile.display_name || profile.username;
+  article.innerHTML = `
+    <a href="${profileRoute(profile.username)}" class="user-explore-main">
+      <span class="account-avatar account-avatar-large explore-avatar">${profile.avatar_url ? "" : escapeHtml(name.slice(0, 2).toUpperCase())}</span>
+      <span>
+        <strong>${escapeHtml(name)}</strong>
+        <small>@${escapeHtml(profile.username)}</small>
+      </span>
+    </a>
+    <p>${escapeHtml(profile.bio || "Nessuna bio pubblica.")}</p>
+    <a class="button button-secondary" href="${profileRoute(profile.username)}">Apri profilo</a>`;
+  const avatar = article.querySelector(".explore-avatar");
+  if (profile.avatar_url) avatar.style.backgroundImage = `url("${profile.avatar_url}")`;
+  return article;
+}
+
+function notificationRoute(notification) {
+  const metadata = notification.metadata || {};
+  if (notification.notification_type === "new_follower") {
+    const username = notification.actor?.username || metadata.actor_username;
+    if (username) return profileRoute(username);
+  }
+  return socialTargetRoute(notification.target_type, notification.target_id, metadata);
+}
+
+function notificationMessage(notification) {
+  const metadata = notification.metadata || {};
+  const actor = notification.actor?.display_name
+    || notification.actor?.username
+    || metadata.actor_display_name
+    || metadata.actor_username
+    || "Un utente";
+  const messages = {
+    new_follower: `${actor} ha iniziato a seguirti`,
+    review_like: `${actor} ha apprezzato la tua recensione di ${metadata.game_title || "un gioco"}`,
+    list_like: `${actor} ha apprezzato la lista ${metadata.list_name || ""}`,
+    review_comment: `${actor} ha commentato la tua recensione di ${metadata.label || "un gioco"}`,
+    list_comment: `${actor} ha commentato la lista ${metadata.label || ""}`,
+  };
+  return messages[notification.notification_type] || `${actor} ha interagito con un tuo contenuto`;
+}
+
+function notificationCard(notification) {
+  const link = document.createElement("a");
+  link.className = `notification-card${notification.read_at ? "" : " is-unread"}`;
+  link.href = notificationRoute(notification);
+  const metadata = notification.metadata || {};
+  const actor = notification.actor || {};
+  const actorName = actor.display_name
+    || actor.username
+    || metadata.actor_display_name
+    || metadata.actor_username
+    || "Utente";
+  const actorAvatar = actor.avatar_url || metadata.actor_avatar_url || null;
+  link.innerHTML = `
+    <span class="account-avatar notification-avatar">${actorAvatar ? "" : escapeHtml(actorName.slice(0, 2).toUpperCase())}</span>
+    <span class="notification-copy">
+      <strong>${escapeHtml(notificationMessage(notification))}</strong>
+      <small>${relativeTime(notification.created_at)}</small>
+    </span>
+    ${notification.read_at ? "" : `<span class="unread-dot" aria-label="Non letta"></span>`}`;
+  const avatar = link.querySelector(".notification-avatar");
+  if (actorAvatar) avatar.style.backgroundImage = `url("${actorAvatar}")`;
+  link.onclick = () => {
+    if (!notification.read_at) {
+      void window.VaultSocial.markNotificationRead(notification.id)
+        .then(() => refreshNotificationCount())
+        .catch(console.error);
+    }
+  };
+  return link;
+}
+
+async function refreshNotificationCount() {
+  if (!window.VaultSocial || !state.auth.user) {
+    state.social.unreadNotifications = 0;
+  } else {
+    try {
+      state.social.unreadNotifications = await window.VaultSocial.getUnreadNotificationCount();
+    } catch (error) {
+      console.warn("Conteggio notifiche non disponibile", error);
+      state.social.unreadNotifications = 0;
+    }
+  }
+  const count = state.social.unreadNotifications;
+  for (const badge of [ui.notificationBadge, ui.sidebarNotificationBadge]) {
+    if (!badge) continue;
+    badge.hidden = count === 0;
+    badge.textContent = count > 99 ? "99+" : String(count);
+  }
+}
+
+async function renderFeedPage() {
+  updateDocumentTitle("Feed");
+  const signedIn = Boolean(state.auth.user);
+  ui.feedFollowingTab.classList.toggle("is-active", state.social.feedFollowingOnly);
+  ui.feedPublicTab.classList.toggle("is-active", !state.social.feedFollowingOnly);
+  ui.feedAuthRequired.hidden = signedIn || !state.social.feedFollowingOnly;
+  ui.feedList.hidden = !signedIn && state.social.feedFollowingOnly;
+
+  if (!window.VaultSocial || !state.auth.configured) {
+    ui.feedList.hidden = false;
+    ui.feedList.innerHTML = `<div class="timeline-empty">Configura Supabase per usare il feed.</div>`;
+    return;
+  }
+  if (!signedIn && state.social.feedFollowingOnly) return;
+
+  ui.feedList.hidden = false;
+  ui.feedList.innerHTML = `<div class="route-loading">Caricamento attività…</div>`;
+  try {
+    const activities = await window.VaultSocial.getActivityFeed({
+      followingOnly: state.social.feedFollowingOnly,
+    });
+    state.social.feed = activities;
+    ui.feedList.replaceChildren();
+    if (!activities.length) {
+      ui.feedList.innerHTML = `<div class="timeline-empty">${state.social.feedFollowingOnly ? "Il feed è vuoto. Segui qualche profilo da Esplora." : "Nessuna attività pubblica recente."}</div>`;
+    } else {
+      for (const activity of activities) ui.feedList.append(activityCard(activity));
+    }
+  } catch (error) {
+    console.error("Feed non disponibile", error);
+    ui.feedList.innerHTML = `<div class="timeline-empty">Feed non disponibile. Verifica la migrazione v3.4.</div>`;
+  }
+}
+
+async function renderExplorePage() {
+  updateDocumentTitle("Esplora utenti");
+  if (!window.VaultSocial || !state.auth.configured) {
+    ui.exploreUsersGrid.innerHTML = `<div class="timeline-empty">Configura Supabase per esplorare i profili.</div>`;
+    return;
+  }
+  ui.exploreUsersGrid.innerHTML = `<div class="route-loading">Ricerca profili…</div>`;
+  try {
+    const profiles = await window.VaultSocial.exploreUsers(ui.exploreUsersSearch.value);
+    state.social.exploreUsers = profiles;
+    ui.exploreUsersGrid.replaceChildren();
+    if (!profiles.length) {
+      ui.exploreUsersGrid.innerHTML = `<div class="timeline-empty">Nessun profilo trovato.</div>`;
+    } else {
+      for (const profile of profiles) ui.exploreUsersGrid.append(userExploreCard(profile));
+    }
+  } catch (error) {
+    console.error("Esplora utenti non disponibile", error);
+    ui.exploreUsersGrid.innerHTML = `<div class="timeline-empty">Impossibile caricare i profili pubblici.</div>`;
+  }
+}
+
+async function renderNotificationsPage() {
+  updateDocumentTitle("Notifiche");
+  const signedIn = Boolean(state.auth.user);
+  ui.notificationsAuthRequired.hidden = signedIn;
+  ui.notificationsList.hidden = !signedIn;
+  ui.notificationsMarkAll.hidden = !signedIn;
+
+  if (!signedIn) return;
+  ui.notificationsList.innerHTML = `<div class="route-loading">Caricamento notifiche…</div>`;
+  try {
+    const notifications = await window.VaultSocial.getNotifications();
+    state.social.notifications = notifications;
+    ui.notificationsList.replaceChildren();
+    if (!notifications.length) {
+      ui.notificationsList.innerHTML = `<div class="timeline-empty">Nessuna notifica.</div>`;
+    } else {
+      for (const notification of notifications) {
+        ui.notificationsList.append(notificationCard(notification));
+      }
+    }
+    await refreshNotificationCount();
+  } catch (error) {
+    console.error("Notifiche non disponibili", error);
+    ui.notificationsList.innerHTML = `<div class="timeline-empty">Notifiche non disponibili. Verifica la migrazione v3.4.</div>`;
+  }
+}
+
+async function renderSharedListSocial(list) {
+  if (!window.VaultSocial || !state.auth.configured || list.visibility !== "public") {
+    ui.sharedListLike.hidden = true;
+    ui.sharedListComments.innerHTML = `<div class="timeline-empty">Le interazioni sono disponibili per le liste pubbliche.</div>`;
+    return;
+  }
+
+  ui.sharedListLike.hidden = false;
+  try {
+    const engagement = await window.VaultSocial.getEngagement("list", [list.id]);
+    const current = engagement[list.id] || { like_count: 0, comment_count: 0, liked_by_me: false };
+    list.like_count = current.like_count;
+    list.comment_count = current.comment_count;
+    list.liked_by_me = current.liked_by_me;
+    const updateButton = () => {
+      ui.sharedListLike.classList.toggle("is-active", Boolean(list.liked_by_me));
+      ui.sharedListLike.innerHTML = `${list.liked_by_me ? "♥" : "♡"} <span>${list.like_count || 0}</span>`;
+    };
+    updateButton();
+    ui.sharedListCommentCount.textContent = `${list.comment_count || 0} commenti`;
+
+    ui.sharedListLike.onclick = async () => {
+      if (!state.auth.user) {
+        navigate("#/login");
+        return;
+      }
+      ui.sharedListLike.disabled = true;
+      try {
+        const liked = await window.VaultSocial.toggleListLike(list.id, Boolean(list.liked_by_me));
+        list.liked_by_me = liked;
+        list.like_count = Math.max(0, Number(list.like_count || 0) + (liked ? 1 : -1));
+        updateButton();
+      } catch (error) {
+        showToast(error.message || "Operazione non riuscita.");
+      } finally {
+        ui.sharedListLike.disabled = false;
+      }
+    };
+
+    await renderCommentThread(ui.sharedListComments, "list", list.id, (count) => {
+      list.comment_count = count;
+      ui.sharedListCommentCount.textContent = `${count} commenti`;
+    });
+  } catch (error) {
+    console.error("Interazioni lista non disponibili", error);
+    ui.sharedListComments.innerHTML = `<div class="timeline-empty">Interazioni non disponibili. Verifica la migrazione v3.4.</div>`;
+  }
+}
+
 function reviewCard(review, { showGame = false } = {}) {
   const article = document.createElement("article");
   article.className = "public-review-card";
@@ -1376,16 +1846,30 @@ function reviewCard(review, { showGame = false } = {}) {
     ${review.title ? `<h3>${escapeHtml(review.title)}</h3>` : ""}
     ${body}
     ${review.contains_spoilers && review.body ? `<button class="spoiler-reveal" type="button">Mostra spoiler</button>` : ""}
-    <footer><span>${formatDate(review.updated_at || review.created_at, true)}</span></footer>`;
+    <footer class="review-card-footer">
+      <span>${formatDate(review.updated_at || review.created_at, true)}</span>
+      <div class="review-social-actions">
+        <button class="review-like-button" type="button" aria-label="Mi piace">
+          ${review.liked_by_me ? "♥" : "♡"} <span>${review.like_count || 0}</span>
+        </button>
+        <button class="review-comments-button" type="button" aria-label="Commenti">
+          💬 <span>${review.comment_count || 0}</span>
+        </button>
+      </div>
+    </footer>
+    <div class="review-comment-thread comment-thread" hidden></div>`;
 
   const spoiler = article.querySelector(".is-spoiler");
   const reveal = article.querySelector(".spoiler-reveal");
   if (spoiler && reveal) {
     reveal.onclick = () => {
       spoiler.classList.toggle("is-revealed");
-      reveal.textContent = spoiler.classList.contains("is-revealed") ? "Nascondi spoiler" : "Mostra spoiler";
+      reveal.textContent = spoiler.classList.contains("is-revealed")
+        ? "Nascondi spoiler"
+        : "Mostra spoiler";
     };
   }
+  wireReviewEngagement(article, review);
   return article;
 }
 
@@ -1439,7 +1923,7 @@ async function renderGameSocial(game) {
     }
   } catch (error) {
     console.error("Caricamento recensioni fallito", error);
-    ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Recensioni temporaneamente non disponibili. Verifica di aver eseguito la migrazione v3.3.</div>`;
+    ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Recensioni temporaneamente non disponibili. Verifica di aver eseguito le migrazioni sociali v3.3 e v3.4.</div>`;
   }
 }
 
@@ -1464,7 +1948,10 @@ async function renderPublicProfilePage() {
       return;
     }
     const content = await window.VaultSocial.getPublicProfileContent(profile.id);
-    if (state.route.name !== "public-profile" || state.route.params.username.toLocaleLowerCase() !== username.toLocaleLowerCase()) return;
+    if (
+      state.route.name !== "public-profile"
+      || state.route.params.username.toLocaleLowerCase() !== username.toLocaleLowerCase()
+    ) return;
 
     state.social.publicProfile = profile;
     state.social.publicProfileContent = content;
@@ -1480,19 +1967,65 @@ async function renderPublicProfilePage() {
     ui.publicProfileStatReviews.textContent = content.reviews.length;
     ui.publicProfileStatAverage.textContent = summary.count ? summary.average.toFixed(1) : "—";
     ui.publicProfileStatLists.textContent = content.lists.length;
+    ui.publicProfileStatFollowers.textContent = content.follow.followers;
+    ui.publicProfileStatFollowing.textContent = content.follow.following;
+
+    const signedIn = Boolean(state.auth.user);
+    ui.publicProfileLoginToFollow.hidden = signedIn || content.follow.is_self;
+    ui.publicProfileFollow.hidden = !signedIn || content.follow.is_self;
+    ui.publicProfileFollow.textContent = content.follow.is_following ? "Seguito ✓" : "Segui";
+    ui.publicProfileFollow.classList.toggle("button-primary", !content.follow.is_following);
+    ui.publicProfileFollow.classList.toggle("button-secondary", content.follow.is_following);
+    ui.publicProfileFollow.onclick = async () => {
+      ui.publicProfileFollow.disabled = true;
+      try {
+        if (content.follow.is_following) {
+          await window.VaultSocial.unfollowUser(profile.id);
+        } else {
+          await window.VaultSocial.followUser(profile.id);
+        }
+        content.follow = await window.VaultSocial.getFollowState(profile.id);
+        ui.publicProfileStatFollowers.textContent = content.follow.followers;
+        ui.publicProfileStatFollowing.textContent = content.follow.following;
+        ui.publicProfileFollow.textContent = content.follow.is_following ? "Seguito ✓" : "Segui";
+        ui.publicProfileFollow.classList.toggle("button-primary", !content.follow.is_following);
+        ui.publicProfileFollow.classList.toggle("button-secondary", content.follow.is_following);
+      } catch (error) {
+        showToast(error.message || "Impossibile aggiornare il follow.");
+      } finally {
+        ui.publicProfileFollow.disabled = false;
+      }
+    };
 
     ui.publicProfileReviews.replaceChildren();
-    if (!content.reviews.length) ui.publicProfileReviews.innerHTML = `<div class="timeline-empty">Nessuna recensione pubblica.</div>`;
-    else for (const review of content.reviews) ui.publicProfileReviews.append(reviewCard({ ...review, author: profile }, { showGame: true }));
+    if (!content.reviews.length) {
+      ui.publicProfileReviews.innerHTML = `<div class="timeline-empty">Nessuna recensione pubblica.</div>`;
+    } else {
+      const engagement = await window.VaultSocial.getEngagement(
+        "review",
+        content.reviews.map((review) => review.id),
+      );
+      for (const review of content.reviews) {
+        ui.publicProfileReviews.append(
+          reviewCard(
+            { ...review, ...(engagement[review.id] || {}), author: profile },
+            { showGame: true },
+          ),
+        );
+      }
+    }
 
     ui.publicProfileLists.replaceChildren();
-    if (!content.lists.length) ui.publicProfileLists.innerHTML = `<div class="timeline-empty">Nessuna lista pubblica.</div>`;
-    else for (const list of content.lists) {
-      const link = document.createElement("a");
-      link.className = "public-list-link";
-      link.href = listRoute(list.id);
-      link.innerHTML = `<span><strong>${escapeHtml(list.name)}</strong><small>${escapeHtml(list.description || "Nessuna descrizione")}</small></span><b>${(list.game_keys || []).length} giochi →</b>`;
-      ui.publicProfileLists.append(link);
+    if (!content.lists.length) {
+      ui.publicProfileLists.innerHTML = `<div class="timeline-empty">Nessuna lista pubblica.</div>`;
+    } else {
+      for (const list of content.lists) {
+        const link = document.createElement("a");
+        link.className = "public-list-link";
+        link.href = listRoute(list.id);
+        link.innerHTML = `<span><strong>${escapeHtml(list.name)}</strong><small>${escapeHtml(list.description || "Nessuna descrizione")}</small></span><b>${(list.game_keys || []).length} giochi →</b>`;
+        ui.publicProfileLists.append(link);
+      }
     }
   } catch (error) {
     console.error("Profilo pubblico non disponibile", error);
@@ -1508,6 +2041,7 @@ async function renderSharedListPage() {
   ui.sharedListNotFound.hidden = true;
   ui.sharedListContent.hidden = true;
   ui.sharedListGames.replaceChildren();
+  ui.sharedListComments.replaceChildren();
 
   try {
     let list = state.lists[id]
@@ -1524,7 +2058,9 @@ async function renderSharedListPage() {
         }
       : null;
 
-    if (!list && window.VaultSocial && state.auth.configured) list = await window.VaultSocial.getSharedList(id);
+    if (!list && window.VaultSocial && state.auth.configured) {
+      list = await window.VaultSocial.getSharedList(id);
+    }
     if (!list || state.route.name !== "list" || state.route.params.id !== id) {
       ui.sharedListLoading.hidden = true;
       ui.sharedListNotFound.hidden = false;
@@ -1539,7 +2075,9 @@ async function renderSharedListPage() {
     ui.sharedListDescription.textContent = list.description || "Nessuna descrizione.";
     ui.sharedListMeta.textContent = `${(list.game_keys || []).length} giochi · aggiornata ${formatDate(list.updated_at || list.created_at, true)}`;
     const authorName = list.author?.display_name || list.author?.username || "Il tuo profilo";
-    ui.sharedListAuthor.textContent = list.author?.username ? `Creata da ${authorName} · @${list.author.username}` : `Creata da ${authorName}`;
+    ui.sharedListAuthor.textContent = list.author?.username
+      ? `Creata da ${authorName} · @${list.author.username}`
+      : `Creata da ${authorName}`;
     ui.sharedListAuthor.href = list.author?.username ? profileRoute(list.author.username) : "#/profile";
     updateDocumentTitle(list.name);
 
@@ -1549,6 +2087,7 @@ async function renderSharedListPage() {
     } else {
       for (const game of games) ui.sharedListGames.append(renderCard(game));
     }
+    await renderSharedListSocial(list);
   } catch (error) {
     console.error("Lista condivisa non disponibile", error);
     ui.sharedListLoading.hidden = true;
@@ -1576,6 +2115,7 @@ function updateAccountUI(snapshot) {
     ui.accountAvatar.textContent = "!";
     ui.accountAvatar.style.backgroundImage = "";
     ui.sidebarDataNote.textContent = "Account cloud non configurato.";
+    void refreshNotificationCount();
     return;
   }
   if (!snapshot.user) {
@@ -1583,11 +2123,13 @@ function updateAccountUI(snapshot) {
     ui.accountAvatar.textContent = "?";
     ui.accountAvatar.style.backgroundImage = "";
     ui.sidebarDataNote.textContent = "I dati personali sono salvati localmente.";
+    void refreshNotificationCount();
     return;
   }
   ui.accountLabel.textContent = snapshot.profile?.display_name || snapshot.profile?.username || "Profilo";
   applyAvatar(ui.accountAvatar, snapshot.user, snapshot.profile);
-  ui.sidebarDataNote.textContent = "Libreria e liste sincronizzate con il tuo account.";
+  ui.sidebarDataNote.textContent = "Libreria, liste e attività sono collegate al tuo account.";
+  void refreshNotificationCount();
 }
 
 function renderAuthPage() {
@@ -1748,6 +2290,9 @@ async function synchronizeSignedInUser(snapshot) {
     if (state.route.name === "game") renderGamePage();
     if (state.route.name === "public-profile") void renderPublicProfilePage();
     if (state.route.name === "list") void renderSharedListPage();
+    if (state.route.name === "feed") void renderFeedPage();
+    if (state.route.name === "explore") void renderExplorePage();
+    if (state.route.name === "notifications") void renderNotificationsPage();
     return;
   }
   ui.cloudStatus.textContent = "Sincronizzazione…";
@@ -1765,7 +2310,11 @@ async function synchronizeSignedInUser(snapshot) {
     if (state.route.name === "game") renderGamePage();
     if (state.route.name === "public-profile") void renderPublicProfilePage();
     if (state.route.name === "list") void renderSharedListPage();
+    if (state.route.name === "feed") void renderFeedPage();
+    if (state.route.name === "explore") void renderExplorePage();
+    if (state.route.name === "notifications") void renderNotificationsPage();
     if (routeToDashboardView(state.route.name)) renderDashboard();
+    void refreshNotificationCount();
   } catch (error) {
     console.error(error);
     ui.cloudStatus.textContent = "Errore di sincronizzazione";
@@ -1998,6 +2547,41 @@ ui.exportLibrary.addEventListener("click", exportData);
 ui.importLibrary.addEventListener("click", () => ui.importLibraryFile.click());
 ui.importLibraryFile.addEventListener("change", () => importData(ui.importLibraryFile.files[0]));
 ui.accountButton.addEventListener("click", () => navigate(state.auth.user ? "#/profile" : "#/login"));
+ui.notificationButton.addEventListener("click", () => navigate(state.auth.user ? "#/notifications" : "#/login"));
+
+ui.feedFollowingTab.addEventListener("click", () => {
+  state.social.feedFollowingOnly = true;
+  void renderFeedPage();
+});
+ui.feedPublicTab.addEventListener("click", () => {
+  state.social.feedFollowingOnly = false;
+  void renderFeedPage();
+});
+ui.feedShowPublic.addEventListener("click", () => {
+  state.social.feedFollowingOnly = false;
+  void renderFeedPage();
+});
+
+let exploreSearchTimer = null;
+ui.exploreUsersSearch.addEventListener("input", () => {
+  clearTimeout(exploreSearchTimer);
+  exploreSearchTimer = setTimeout(() => {
+    if (state.route.name === "explore") void renderExplorePage();
+  }, 260);
+});
+
+ui.notificationsMarkAll.addEventListener("click", async () => {
+  ui.notificationsMarkAll.disabled = true;
+  try {
+    await window.VaultSocial.markAllNotificationsRead();
+    await renderNotificationsPage();
+    showToast("Notifiche segnate come lette.");
+  } catch (error) {
+    showToast(error.message || "Impossibile aggiornare le notifiche.");
+  } finally {
+    ui.notificationsMarkAll.disabled = false;
+  }
+});
 
 ui.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -2292,3 +2876,6 @@ handleRoute();
 loadData();
 initializeUserSystem();
 countdownTimer = setInterval(updateCountdowns, 60000);
+window.setInterval(() => {
+  if (state.auth.user) void refreshNotificationCount();
+}, 60000);

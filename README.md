@@ -286,3 +286,51 @@ external_game_mappings
 Il tracker dei giochi gratuiti continua a usare il proprio workflow separato.
 Dopo il deploy, avvia manualmente `Sync Epic Catalog` una volta per rigenerare
 `docs/catalog.json` con lo schema catalogo v2.
+
+
+## v3.4 — Community
+
+La v3.4 aggiunge la prima componente sociale completa:
+
+- follow e unfollow tra profili pubblici;
+- conteggi follower e seguiti;
+- feed degli utenti seguiti e feed pubblico;
+- pagina Esplora utenti;
+- like alle recensioni e alle liste pubbliche;
+- commenti su recensioni e liste;
+- notifiche interne per follower, like e commenti;
+- badge delle notifiche non lette;
+- policy RLS e trigger server-side per attività e notifiche.
+
+### Migrazione richiesta
+
+Nel pannello Supabase apri **SQL Editor**, incolla ed esegui:
+
+```text
+supabase/migrations/20260610160000_community_v34.sql
+```
+
+La migrazione crea:
+
+```text
+user_follows
+review_likes
+list_likes
+content_comments
+activities
+user_notifications
+```
+
+Le notifiche vengono create da trigger PostgreSQL. Il browser non possiede permessi
+per inserire direttamente notifiche o attività.
+
+### Nuove route
+
+```text
+#/feed
+#/explore
+#/notifications
+```
+
+Le interazioni sociali rispettano `profiles.is_public` e le preferenze
+`show_lists` / `show_activity` già presenti in `user_settings`.

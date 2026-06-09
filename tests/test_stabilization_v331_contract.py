@@ -42,7 +42,7 @@ def test_library_toggle_does_not_full_render_dashboard():
 
 def test_multistore_sql_foundation_is_present():
     sql = (
-        ROOT / "supabase" / "migrations" / "20260610_multistore_v331.sql"
+        ROOT / "supabase" / "migrations" / "20260610100000_multistore_v331.sql"
     ).read_text(encoding="utf-8")
 
     assert "create table if not exists public.games" in sql

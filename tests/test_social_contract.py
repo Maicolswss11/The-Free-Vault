@@ -18,7 +18,7 @@ def test_social_assets_and_routes_exist():
 
 
 def test_social_migration_has_rls_and_unique_review():
-    sql = (ROOT / "supabase" / "migrations" / "20260609_social_v33.sql").read_text(encoding="utf-8")
+    sql = (ROOT / "supabase" / "migrations" / "20260609120000_social_v33.sql").read_text(encoding="utf-8")
     assert "create table if not exists public.game_reviews" in sql.lower()
     assert "unique (user_id, game_key)" in sql.lower()
     assert "enable row level security" in sql.lower()

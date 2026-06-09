@@ -33,6 +33,16 @@
         <a class="nav-item" data-route="library" href="#/library"><span>◆</span> La mia libreria</a>
       </nav>
 
+      <p class="nav-section-label">COMMUNITY</p>
+      <nav class="main-nav">
+        <a class="nav-item" data-route="feed" href="#/feed"><span>◫</span> Feed</a>
+        <a class="nav-item" data-route="explore" href="#/explore"><span>◎</span> Esplora utenti</a>
+        <a class="nav-item nav-item-with-badge" data-route="notifications" href="#/notifications">
+          <span>♢</span> Notifiche
+          <b id="sidebar-notification-badge" class="nav-count-badge" hidden>0</b>
+        </a>
+      </nav>
+
       <p class="nav-section-label">ACCOUNT</p>
       <nav class="main-nav">
         <a class="nav-item" data-route="profile" href="#/profile"><span>●</span> Profilo</a>
@@ -72,6 +82,10 @@
         <div class="topbar-actions">
           <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati">↻</button>
           <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
+          <button id="notification-button" class="icon-button notification-button" type="button" title="Notifiche" aria-label="Apri notifiche">
+            ♢
+            <span id="notification-badge" class="notification-badge" hidden>0</span>
+          </button>
           <button id="account-button" class="account-button" type="button">
             <span id="account-avatar" class="account-avatar">?</span>
             <span id="account-label">Accedi</span>
@@ -435,6 +449,9 @@
                 <span id="profile-visibility-badge" class="cloud-status">Profilo pubblico</span>
                 <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
                 <a id="view-public-profile" class="button button-secondary" href="#/profile">Vedi profilo pubblico</a>
+                <a class="button button-secondary" href="#/feed">Feed</a>
+                <a class="button button-secondary" href="#/explore">Esplora</a>
+                <a class="button button-secondary" href="#/notifications">Notifiche</a>
                 <a class="button button-primary" href="#/settings/profile">Impostazioni</a>
                 <button id="logout-button" class="button button-secondary" type="button">Esci</button>
               </div>
@@ -490,6 +507,8 @@
                 <p id="public-profile-member-since" class="muted"></p>
               </div>
               <div class="profile-hero-actions">
+                <button id="public-profile-follow" class="button button-primary" type="button" hidden>Segui</button>
+                <a id="public-profile-login-to-follow" class="button button-primary" href="#/login" hidden>Accedi per seguire</a>
                 <button id="public-profile-share" class="button button-secondary" type="button">Condividi profilo</button>
               </div>
             </section>
@@ -497,6 +516,8 @@
               <article><strong id="public-profile-stat-reviews">0</strong><span>Recensioni</span></article>
               <article><strong id="public-profile-stat-average">—</strong><span>Voto medio</span></article>
               <article><strong id="public-profile-stat-lists">0</strong><span>Liste pubbliche</span></article>
+              <article><strong id="public-profile-stat-followers">0</strong><span>Follower</span></article>
+              <article><strong id="public-profile-stat-following">0</strong><span>Seguiti</span></article>
             </section>
             <div class="public-profile-layout">
               <section class="detail-panel">
@@ -531,10 +552,79 @@
                 <a id="shared-list-author" class="shared-list-author" href="#"></a>
                 <p id="shared-list-meta" class="muted"></p>
               </div>
-              <button id="shared-list-share" class="button button-secondary" type="button">Condividi lista</button>
+              <div class="shared-list-actions">
+                <button id="shared-list-like" class="button button-secondary" type="button">♡ <span id="shared-list-like-count">0</span></button>
+                <button id="shared-list-share" class="button button-secondary" type="button">Condividi lista</button>
+              </div>
             </header>
             <section id="shared-list-games" class="games-grid"></section>
+            <section class="detail-panel list-comments-panel">
+              <div class="social-section-header">
+                <div>
+                  <p class="eyebrow">COMMUNITY</p>
+                  <h2>Commenti alla lista</h2>
+                </div>
+                <span id="shared-list-comment-count" class="pill">0 commenti</span>
+              </div>
+              <div id="shared-list-comments" class="comment-thread"></div>
+            </section>
           </div>
+        </section>
+
+        <section id="feed-page" class="route-page community-page" hidden>
+          <header class="community-page-header">
+            <div>
+              <p class="eyebrow">COMMUNITY</p>
+              <h1>Feed attività</h1>
+              <p>Recensioni, liste e attività degli utenti che segui.</p>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Tipo di feed">
+              <button id="feed-following-tab" class="is-active" type="button">Seguiti</button>
+              <button id="feed-public-tab" type="button">Pubblico</button>
+            </div>
+          </header>
+          <div id="feed-auth-required" class="auth-required" hidden>
+            <span class="account-avatar account-avatar-large">?</span>
+            <h2>Accedi per vedere il feed dei seguiti</h2>
+            <p>Puoi comunque aprire il feed pubblico senza un account.</p>
+            <div class="auth-required-actions">
+              <a class="button button-primary" href="#/login">Accedi</a>
+              <button id="feed-show-public" class="button button-secondary" type="button">Apri feed pubblico</button>
+            </div>
+          </div>
+          <div id="feed-list" class="activity-feed"></div>
+        </section>
+
+        <section id="explore-page" class="route-page community-page" hidden>
+          <header class="community-page-header">
+            <div>
+              <p class="eyebrow">COMMUNITY</p>
+              <h1>Esplora utenti</h1>
+              <p>Trova profili pubblici, recensioni e liste da seguire.</p>
+            </div>
+          </header>
+          <label class="community-search">
+            <span>⌕</span>
+            <input id="explore-users-search" type="search" placeholder="Cerca username o nome..." autocomplete="off">
+          </label>
+          <div id="explore-users-grid" class="user-explore-grid"></div>
+        </section>
+
+        <section id="notifications-page" class="route-page community-page" hidden>
+          <header class="community-page-header">
+            <div>
+              <p class="eyebrow">ACCOUNT</p>
+              <h1>Notifiche</h1>
+              <p>Follower, like e commenti ricevuti.</p>
+            </div>
+            <button id="notifications-mark-all" class="button button-secondary" type="button">Segna tutte come lette</button>
+          </header>
+          <div id="notifications-auth-required" class="auth-required" hidden>
+            <span class="account-avatar account-avatar-large">?</span>
+            <h2>Accedi per vedere le notifiche</h2>
+            <a class="button button-primary" href="#/login">Accedi</a>
+          </div>
+          <div id="notifications-list" class="notifications-list"></div>
         </section>
 
         <section id="settings-page" class="route-page settings-page" hidden>
