@@ -239,3 +239,50 @@ Prima del deploy eseguire nel SQL Editor Supabase:
 ```text
 supabase/migrations/20260609_social_v33.sql
 ```
+
+
+## v3.3.1 — Stabilizzazione ricerca, filtri e fondazione multi-store
+
+Questa release corregge quattro problemi strutturali:
+
+- la ricerca nella topbar è ora globale, mostra suggerimenti da qualsiasi pagina e
+  apre `#/catalog?q=...` soltanto quando si richiede la pagina completa;
+- i filtri sono contestuali: vengono nascosti su Home, Gratis ora e In arrivo,
+  mentre Catalogo, Libreria e Cronologia mostrano soltanto i controlli utili;
+- aggiunta/rimozione e preferiti aggiornano soltanto la card interessata, senza
+  ricostruire la pagina e senza riportare lo scroll all'inizio;
+- il catalogo distingue `canonical_id` del gioco e `listing_id` del singolo store.
+
+La sincronizzazione Epic arricchisce ogni listing con:
+
+```text
+canonical_id
+listing_id
+category_group
+market_segment
+market_segment_source
+release_year
+platforms
+```
+
+La classificazione AAA/indie è dichiaratamente conservativa e include il campo
+`market_segment_source`; i titoli dubbi restano `unclassified`.
+
+Per preparare Steam, PlayStation e Xbox è inclusa la migrazione:
+
+```text
+supabase/migrations/20260610_multistore_v331.sql
+```
+
+che crea:
+
+```text
+games
+game_releases
+store_listings
+external_game_mappings
+```
+
+Il tracker dei giochi gratuiti continua a usare il proprio workflow separato.
+Dopo il deploy, avvia manualmente `Sync Epic Catalog` una volta per rigenerare
+`docs/catalog.json` con lo schema catalogo v2.

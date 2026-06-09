@@ -17,7 +17,13 @@ const state = {
   lists: loadJson(LISTS_KEY, {}),
   route: { name: "home", params: {}, query: new URLSearchParams() },
   search: "",
+  globalSearch: "",
   statusFilter: "all",
+  storeFilter: "all",
+  categoryFilter: "all",
+  segmentFilter: "all",
+  priceFilter: "all",
+  yearFilter: "all",
   sort: "relevance",
   pendingListGame: null,
   auth: { configured: false, user: null, profile: null },
@@ -39,7 +45,14 @@ const ui = {
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
+  globalSearchResults: $("#global-search-results"),
+  toolbarControls: $("#toolbar-controls"),
   filter: $("#status-filter"),
+  storeFilter: $("#store-filter"),
+  categoryFilter: $("#category-filter"),
+  segmentFilter: $("#segment-filter"),
+  priceFilter: $("#price-filter"),
+  yearFilter: $("#year-filter"),
   sort: $("#sort-select"),
   refresh: $("#refresh-button"),
   status: $("#status-message"),
@@ -256,14 +269,36 @@ function escapeAttr(value) {
 }
 
 function gameKey(game) {
-  return game.internal_id || game.epic_id || game.promotion_key ||
-    `epic:${game.namespace || "unknown"}:${game.external_id || game.title}`;
+  return game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
+    `${game.store || "epic"}:${game.namespace || "unknown"}:${game.external_id || game.title}`;
+}
+
+function gameAliases(game) {
+  return [
+    game.canonical_id,
+    game.internal_id,
+    game.listing_id,
+    game.epic_id,
+    game.promotion_key,
+    game.external_id,
+    game.namespace && (game.external_id || game.epic_id)
+      ? `epic:${game.namespace}:${game.external_id || game.epic_id}`
+      : null,
+  ].filter(Boolean);
+}
+
+function reviewKeysForGame(game) {
+  return [...new Set([gameKey(game), ...gameAliases(game)].filter(Boolean))];
 }
 
 function snapshotGame(game) {
   return {
-    internal_id: game.internal_id,
+    canonical_id: game.canonical_id,
+    canonical_title: game.canonical_title,
+    listing_id: game.listing_id || game.internal_id,
+    internal_id: game.internal_id || game.listing_id,
     store: game.store || "epic",
+    platforms: game.platforms || ["pc"],
     external_id: game.external_id || game.epic_id,
     epic_id: game.epic_id,
     namespace: game.namespace,
@@ -274,6 +309,7 @@ function snapshotGame(game) {
     image_url: game.image_url,
     store_url: game.store_url,
     release_date: game.release_date,
+    release_year: game.release_year,
     fmt_original_price: game.fmt_original_price,
     fmt_discount_price: game.fmt_discount_price,
     original_price: game.original_price,
@@ -284,6 +320,12 @@ function snapshotGame(game) {
     end_date: game.end_date,
     is_mystery_game: game.is_mystery_game,
     offer_type: game.offer_type,
+    category_group: game.category_group,
+    edition_name: game.edition_name,
+    market_segment: game.market_segment,
+    market_segment_source: game.market_segment_source,
+    genres: game.genres || [],
+    categories: game.categories || [],
     source_kind: game.source_kind,
   };
 }
@@ -356,12 +398,79 @@ function countdownText(game) {
   return `${mode === "upcoming" ? "Tra" : "Scade tra"} ${days ? `${days}g ` : ""}${hours}h`;
 }
 
+
+function releaseYearOf(game) {
+  const explicit = Number(game.release_year);
+  if (Number.isInteger(explicit) && explicit > 1900) return explicit;
+  const value = game.release_date || game.start_date;
+  if (!value) return null;
+  const year = new Date(value).getFullYear();
+  return Number.isInteger(year) ? year : null;
+}
+
+function inferCategoryGroup(game) {
+  const offer = String(game.offer_type || "").toUpperCase();
+  const categories = (game.categories || []).join(" ").toLowerCase();
+  if (["ADD_ON", "DLC"].includes(offer) || categories.includes("addon")) return "dlc";
+  if (offer === "BUNDLE" || categories.includes("bundle")) return "bundle";
+  if (offer === "BASE_GAME" || categories.includes("games/edition/base")) return "base_game";
+  if (offer === "EDITION" || categories.includes("games/edition")) return "edition";
+  return "other";
+}
+
+function inferMarketSegment(game) {
+  const known = String(game.market_segment || "");
+  if (["aaa", "indie", "unclassified"].includes(known)) return known;
+  return "unclassified";
+}
+
+function priceBucket(game) {
+  const original = Number(game.original_price);
+  const discounted = Number(game.discount_price);
+  if (Number.isFinite(discounted) && discounted === 0) return "free";
+  if (Number.isFinite(original) && Number.isFinite(discounted) && discounted < original) return "discounted";
+  return "paid";
+}
+
+function storeLabel(store) {
+  return {
+    epic: "Epic Games",
+    steam: "Steam",
+    playstation: "PlayStation",
+    xbox: "Xbox",
+  }[store || "epic"] || String(store || "Store");
+}
+
 function normalizePromotion(game) {
-  return { ...game, source_kind: "promotion", store: "epic" };
+  const listingAlias = game.namespace && (game.epic_id || game.external_id)
+    ? `epic:${game.namespace}:${game.epic_id || game.external_id}`
+    : null;
+  const catalogMatch = listingAlias ? state.gameIndex.get(listingAlias) : null;
+  return {
+    ...game,
+    canonical_id: game.canonical_id || catalogMatch?.canonical_id,
+    listing_id: game.listing_id || listingAlias,
+    internal_id: game.internal_id || listingAlias,
+    category_group: game.category_group || "base_game",
+    market_segment: game.market_segment || catalogMatch?.market_segment || "unclassified",
+    release_year: game.release_year || catalogMatch?.release_year,
+    source_kind: "promotion",
+    store: "epic",
+    platforms: game.platforms || ["pc"],
+  };
 }
 
 function normalizeCatalog(game) {
-  return { ...game, source_kind: "catalog", store: "epic" };
+  return {
+    ...game,
+    listing_id: game.listing_id || game.internal_id,
+    source_kind: "catalog",
+    store: game.store || "epic",
+    category_group: game.category_group || inferCategoryGroup(game),
+    market_segment: game.market_segment || inferMarketSegment(game),
+    release_year: game.release_year || releaseYearOf(game),
+    platforms: game.platforms || ["pc"],
+  };
 }
 
 function historyGames() {
@@ -384,18 +493,20 @@ function rebuildGameIndex() {
   const next = new Map();
   const insert = (game) => {
     if (!game?.title) return;
-    const key = gameKey(game);
-    const previous = next.get(key);
-    if (!previous || game.source_kind === "promotion") next.set(key, game);
+    for (const alias of gameAliases(game)) {
+      const previous = next.get(alias);
+      if (!previous || game.source_kind === "promotion") next.set(alias, game);
+    }
+    next.set(gameKey(game), game);
   };
+
   state.catalog.map(normalizeCatalog).forEach(insert);
+  // Rende subito disponibili gli alias delle listing ai parser delle promozioni.
+  state.gameIndex = next;
   historyGames().forEach(insert);
   state.upcoming.map(normalizePromotion).forEach(insert);
   state.current.map(normalizePromotion).forEach(insert);
-  libraryGames().forEach((game) => {
-    const key = gameKey(game);
-    if (!next.has(key)) next.set(key, game);
-  });
+  libraryGames().forEach(insert);
   state.gameIndex = next;
 }
 
@@ -491,6 +602,18 @@ function handleRoute() {
   state.route = parseRoute();
   setActiveNavigation(state.route.name);
 
+  if (state.route.name === "catalog") {
+    const query = (state.route.query.get("q") || "").trim();
+    state.search = query;
+    state.globalSearch = query;
+    ui.search.value = query;
+  } else {
+    state.search = "";
+    state.globalSearch = "";
+    ui.search.value = "";
+  }
+  hideGlobalSearchResults();
+
   if (routeToDashboardView(state.route.name)) {
     setPageVisibility("dashboard");
     renderDashboard();
@@ -518,11 +641,22 @@ function handleRoute() {
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
+
 function allSearchText(game) {
   const entry = getLibraryEntry(game);
   return [
-    game.title, game.description, game.publisher, game.developer,
-    game.offer_type, entry?.status, entry?.notes,
+    game.title,
+    game.canonical_title,
+    game.description,
+    game.publisher,
+    game.developer,
+    game.offer_type,
+    game.category_group,
+    game.market_segment,
+    (game.genres || []).join(" "),
+    storeLabel(game.store),
+    entry?.status,
+    entry?.notes,
   ].filter(Boolean).join(" ").toLocaleLowerCase("it");
 }
 
@@ -532,12 +666,47 @@ function gameMatchesSearch(game) {
 
 function matchesStatusFilter(game) {
   const entry = getLibraryEntry(game);
+  const route = state.route.name;
+  if (!["catalog", "library", "history"].includes(route)) return true;
   if (state.statusFilter === "all") return true;
-  if (state.statusFilter === "current" || state.statusFilter === "upcoming") {
-    return getMode(game) === state.statusFilter;
+
+  if (route === "history") {
+    if (state.statusFilter === "redeemed") return Boolean(entry);
+    if (state.statusFilter === "missed") return !entry;
   }
+
+  if (route === "library") {
+    if (state.statusFilter === "favorite") return Boolean(entry?.favorite);
+    return entry?.status === state.statusFilter;
+  }
+
   if (state.statusFilter === "saved") return Boolean(entry);
   if (state.statusFilter === "favorite") return Boolean(entry?.favorite);
+  return true;
+}
+
+function matchesAdvancedFilters(game) {
+  const route = state.route.name;
+  if (!["catalog", "library", "history"].includes(route)) return true;
+
+  if (route === "catalog") {
+    if (state.storeFilter !== "all" && (game.store || "epic") !== state.storeFilter) return false;
+    if (state.categoryFilter !== "all" && inferCategoryGroup(game) !== state.categoryFilter) return false;
+    if (state.segmentFilter !== "all" && inferMarketSegment(game) !== state.segmentFilter) return false;
+    if (state.priceFilter !== "all" && priceBucket(game) !== state.priceFilter) return false;
+    if (state.yearFilter !== "all" && String(releaseYearOf(game) || "") !== state.yearFilter) return false;
+  }
+
+  if (route === "library") {
+    if (state.storeFilter !== "all" && (game.store || "epic") !== state.storeFilter) return false;
+    if (state.categoryFilter !== "all" && inferCategoryGroup(game) !== state.categoryFilter) return false;
+    if (state.segmentFilter !== "all" && inferMarketSegment(game) !== state.segmentFilter) return false;
+  }
+
+  if (route === "history") {
+    if (state.yearFilter !== "all" && String(releaseYearOf(game) || "") !== state.yearFilter) return false;
+  }
+
   return true;
 }
 
@@ -564,7 +733,90 @@ function gamesForDashboard() {
     const list = state.lists[state.route.params.id];
     games = (list?.games || []).map(resolveGameByKey).filter(Boolean);
   }
-  return sortGames(games.filter(gameMatchesSearch).filter(matchesStatusFilter));
+
+  return sortGames(
+    games
+      .filter(gameMatchesSearch)
+      .filter(matchesStatusFilter)
+      .filter(matchesAdvancedFilters)
+  );
+}
+
+function uniqueSearchGames() {
+  const unique = new Map();
+  for (const game of state.gameIndex.values()) {
+    if (!game?.title) continue;
+    const key = gameKey(game);
+    if (!unique.has(key)) unique.set(key, game);
+  }
+  return [...unique.values()];
+}
+
+function hideGlobalSearchResults() {
+  ui.globalSearchResults.hidden = true;
+  ui.globalSearchResults.replaceChildren();
+  ui.search.setAttribute("aria-expanded", "false");
+}
+
+function renderGlobalSearchResults() {
+  const query = state.globalSearch.trim().toLocaleLowerCase("it");
+  if (query.length < 2) {
+    hideGlobalSearchResults();
+    return;
+  }
+
+  const results = uniqueSearchGames()
+    .filter((game) => allSearchText(game).includes(query))
+    .sort((a, b) => {
+      const aTitle = a.title.toLocaleLowerCase("it");
+      const bTitle = b.title.toLocaleLowerCase("it");
+      const aStarts = aTitle.startsWith(query) ? 0 : 1;
+      const bStarts = bTitle.startsWith(query) ? 0 : 1;
+      return aStarts - bStarts || a.title.localeCompare(b.title, "it");
+    })
+    .slice(0, 8);
+
+  ui.globalSearchResults.replaceChildren();
+  if (!results.length) {
+    const empty = document.createElement("div");
+    empty.className = "global-search-empty";
+    empty.textContent = "Nessun risultato.";
+    ui.globalSearchResults.append(empty);
+  } else {
+    for (const game of results) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "global-search-result";
+      button.setAttribute("role", "option");
+      button.innerHTML = `
+        <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+        <span>
+          <strong>${escapeHtml(game.title)}</strong>
+          <small>${escapeHtml(game.developer || game.publisher || storeLabel(game.store))}</small>
+        </span>
+        <em>${escapeHtml(storeLabel(game.store))}</em>`;
+      button.onclick = () => {
+        state.globalSearch = "";
+        ui.search.value = "";
+        hideGlobalSearchResults();
+        navigate(gameRoute(game));
+      };
+      ui.globalSearchResults.append(button);
+    }
+  }
+
+  const openCatalog = document.createElement("button");
+  openCatalog.type = "button";
+  openCatalog.className = "global-search-all";
+  openCatalog.textContent = `Vedi tutti i risultati per “${state.globalSearch.trim()}”`;
+  openCatalog.onclick = () => {
+    const queryValue = state.globalSearch.trim();
+    hideGlobalSearchResults();
+    navigate(`#/catalog?q=${encodeURIComponent(queryValue)}`);
+  };
+  ui.globalSearchResults.append(openCatalog);
+  ui.globalSearchResults.hidden = false;
+  ui.search.setAttribute("aria-expanded", "true");
 }
 
 function updateStats() {
@@ -587,11 +839,7 @@ function renderHero() {
   ui.heroLink.href = game.store_url;
   const inLibrary = Boolean(getLibraryEntry(game));
   ui.heroLibrary.textContent = inLibrary ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
-  ui.heroLibrary.onclick = () => {
-    if (getLibraryEntry(game)) removeLibraryEntry(game);
-    else setLibraryEntry(game);
-    renderDashboard();
-  };
+  ui.heroLibrary.onclick = () => toggleLibraryWithoutRerender(game);
   ui.heroDetails.onclick = () => navigate(gameRoute(game));
 }
 
@@ -630,6 +878,57 @@ function applyPriceToCard(game, originalPrice, priceLabel) {
   }
 }
 
+
+function updateCardPersonalState(card, game) {
+  const entry = getLibraryEntry(game);
+  const libraryButton = card.querySelector(".library-button");
+  const favoriteButton = card.querySelector(".favorite-button");
+  const favoriteIndicator = card.querySelector(".favorite-indicator");
+  libraryButton.textContent = entry ? "In libreria" : "Aggiungi";
+  favoriteButton.textContent = entry?.favorite ? "♥" : "♡";
+  favoriteIndicator.hidden = !entry?.favorite;
+  card.classList.toggle("is-saved", Boolean(entry));
+  card.classList.toggle("is-favorite", Boolean(entry?.favorite));
+}
+
+function refreshGamePresentation(game) {
+  const key = gameKey(game);
+  const entry = getLibraryEntry(game);
+
+  for (const card of $$(".game-card")) {
+    const cardKey = card.dataset.gameKey;
+    const cardGame = resolveGameByKey(cardKey);
+    if (cardKey !== key && (!cardGame || gameKey(cardGame) !== key)) continue;
+
+    const mustDisappear =
+      (state.route.name === "library" && !entry) ||
+      (state.statusFilter === "saved" && !entry) ||
+      (state.statusFilter === "favorite" && !entry?.favorite);
+
+    if (mustDisappear) card.remove();
+    else updateCardPersonalState(card, game);
+  }
+
+  if (!ui.hero.hidden && state.current[0]) {
+    const heroGame = normalizePromotion(state.current[0]);
+    if (gameKey(heroGame) === key) {
+      ui.heroLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
+    }
+  }
+
+  updateStats();
+
+  if (!ui.grid.hidden && !ui.grid.querySelector(".game-card") && state.route.name !== "lists") {
+    ui.grid.innerHTML = `<div class="empty-state"><strong>Nessun gioco trovato</strong><span>Modifica ricerca o filtri.</span></div>`;
+  }
+}
+
+function toggleLibraryWithoutRerender(game) {
+  if (getLibraryEntry(game)) removeLibraryEntry(game);
+  else setLibraryEntry(game);
+  refreshGamePresentation(game);
+}
+
 function renderCard(game) {
   const fragment = ui.template.content.cloneNode(true);
   const card = fragment.querySelector(".game-card");
@@ -646,35 +945,27 @@ function renderCard(game) {
   const storeLink = fragment.querySelector(".store-link");
   const libraryButton = fragment.querySelector(".library-button");
   const favoriteButton = fragment.querySelector(".favorite-button");
-  const favoriteIndicator = fragment.querySelector(".favorite-indicator");
 
-  const entry = getLibraryEntry(game);
   card.dataset.gameKey = gameKey(game);
   image.src = game.image_url || PLACEHOLDER;
   image.alt = `Copertina di ${game.title}`;
   image.onerror = () => { image.src = PLACEHOLDER; };
   badge.textContent = badgeText(game);
-  publisher.textContent = game.developer || game.publisher || "Epic Games Store";
+  publisher.textContent = game.developer || game.publisher || storeLabel(game.store);
   title.textContent = game.title;
   description.textContent = game.description || "Descrizione non disponibile.";
   applyPriceToCard(game, originalPrice, priceLabel);
   countdown.textContent = countdownText(game);
   progress.hidden = game.source_kind === "catalog";
   storeLink.href = game.store_url;
-  libraryButton.textContent = entry ? "In libreria" : "Aggiungi";
-  favoriteButton.textContent = entry?.favorite ? "♥" : "♡";
-  favoriteIndicator.hidden = !entry?.favorite;
-  card.classList.toggle("is-saved", Boolean(entry));
-  card.classList.toggle("is-favorite", Boolean(entry?.favorite));
+  storeLink.textContent = `Apri su ${storeLabel(game.store)}`;
+  updateCardPersonalState(card, game);
 
   cover.onclick = () => navigate(gameRoute(game));
-  libraryButton.onclick = () => {
-    if (entry) removeLibraryEntry(game); else setLibraryEntry(game);
-    renderDashboard();
-  };
+  libraryButton.onclick = () => toggleLibraryWithoutRerender(game);
   favoriteButton.onclick = () => {
     setLibraryEntry(game, { favorite: !getLibraryEntry(game)?.favorite });
-    renderDashboard();
+    refreshGamePresentation(game);
   };
   return fragment;
 }
@@ -699,13 +990,92 @@ function renderGames() {
   }
 }
 
+
+function setSelectOptions(select, options, currentValue) {
+  select.replaceChildren();
+  for (const [value, label] of options) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.append(option);
+  }
+  select.value = options.some(([value]) => value === currentValue) ? currentValue : "all";
+}
+
+function populateYearFilter() {
+  const years = [...new Set(
+    [...state.catalog.map(normalizeCatalog), ...historyGames(), ...libraryGames()]
+      .map(releaseYearOf)
+      .filter(Boolean)
+  )].sort((a, b) => b - a);
+
+  const current = state.yearFilter;
+  setSelectOptions(
+    ui.yearFilter,
+    [["all", "Tutti gli anni"], ...years.map((year) => [String(year), String(year)])],
+    current
+  );
+  state.yearFilter = ui.yearFilter.value;
+}
+
+function configureContextualFilters() {
+  const route = state.route.name;
+  const controlsVisible = ["catalog", "library", "history"].includes(route);
+  ui.toolbarControls.hidden = !controlsVisible;
+
+  const visibility = {
+    store: ["catalog", "library"].includes(route),
+    category: ["catalog", "library"].includes(route),
+    segment: ["catalog", "library"].includes(route),
+    price: route === "catalog",
+    year: ["catalog", "history"].includes(route),
+    status: ["catalog", "library", "history"].includes(route),
+    sort: controlsVisible,
+  };
+
+  $("#store-filter-wrap").hidden = !visibility.store;
+  $("#category-filter-wrap").hidden = !visibility.category;
+  $("#segment-filter-wrap").hidden = !visibility.segment;
+  $("#price-filter-wrap").hidden = !visibility.price;
+  $("#year-filter-wrap").hidden = !visibility.year;
+  $("#status-filter-wrap").hidden = !visibility.status;
+  $("#sort-filter-wrap").hidden = !visibility.sort;
+
+  if (route === "catalog") {
+    setSelectOptions(ui.filter, [
+      ["all", "Tutti"],
+      ["saved", "In libreria"],
+      ["favorite", "Preferiti"],
+    ], state.statusFilter);
+  } else if (route === "library") {
+    setSelectOptions(ui.filter, [
+      ["all", "Tutti gli stati"],
+      ["saved", "In libreria"],
+      ["backlog", "Da giocare"],
+      ["playing", "In gioco"],
+      ["completed", "Completati"],
+      ["abandoned", "Abbandonati"],
+      ["favorite", "Preferiti"],
+    ], state.statusFilter);
+  } else if (route === "history") {
+    setSelectOptions(ui.filter, [
+      ["all", "Tutti"],
+      ["redeemed", "Riscattati"],
+      ["missed", "Persi"],
+    ], state.statusFilter);
+  }
+
+  state.statusFilter = ui.filter.value;
+  populateYearFilter();
+}
+
 function renderDashboardHeader() {
   const labels = {
     home: ["THE FREE VAULT", "Scopri i giochi gratuiti"],
     current: ["FREE TRACKER", "Gratis adesso"],
     upcoming: ["FREE TRACKER", "In arrivo"],
     history: ["FREE TRACKER", "Cronologia dei regali"],
-    catalog: ["DISCOVER", "Catalogo Epic Games Store"],
+    catalog: ["DISCOVER", "Catalogo multi-store"],
     library: ["PERSONALE", "La mia libreria"],
     lists: ["PERSONALE", "Le mie liste"],
     list: ["LISTA PERSONALE", state.lists[state.route.params.id]?.name || "Lista"],
@@ -717,11 +1087,18 @@ function renderDashboardHeader() {
   ui.listsDashboard.hidden = state.route.name !== "lists";
   ui.toolbar.hidden = state.route.name === "lists";
   ui.catalogMeta.hidden = state.route.name !== "catalog";
+  configureContextualFilters();
+
   if (state.route.name === "catalog") {
     const generated = state.catalogMeta?.generated_at;
+    const canonicalTotal = state.catalogMeta?.canonical_total;
+    const listingText = `${state.catalog.length.toLocaleString("it-IT")} listing`;
+    const canonicalText = canonicalTotal
+      ? ` · ${Number(canonicalTotal).toLocaleString("it-IT")} giochi canonici`
+      : "";
     ui.catalogMeta.textContent = state.catalog.length
-      ? `${state.catalog.length.toLocaleString("it-IT")} listing Epic · aggiornato ${formatDate(generated, true)}`
-      : "Catalogo non ancora sincronizzato. Avvia il workflow “Sync Epic Catalog”.";
+      ? `${listingText}${canonicalText} · aggiornato ${formatDate(generated, true)}`
+      : "Catalogo non ancora sincronizzato. Avvia il workflow di sincronizzazione.";
   }
 }
 
@@ -914,9 +1291,10 @@ function renderGamePage() {
     game.release_date ? `<span><small>USCITA</small>${escapeHtml(formatDate(game.release_date))}</span>` : "",
     priceText(game) ? `<span><small>PREZZO</small>${escapeHtml(priceText(game))}</span>` : "",
     game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type)}</span>` : "",
-    `<span><small>STORE</small>Epic Games Store</span>`,
+    `<span><small>STORE</small>${escapeHtml(storeLabel(game.store))}</span>`,
   ].filter(Boolean).join("");
   ui.gamePageStoreLink.href = game.store_url;
+  ui.gamePageStoreLink.textContent = `Apri su ${storeLabel(game.store)}`;
   ui.gamePageLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
   ui.gamePageFavorite.textContent = entry?.favorite ? "♥ Preferito" : "♡ Preferito";
   ui.gamePageStatus.value = entry?.status || "saved";
@@ -1013,6 +1391,7 @@ function reviewCard(review, { showGame = false } = {}) {
 
 async function renderGameSocial(game) {
   const key = gameKey(game);
+  const reviewKeys = reviewKeysForGame(game);
   ui.publicReviewsList.innerHTML = `<div class="route-loading">Caricamento recensioni…</div>`;
   ui.publicReviewError.hidden = true;
 
@@ -1027,10 +1406,13 @@ async function renderGameSocial(game) {
 
   try {
     const [reviews, myReview] = await Promise.all([
-      window.VaultSocial.getGameReviews(key),
-      window.VaultSocial.getMyReview(key),
+      window.VaultSocial.getGameReviews(reviewKeys),
+      window.VaultSocial.getMyReview(reviewKeys),
     ]);
-    if (state.route.name !== "game" || state.route.params.key !== key) return;
+    const routedGame = state.route.name === "game"
+      ? resolveGameByKey(state.route.params.key)
+      : null;
+    if (!routedGame || gameKey(routedGame) !== key) return;
     state.social.gameReviews = reviews;
     state.social.myReview = myReview;
     const summary = window.VaultSocial.summarizeRatings(reviews);
@@ -1411,6 +1793,83 @@ async function initializeUserSystem() {
   }
 }
 
+
+function migratePersonalDataToCanonicalKeys() {
+  const aliasMap = new Map();
+  const signatureMap = new Map();
+
+  for (const rawGame of state.catalog) {
+    const game = normalizeCatalog(rawGame);
+    for (const alias of gameAliases(game)) aliasMap.set(alias, game);
+    const signature = [
+      String(game.title || "").trim().toLocaleLowerCase("it"),
+      String(game.developer || game.publisher || "").trim().toLocaleLowerCase("it"),
+    ].join("|");
+    signatureMap.set(signature, game);
+  }
+
+  let libraryChanged = false;
+  const movedKeys = [];
+  const nextLibrary = { ...state.library };
+
+  for (const [oldKey, entry] of Object.entries(state.library)) {
+    const snapshot = entry?.game || {};
+    let candidate = null;
+    for (const alias of [oldKey, ...gameAliases(snapshot)]) {
+      candidate = aliasMap.get(alias);
+      if (candidate) break;
+    }
+
+    if (!candidate && snapshot.title) {
+      const signature = [
+        String(snapshot.title).trim().toLocaleLowerCase("it"),
+        String(snapshot.developer || snapshot.publisher || "").trim().toLocaleLowerCase("it"),
+      ].join("|");
+      candidate = signatureMap.get(signature);
+    }
+
+    const canonicalKey = candidate?.canonical_id;
+    if (!canonicalKey || canonicalKey === oldKey) continue;
+
+    const existing = nextLibrary[canonicalKey];
+    nextLibrary[canonicalKey] = {
+      ...(entry || {}),
+      ...(existing || {}),
+      game: snapshotGame({ ...snapshot, ...candidate }),
+      updatedAt: new Date().toISOString(),
+    };
+    delete nextLibrary[oldKey];
+    movedKeys.push([oldKey, canonicalKey]);
+    libraryChanged = true;
+  }
+
+  let listsChanged = false;
+  if (movedKeys.length) {
+    const replacements = new Map(movedKeys);
+    for (const list of Object.values(state.lists)) {
+      const updated = (list.games || []).map((key) => replacements.get(key) || key);
+      const deduplicated = [...new Set(updated)];
+      if (JSON.stringify(deduplicated) !== JSON.stringify(list.games || [])) {
+        list.games = deduplicated;
+        list.updatedAt = new Date().toISOString();
+        listsChanged = true;
+      }
+    }
+  }
+
+  if (libraryChanged) {
+    state.library = nextLibrary;
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+    for (const [oldKey] of movedKeys) {
+      window.VaultCloud?.deleteLibraryItem(oldKey).catch(console.error);
+    }
+  }
+  if (listsChanged) localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
+  if (libraryChanged || listsChanged) {
+    window.VaultCloud?.schedulePush(state.library, state.lists);
+  }
+}
+
 async function loadData() {
   ui.refresh.disabled = true;
   ui.status.hidden = true;
@@ -1431,6 +1890,7 @@ async function loadData() {
     state.catalog = catalog.games || [];
     state.catalogMeta = catalog;
     state.dataLoaded = true;
+    migratePersonalDataToCanonicalKeys();
     rebuildGameIndex();
     ui.sidebarUpdate.textContent = promotions.generated_at
       ? `Aggiornato ${formatDate(promotions.generated_at, true)}`
@@ -1493,11 +1953,37 @@ async function importData(file) {
 }
 
 ui.search.addEventListener("input", () => {
-  state.search = ui.search.value.trim();
-  if (!routeToDashboardView(state.route.name) || state.route.name === "lists") navigate("#/catalog");
-  else renderDashboard();
+  state.globalSearch = ui.search.value.trim();
+  if (state.route.name === "catalog") {
+    state.search = state.globalSearch;
+    renderDashboard();
+  }
+  renderGlobalSearchResults();
 });
+
+ui.search.addEventListener("focus", renderGlobalSearchResults);
+ui.search.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const query = ui.search.value.trim();
+    hideGlobalSearchResults();
+    navigate(query ? `#/catalog?q=${encodeURIComponent(query)}` : "#/catalog");
+  } else if (event.key === "Escape") {
+    hideGlobalSearchResults();
+    ui.search.blur();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".search-box")) hideGlobalSearchResults();
+});
+
 ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; renderDashboard(); });
+ui.storeFilter.addEventListener("change", () => { state.storeFilter = ui.storeFilter.value; renderDashboard(); });
+ui.categoryFilter.addEventListener("change", () => { state.categoryFilter = ui.categoryFilter.value; renderDashboard(); });
+ui.segmentFilter.addEventListener("change", () => { state.segmentFilter = ui.segmentFilter.value; renderDashboard(); });
+ui.priceFilter.addEventListener("change", () => { state.priceFilter = ui.priceFilter.value; renderDashboard(); });
+ui.yearFilter.addEventListener("change", () => { state.yearFilter = ui.yearFilter.value; renderDashboard(); });
 ui.sort.addEventListener("change", () => { state.sort = ui.sort.value; renderDashboard(); });
 ui.refresh.addEventListener("click", loadData);
 ui.createListButton.addEventListener("click", () => openListEditor());
@@ -1623,7 +2109,7 @@ ui.publicReviewDelete.addEventListener("click", async () => {
   const game = resolveGameByKey(state.route.params.key);
   if (!game || !confirm("Eliminare la tua recensione pubblica?")) return;
   try {
-    await window.VaultSocial.deleteReview(gameKey(game));
+    await window.VaultSocial.deleteReview(reviewKeysForGame(game));
     showToast("Recensione eliminata.");
     await renderGameSocial(game);
   } catch (error) {

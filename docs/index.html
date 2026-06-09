@@ -57,8 +57,17 @@
       <header class="topbar">
         <div class="search-box">
           <span aria-hidden="true">⌕</span>
-          <input id="search-input" type="search" placeholder="Cerca giochi..." autocomplete="off">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Cerca in tutti i cataloghi..."
+            autocomplete="off"
+            aria-autocomplete="list"
+            aria-controls="global-search-results"
+            aria-expanded="false"
+          >
           <kbd>/</kbd>
+          <div id="global-search-results" class="global-search-results" role="listbox" hidden></div>
         </div>
         <div class="topbar-actions">
           <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati">↻</button>
@@ -149,20 +158,71 @@
               <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
               <h2 id="view-title">Scopri i giochi gratuiti</h2>
             </div>
-            <div class="toolbar-controls">
-              <select id="status-filter" aria-label="Filtra per stato">
-                <option value="all">Tutti</option>
-                <option value="current">Gratis ora</option>
-                <option value="upcoming">In arrivo</option>
-                <option value="saved">In libreria</option>
-                <option value="favorite">Preferiti</option>
-              </select>
-              <select id="sort-select" aria-label="Ordina giochi">
-                <option value="relevance">Più rilevanti</option>
-                <option value="title">Titolo A–Z</option>
-                <option value="date">Data più recente</option>
-                <option value="value">Prezzo più alto</option>
-              </select>
+            <div id="toolbar-controls" class="toolbar-controls">
+              <label id="store-filter-wrap" class="filter-field">
+                <span>Store</span>
+                <select id="store-filter" aria-label="Filtra per store">
+                  <option value="all">Tutti gli store</option>
+                  <option value="epic">Epic Games</option>
+                  <option value="steam">Steam</option>
+                  <option value="playstation">PlayStation</option>
+                  <option value="xbox">Xbox</option>
+                </select>
+              </label>
+
+              <label id="category-filter-wrap" class="filter-field">
+                <span>Categoria</span>
+                <select id="category-filter" aria-label="Filtra per categoria">
+                  <option value="all">Tutte le categorie</option>
+                  <option value="base_game">Giochi base</option>
+                  <option value="dlc">DLC e add-on</option>
+                  <option value="bundle">Bundle</option>
+                  <option value="edition">Edizioni</option>
+                  <option value="other">Altro</option>
+                </select>
+              </label>
+
+              <label id="segment-filter-wrap" class="filter-field">
+                <span>Produzione</span>
+                <select id="segment-filter" aria-label="Filtra per fascia produttiva">
+                  <option value="all">Tutte le produzioni</option>
+                  <option value="aaa">AAA (stima)</option>
+                  <option value="indie">Indie (stima)</option>
+                  <option value="unclassified">Non classificato</option>
+                </select>
+              </label>
+
+              <label id="price-filter-wrap" class="filter-field">
+                <span>Prezzo</span>
+                <select id="price-filter" aria-label="Filtra per prezzo">
+                  <option value="all">Tutti i prezzi</option>
+                  <option value="free">Gratis / free-to-play</option>
+                  <option value="discounted">In offerta</option>
+                  <option value="paid">A pagamento</option>
+                </select>
+              </label>
+
+              <label id="year-filter-wrap" class="filter-field">
+                <span>Anno</span>
+                <select id="year-filter" aria-label="Filtra per anno">
+                  <option value="all">Tutti gli anni</option>
+                </select>
+              </label>
+
+              <label id="status-filter-wrap" class="filter-field">
+                <span>Stato</span>
+                <select id="status-filter" aria-label="Filtra per stato"></select>
+              </label>
+
+              <label id="sort-filter-wrap" class="filter-field">
+                <span>Ordina</span>
+                <select id="sort-select" aria-label="Ordina giochi">
+                  <option value="relevance">Più rilevanti</option>
+                  <option value="title">Titolo A–Z</option>
+                  <option value="date">Data più recente</option>
+                  <option value="value">Prezzo più alto</option>
+                </select>
+              </label>
             </div>
           </div>
 

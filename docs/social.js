@@ -19,9 +19,16 @@
     return { ...row, author: author || null };
   }
 
-  async function getGameReviews(gameKey) {
+  function normalizeKeys(value) {
+    const keys = Array.isArray(value) ? value : [value];
+    return [...new Set(keys.filter(Boolean).map(String))];
+  }
+
+  async function getGameReviews(gameKeys) {
     const db = requireClient();
-    const { data, error } = await db
+    const keys = normalizeKeys(gameKeys);
+    if (!keys.length) return [];
+    let query = db
       .from('game_reviews')
       .select(`
         id, user_id, game_key, game_title, game_image_url, store_url,
@@ -29,25 +36,33 @@
         author:profiles!game_reviews_user_id_fkey (
           username, display_name, avatar_url, is_public
         )
-      `)
-      .eq('game_key', gameKey)
-      .order('updated_at', { ascending: false });
+      `);
+    query = keys.length === 1
+      ? query.eq('game_key', keys[0])
+      : query.in('game_key', keys);
+    const { data, error } = await query.order('updated_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(normalizeReview);
   }
 
-  async function getMyReview(gameKey) {
+  async function getMyReview(gameKeys) {
     const db = requireClient();
     const user = currentUser();
     if (!user) return null;
-    const { data, error } = await db
+    const keys = normalizeKeys(gameKeys);
+    if (!keys.length) return null;
+    let query = db
       .from('game_reviews')
       .select('id, user_id, game_key, game_title, game_image_url, store_url, rating, title, body, contains_spoilers, created_at, updated_at')
-      .eq('user_id', user.id)
-      .eq('game_key', gameKey)
-      .maybeSingle();
+      .eq('user_id', user.id);
+    query = keys.length === 1
+      ? query.eq('game_key', keys[0])
+      : query.in('game_key', keys);
+    const { data, error } = await query
+      .order('updated_at', { ascending: false })
+      .limit(1);
     if (error) throw error;
-    return data || null;
+    return data?.[0] || null;
   }
 
   async function saveReview({ game, rating, title, body, containsSpoilers }) {
@@ -59,9 +74,30 @@
       throw new Error('Seleziona un voto da 1 a 5.');
     }
 
+    const canonicalKey = game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key || game.title;
+    const legacyKeys = normalizeKeys([
+      game.internal_id,
+      game.listing_id,
+      game.epic_id,
+      game.promotion_key,
+      game.external_id,
+      game.namespace && (game.external_id || game.epic_id)
+        ? `epic:${game.namespace}:${game.external_id || game.epic_id}`
+        : null,
+    ]).filter((key) => key !== canonicalKey);
+
+    if (legacyKeys.length) {
+      const { error: cleanupError } = await db
+        .from('game_reviews')
+        .delete()
+        .eq('user_id', user.id)
+        .in('game_key', legacyKeys);
+      if (cleanupError) throw cleanupError;
+    }
+
     const payload = {
       user_id: user.id,
-      game_key: game.internal_id || game.epic_id || game.promotion_key || game.title,
+      game_key: canonicalKey,
       game_title: String(game.title || 'Gioco').slice(0, 200),
       game_image_url: game.image_url || null,
       store_url: game.store_url || null,
@@ -81,15 +117,20 @@
     return data;
   }
 
-  async function deleteReview(gameKey) {
+  async function deleteReview(gameKeys) {
     const db = requireClient();
     const user = currentUser();
     if (!user) throw new Error('Utente non autenticato.');
-    const { error } = await db
+    const keys = normalizeKeys(gameKeys);
+    if (!keys.length) return;
+    let query = db
       .from('game_reviews')
       .delete()
-      .eq('user_id', user.id)
-      .eq('game_key', gameKey);
+      .eq('user_id', user.id);
+    query = keys.length === 1
+      ? query.eq('game_key', keys[0])
+      : query.in('game_key', keys);
+    const { error } = await query;
     if (error) throw error;
   }
 

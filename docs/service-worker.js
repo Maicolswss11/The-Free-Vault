@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-free-vault-v3-3-social";
+const CACHE_NAME = "the-free-vault-v3-3-1-stabilization";
 const APP_SHELL = [
   "./",
   "./index.html",
