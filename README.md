@@ -180,3 +180,43 @@ La scheda gioco permette di salvare nel JSON sincronizzato di `user_library`:
 - preferito;
 - voto da 1 a 5;
 - note personali.
+
+
+## v3.2 — Account completo
+
+La release aggiunge:
+
+- recupero password e pagina per impostarne una nuova;
+- modifica email e password;
+- avatar su Supabase Storage;
+- impostazioni privacy;
+- pagina impostazioni con routing dedicato;
+- esportazione/importazione dati dalla pagina account;
+- eliminazione account tramite Edge Function server-side.
+
+### Aggiornamento database
+
+Esegui nuovamente tutto `supabase/schema.sql` nel **SQL Editor**. È idempotente e aggiunge
+`user_settings`, la colonna `profiles.is_public`, il bucket `avatars` e le relative policy RLS.
+
+### Redirect Supabase
+
+Aggiungi agli URL consentiti anche:
+
+```text
+https://maicolswss11.github.io/The-Free-Vault/?auth=recovery
+https://maicolswss11.github.io/The-Free-Vault/**
+```
+
+### Edge Function per eliminare l’account
+
+Installa la Supabase CLI, collega il progetto e pubblica:
+
+```bash
+supabase login
+supabase link --project-ref IL_TUO_PROJECT_REF
+supabase functions deploy delete-account
+```
+
+La `service_role` resta esclusivamente nell’ambiente server della Edge Function e non viene mai
+inserita nel frontend.

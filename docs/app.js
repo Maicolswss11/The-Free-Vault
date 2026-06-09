@@ -32,6 +32,7 @@ const ui = {
   gamePage: $("#game-page"),
   authPage: $("#auth-page"),
   profilePage: $("#profile-page"),
+  settingsPage: $("#settings-page"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
@@ -92,6 +93,16 @@ const ui = {
   registerError: $("#register-error"),
   registerSubmit: $("#register-submit"),
   authConfirmation: $("#auth-confirmation-message"),
+  forgotPasswordForm: $("#forgot-password-form"),
+  forgotPasswordEmail: $("#forgot-password-email"),
+  forgotPasswordError: $("#forgot-password-error"),
+  forgotPasswordSuccess: $("#forgot-password-success"),
+  forgotPasswordSubmit: $("#forgot-password-submit"),
+  resetPasswordForm: $("#reset-password-form"),
+  resetPasswordValue: $("#reset-password-value"),
+  resetPasswordConfirm: $("#reset-password-confirm"),
+  resetPasswordError: $("#reset-password-error"),
+  resetPasswordSubmit: $("#reset-password-submit"),
   profileSignedOut: $("#profile-signed-out"),
   profileSignedIn: $("#profile-signed-in"),
   profilePageAvatar: $("#profile-page-avatar"),
@@ -105,6 +116,32 @@ const ui = {
   profileBio: $("#profile-bio"),
   profileError: $("#profile-error"),
   profileRecentGames: $("#profile-recent-games"),
+  profileVisibilityBadge: $("#profile-visibility-badge"),
+  settingsSignedOut: $("#settings-signed-out"),
+  settingsSignedIn: $("#settings-signed-in"),
+  settingsAvatarPreview: $("#settings-avatar-preview"),
+  avatarFile: $("#avatar-file"),
+  avatarUploadButton: $("#avatar-upload-button"),
+  avatarRemoveButton: $("#avatar-remove-button"),
+  changeEmailForm: $("#change-email-form"),
+  changeEmailValue: $("#change-email-value"),
+  changeEmailMessage: $("#change-email-message"),
+  changePasswordForm: $("#change-password-form"),
+  changePasswordValue: $("#change-password-value"),
+  changePasswordConfirm: $("#change-password-confirm"),
+  changePasswordMessage: $("#change-password-message"),
+  privacyForm: $("#privacy-form"),
+  privacyPublic: $("#privacy-public"),
+  privacyLibrary: $("#privacy-library"),
+  privacyLists: $("#privacy-lists"),
+  privacyActivity: $("#privacy-activity"),
+  privacyEmails: $("#privacy-emails"),
+  privacyMessage: $("#privacy-message"),
+  settingsExportData: $("#settings-export-data"),
+  settingsImportData: $("#settings-import-data"),
+  deleteAccountConfirmation: $("#delete-account-confirmation"),
+  deleteAccountMessage: $("#delete-account-message"),
+  deleteAccountButton: $("#delete-account-button"),
   cloudStatus: $("#cloud-status"),
   gamePageImage: $("#game-page-image"),
   gamePageBadge: $("#game-page-badge"),
@@ -356,6 +393,8 @@ function parseRoute() {
     profile: "profile",
     login: "login",
     register: "register",
+    "forgot-password": "forgot-password",
+    "reset-password": "reset-password",
   };
   if (first === "game" && segments[1]) {
     return { name: "game", params: { key: decodeURIComponent(segments.slice(1).join("/")) }, query };
@@ -365,6 +404,9 @@ function parseRoute() {
   }
   if (first === "auth" && segments[1] === "callback") {
     return { name: "auth-callback", params: {}, query };
+  }
+  if (first === "settings") {
+    return { name: "settings", params: { section: segments[1] || "profile" }, query };
   }
   return { name: simple[first] || "home", params: {}, query };
 }
@@ -378,6 +420,7 @@ function setPageVisibility(page) {
   ui.gamePage.hidden = page !== "game";
   ui.authPage.hidden = page !== "auth";
   ui.profilePage.hidden = page !== "profile";
+  ui.settingsPage.hidden = page !== "settings";
 }
 
 function updateDocumentTitle(label) {
@@ -385,7 +428,7 @@ function updateDocumentTitle(label) {
 }
 
 function setActiveNavigation(routeName) {
-  const normalized = routeName === "list" ? "lists" : routeName;
+  const normalized = routeName === "list" ? "lists" : routeName === "settings" ? "settings" : routeName;
   $$('[data-route]').forEach((node) => {
     node.classList.toggle("is-active", node.dataset.route === normalized);
   });
@@ -409,12 +452,15 @@ function handleRoute() {
   } else if (state.route.name === "game") {
     setPageVisibility("game");
     renderGamePage();
-  } else if (["login", "register", "auth-callback"].includes(state.route.name)) {
+  } else if (["login", "register", "forgot-password", "reset-password", "auth-callback"].includes(state.route.name)) {
     setPageVisibility("auth");
     renderAuthPage();
   } else if (state.route.name === "profile") {
     setPageVisibility("profile");
     renderProfilePage();
+  } else if (state.route.name === "settings") {
+    setPageVisibility("settings");
+    renderSettingsPage();
   } else {
     navigate("#/home");
   }
@@ -854,43 +900,84 @@ function initialsForAccount(user, profile) {
   return source.trim().slice(0, 2).toUpperCase();
 }
 
+function applyAvatar(element, user, profile) {
+  if (!element) return;
+  const url = profile?.avatar_url;
+  element.classList.toggle("has-image", Boolean(url));
+  element.style.backgroundImage = url ? `url("${String(url).replaceAll('"', '%22')}")` : "";
+  element.textContent = url ? "" : initialsForAccount(user, profile);
+}
+
 function updateAccountUI(snapshot) {
   state.auth = snapshot;
   if (!snapshot.configured) {
     ui.accountLabel.textContent = "Configura account";
     ui.accountAvatar.textContent = "!";
+    ui.accountAvatar.style.backgroundImage = "";
     ui.sidebarDataNote.textContent = "Account cloud non configurato.";
     return;
   }
   if (!snapshot.user) {
     ui.accountLabel.textContent = "Accedi";
     ui.accountAvatar.textContent = "?";
+    ui.accountAvatar.style.backgroundImage = "";
     ui.sidebarDataNote.textContent = "I dati personali sono salvati localmente.";
     return;
   }
   ui.accountLabel.textContent = snapshot.profile?.display_name || snapshot.profile?.username || "Profilo";
-  ui.accountAvatar.textContent = initialsForAccount(snapshot.user, snapshot.profile);
+  applyAvatar(ui.accountAvatar, snapshot.user, snapshot.profile);
   ui.sidebarDataNote.textContent = "Libreria e liste sincronizzate con il tuo account.";
 }
 
 function renderAuthPage() {
   const mode = state.route.name;
   const isRegister = mode === "register";
+  const isForgot = mode === "forgot-password";
+  const isReset = mode === "reset-password";
   const isCallback = mode === "auth-callback" || state.route.query.get("confirmed") === "1";
-  updateDocumentTitle(isRegister ? "Registrati" : "Accedi");
+  const titles = {
+    register: "Registrati",
+    "forgot-password": "Recupera password",
+    "reset-password": "Nuova password",
+  };
+  updateDocumentTitle(titles[mode] || "Accedi");
   ui.authConfigWarning.hidden = Boolean(window.VaultAuth?.configured);
-  ui.loginForm.hidden = isRegister || isCallback;
+  ui.loginForm.hidden = isRegister || isForgot || isReset || isCallback;
   ui.registerForm.hidden = !isRegister || isCallback;
+  ui.forgotPasswordForm.hidden = !isForgot;
+  ui.resetPasswordForm.hidden = !isReset;
   ui.authConfirmation.hidden = !isCallback;
+
   ui.authEyebrow.textContent = isCallback ? "EMAIL CONFERMATA" : "THE FREE VAULT ACCOUNT";
-  ui.authTitle.textContent = isCallback ? "Account attivato" : isRegister ? "Crea il tuo account" : "Bentornato";
+  ui.authTitle.textContent = isCallback
+    ? "Account attivato"
+    : isRegister
+      ? "Crea il tuo account"
+      : isForgot
+        ? "Recupera la password"
+        : isReset
+          ? "Scegli una nuova password"
+          : "Bentornato";
   ui.authSubtitle.textContent = isCallback
     ? "La conferma è andata a buon fine."
     : isRegister
       ? "Servono solo username, email e password. Il resto si completa dal profilo."
-      : "Accedi con email e password per sincronizzare il tuo Vault.";
+      : isForgot
+        ? "Riceverai un link sicuro per impostare una nuova password."
+        : isReset
+          ? "Inserisci una password nuova di almeno otto caratteri."
+          : "Accedi con email e password per sincronizzare il tuo Vault.";
 
-  if (state.auth.user && !isCallback) {
+  if (isReset && !state.auth.user && !window.VaultAuth?.recoveryMode) {
+    ui.resetPasswordError.textContent = "Il link di recupero non è valido o è scaduto. Richiedine uno nuovo.";
+    ui.resetPasswordError.hidden = false;
+    ui.resetPasswordSubmit.disabled = true;
+  } else if (isReset) {
+    ui.resetPasswordError.hidden = true;
+    ui.resetPasswordSubmit.disabled = false;
+  }
+
+  if (state.auth.user && !isCallback && !isReset) {
     navigate("#/profile");
     return;
   }
@@ -943,11 +1030,12 @@ function renderProfilePage() {
   }
 
   const displayName = profile?.display_name || profile?.username || "Profilo";
-  ui.profilePageAvatar.textContent = initialsForAccount(user, profile);
+  applyAvatar(ui.profilePageAvatar, user, profile);
   ui.profilePageName.textContent = displayName;
   ui.profilePageHandle.textContent = profile?.username ? `@${profile.username}` : "";
   ui.profilePageBio.textContent = profile?.bio || "Nessuna bio inserita.";
   ui.profilePageEmail.textContent = user.email || "";
+  ui.profileVisibilityBadge.textContent = profile?.is_public === false ? "Profilo privato" : "Profilo pubblico";
   ui.profileUsername.value = profile?.username || "";
   ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
   ui.profileBio.value = profile?.bio || "";
@@ -960,10 +1048,40 @@ function renderProfilePage() {
   renderProfileRecentGames();
 }
 
+function renderSettingsPage() {
+  const { user, profile, settings, configured } = state.auth;
+  updateDocumentTitle("Impostazioni");
+  ui.settingsSignedOut.hidden = Boolean(user);
+  ui.settingsSignedIn.hidden = !user;
+  if (!user) {
+    if (!configured) ui.settingsSignedOut.querySelector("p:last-of-type").textContent = "Configura Supabase per abilitare gli account cloud.";
+    return;
+  }
+
+  const section = ["profile", "account", "privacy", "data"].includes(state.route.params.section)
+    ? state.route.params.section
+    : "profile";
+  $$('[data-settings-tab]').forEach((link) => link.classList.toggle('is-active', link.dataset.settingsTab === section));
+  $$('.settings-panel').forEach((panel) => { panel.hidden = panel.id !== `settings-panel-${section}`; });
+
+  applyAvatar(ui.settingsAvatarPreview, user, profile);
+  ui.avatarRemoveButton.disabled = !profile?.avatar_url;
+  ui.profileUsername.value = profile?.username || "";
+  ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
+  ui.profileBio.value = profile?.bio || "";
+  ui.changeEmailValue.value = user.email || "";
+  ui.privacyPublic.checked = profile?.is_public !== false;
+  ui.privacyLibrary.checked = settings?.show_library !== false;
+  ui.privacyLists.checked = settings?.show_lists !== false;
+  ui.privacyActivity.checked = settings?.show_activity !== false;
+  ui.privacyEmails.checked = settings?.email_notifications !== false;
+}
+
 async function synchronizeSignedInUser(snapshot) {
   updateAccountUI(snapshot);
   if (!snapshot.user) {
     if (state.route.name === "profile") renderProfilePage();
+    if (state.route.name === "settings") renderSettingsPage();
     return;
   }
   ui.cloudStatus.textContent = "Sincronizzazione…";
@@ -977,6 +1095,7 @@ async function synchronizeSignedInUser(snapshot) {
     rebuildGameIndex();
     ui.cloudStatus.textContent = "Sincronizzato";
     if (state.route.name === "profile") renderProfilePage();
+    if (state.route.name === "settings") renderSettingsPage();
     if (routeToDashboardView(state.route.name)) renderDashboard();
   } catch (error) {
     console.error(error);
@@ -992,8 +1111,11 @@ async function initializeUserSystem() {
   });
   try {
     const result = await window.VaultAuth.initialize();
-    if (result?.returnedFromConfirmation && result.session) {
+    if (result?.returnKind === "confirmation" && result.session) {
       showToast("Email confermata correttamente.");
+      handleRoute();
+    }
+    if (result?.returnKind === "recovery" && result.session) {
       handleRoute();
     }
   } catch (error) {
@@ -1123,6 +1245,40 @@ ui.loginForm.addEventListener("submit", async (event) => {
   }
 });
 
+ui.forgotPasswordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.forgotPasswordError.hidden = true;
+  ui.forgotPasswordSuccess.hidden = true;
+  ui.forgotPasswordSubmit.disabled = true;
+  try {
+    await window.VaultAuth.requestPasswordReset(ui.forgotPasswordEmail.value.trim());
+    ui.forgotPasswordSuccess.textContent = "Email inviata. Controlla anche la cartella spam.";
+    ui.forgotPasswordSuccess.hidden = false;
+  } catch (error) {
+    ui.forgotPasswordError.textContent = error.message || "Invio fallito.";
+    ui.forgotPasswordError.hidden = false;
+  } finally {
+    ui.forgotPasswordSubmit.disabled = false;
+  }
+});
+
+ui.resetPasswordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.resetPasswordError.hidden = true;
+  try {
+    if (ui.resetPasswordValue.value !== ui.resetPasswordConfirm.value) {
+      throw new Error("Le password non coincidono.");
+    }
+    await window.VaultAuth.updatePassword(ui.resetPasswordValue.value);
+    ui.resetPasswordForm.reset();
+    showToast("Password aggiornata.");
+    navigate("#/profile");
+  } catch (error) {
+    ui.resetPasswordError.textContent = error.message || "Aggiornamento fallito.";
+    ui.resetPasswordError.hidden = false;
+  }
+});
+
 ui.registerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   ui.registerError.hidden = true;
@@ -1168,6 +1324,115 @@ ui.profileForm.addEventListener("submit", async (event) => {
   }
 });
 
+ui.avatarUploadButton.addEventListener("click", () => ui.avatarFile.click());
+ui.avatarFile.addEventListener("change", async () => {
+  const file = ui.avatarFile.files?.[0];
+  if (!file) return;
+  ui.avatarUploadButton.disabled = true;
+  try {
+    await window.VaultAuth.uploadAvatar(file);
+    showToast("Avatar aggiornato.");
+    renderSettingsPage();
+  } catch (error) {
+    showToast(error.message || "Caricamento avatar fallito.");
+  } finally {
+    ui.avatarFile.value = "";
+    ui.avatarUploadButton.disabled = false;
+  }
+});
+ui.avatarRemoveButton.addEventListener("click", async () => {
+  try {
+    await window.VaultAuth.removeAvatar();
+    showToast("Avatar rimosso.");
+    renderSettingsPage();
+  } catch (error) {
+    showToast(error.message || "Rimozione fallita.");
+  }
+});
+
+ui.changeEmailForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.changeEmailMessage.hidden = true;
+  try {
+    await window.VaultAuth.updateEmail(ui.changeEmailValue.value);
+    ui.changeEmailMessage.textContent = "Richiesta inviata. Controlla le email di conferma.";
+    ui.changeEmailMessage.classList.add("auth-success");
+    ui.changeEmailMessage.hidden = false;
+  } catch (error) {
+    ui.changeEmailMessage.classList.remove("auth-success");
+    ui.changeEmailMessage.textContent = error.message || "Modifica email fallita.";
+    ui.changeEmailMessage.hidden = false;
+  }
+});
+
+ui.changePasswordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.changePasswordMessage.hidden = true;
+  try {
+    if (ui.changePasswordValue.value !== ui.changePasswordConfirm.value) {
+      throw new Error("Le password non coincidono.");
+    }
+    await window.VaultAuth.updatePassword(ui.changePasswordValue.value);
+    ui.changePasswordForm.reset();
+    ui.changePasswordMessage.textContent = "Password aggiornata.";
+    ui.changePasswordMessage.classList.add("auth-success");
+    ui.changePasswordMessage.hidden = false;
+  } catch (error) {
+    ui.changePasswordMessage.classList.remove("auth-success");
+    ui.changePasswordMessage.textContent = error.message || "Modifica password fallita.";
+    ui.changePasswordMessage.hidden = false;
+  }
+});
+
+ui.privacyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.privacyMessage.hidden = true;
+  try {
+    await window.VaultAuth.updatePrivacy({
+      is_public: ui.privacyPublic.checked,
+      show_library: ui.privacyLibrary.checked,
+      show_lists: ui.privacyLists.checked,
+      show_activity: ui.privacyActivity.checked,
+      email_notifications: ui.privacyEmails.checked,
+    });
+    ui.privacyMessage.textContent = "Preferenze salvate.";
+    ui.privacyMessage.classList.add("auth-success");
+    ui.privacyMessage.hidden = false;
+    renderSettingsPage();
+  } catch (error) {
+    ui.privacyMessage.classList.remove("auth-success");
+    ui.privacyMessage.textContent = error.message || "Salvataggio fallito.";
+    ui.privacyMessage.hidden = false;
+  }
+});
+
+ui.settingsExportData.addEventListener("click", exportData);
+ui.settingsImportData.addEventListener("click", () => ui.importLibraryFile.click());
+ui.deleteAccountButton.addEventListener("click", async () => {
+  ui.deleteAccountMessage.hidden = true;
+  if (ui.deleteAccountConfirmation.value.trim() !== "ELIMINA") {
+    ui.deleteAccountMessage.textContent = "Scrivi ELIMINA per confermare.";
+    ui.deleteAccountMessage.hidden = false;
+    return;
+  }
+  if (!window.confirm("Eliminare definitivamente il tuo account The Free Vault?")) return;
+  ui.deleteAccountButton.disabled = true;
+  try {
+    await window.VaultAuth.deleteAccount();
+    localStorage.removeItem(LIBRARY_KEY);
+    localStorage.removeItem(LISTS_KEY);
+    state.library = {};
+    state.lists = {};
+    showToast("Account eliminato.");
+    navigate("#/home");
+  } catch (error) {
+    ui.deleteAccountMessage.textContent = error.message || "Eliminazione fallita. Verifica che la Edge Function sia stata pubblicata.";
+    ui.deleteAccountMessage.hidden = false;
+  } finally {
+    ui.deleteAccountButton.disabled = false;
+  }
+});
+
 $("#logout-button").addEventListener("click", async () => {
   try {
     await window.VaultAuth.signOut();
@@ -1185,6 +1450,7 @@ $$('[data-back]').forEach((button) => button.addEventListener("click", () => {
 
 window.addEventListener("hashchange", handleRoute);
 window.addEventListener("tfv:auth-return", handleRoute);
+window.addEventListener("tfv:password-recovery", () => navigate("#/reset-password"));
 window.addEventListener("tfv:sync-error", () => {
   if (ui.cloudStatus) ui.cloudStatus.textContent = "Errore di sincronizzazione";
 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-free-vault-v3-1-routing-profiles";
+const CACHE_NAME = "the-free-vault-v3-2-account-complete";
 const APP_SHELL = [
   "./",
   "./index.html",
