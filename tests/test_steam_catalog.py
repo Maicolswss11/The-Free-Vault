@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 from poller.steam_catalog_main import run
 from poller.steam_catalog_store import parse_steam_app, parse_steam_page
-from poller.steam_client import fetch_app_list_page
+from poller.steam_client import STEAM_APP_LIST_URL, fetch_app_list_page
 
 
 def test_parse_steam_app_creates_multistore_listing():
@@ -71,3 +71,9 @@ def test_steam_catalog_run_writes_file(tmp_path):
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["store"] == "steam"
     assert payload["games"][0]["listing_id"] == "steam:77"
+
+
+def test_steam_catalog_uses_public_web_api_host():
+    assert STEAM_APP_LIST_URL == (
+        "https://api.steampowered.com/IStoreService/GetAppList/v1/"
+    )

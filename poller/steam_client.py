@@ -19,7 +19,7 @@ from .logging_config import get_logger
 logger = get_logger(__name__)
 
 STEAM_APP_LIST_URL = (
-    "https://partner.steam-api.com/IStoreService/GetAppList/v1/"
+    "https://api.steampowered.com/IStoreService/GetAppList/v1/"
 )
 ENV_STEAM_WEB_API_KEY = "STEAM_WEB_API_KEY"
 
