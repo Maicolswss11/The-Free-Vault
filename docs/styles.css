@@ -406,3 +406,69 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   .lists-header .button { width: 100%; }
   .list-cover-stack { height: 135px; }
 }
+
+
+/* Fix navigazione e ricerca mobile */
+@media (max-width: 640px) {
+  /* La sidebar su mobile è inutile: tutte le sezioni sono nel footer */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* Nasconde il pulsante hamburger */
+  .menu-button {
+    display: none !important;
+  }
+
+  /* Ricerca + pulsante aggiorna */
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .search-box {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .search-box input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Elimina il finto placeholder che si sovrappone */
+  .search-box::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Ripristina il placeholder reale */
+  .search-box input::placeholder {
+    color: #687386 !important;
+    opacity: 1;
+  }
+
+  .topbar-actions {
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+
+  /* Cinque pulsanti sulla stessa riga */
+  .mobile-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  .mobile-nav-item {
+    min-width: 0;
+    padding: 5px 2px;
+    font-size: 0.58rem;
+    white-space: nowrap;
+  }
+
+  .mobile-nav-item span {
+    font-size: 0.95rem;
+  }
+}
