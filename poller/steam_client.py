@@ -65,6 +65,7 @@ def fetch_app_list_page(
 
     owns_session = session is None
     session = session or requests.Session()
+    logger.info("Endpoint Steam catalogo: %s", STEAM_APP_LIST_URL)
     try:
         response = session.get(
             STEAM_APP_LIST_URL,

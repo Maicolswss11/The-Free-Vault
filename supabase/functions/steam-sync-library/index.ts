@@ -40,7 +40,7 @@ Deno.serve(async (request) => {
     .maybeSingle();
   if (accountError || !account?.steam_id) return json({ error: "Steam non collegato" }, 400);
 
-  const endpoint = new URL("https://partner.steam-api.com/IPlayerService/GetOwnedGames/v1/");
+  const endpoint = new URL("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/");
   endpoint.searchParams.set("key", steamKey);
   endpoint.searchParams.set("input_json", JSON.stringify({
     steamid: account.steam_id,

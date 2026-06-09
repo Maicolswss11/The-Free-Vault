@@ -36,10 +36,14 @@ def run(
     }
 
     try:
-        payloads = pages or iter_app_list_pages(
-            max_results=max_results,
-            max_pages=max_pages,
-            include_dlc=include_dlc,
+        payloads = (
+            pages
+            if pages is not None
+            else iter_app_list_pages(
+                max_results=max_results,
+                max_pages=max_pages,
+                include_dlc=include_dlc,
+            )
         )
         parsed = []
         for payload in payloads:

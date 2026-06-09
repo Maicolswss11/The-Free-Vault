@@ -29,3 +29,15 @@ def test_steam_edge_functions_and_migration_exist():
     sql = (ROOT / "supabase/migrations/20260610_v40_steam_integration.sql").read_text(encoding="utf-8")
     assert "create table if not exists public.steam_accounts" in sql
     assert "create table if not exists public.user_owned_listings" in sql
+
+
+def test_steam_integrations_use_public_web_api_host():
+    files = [
+        ROOT / "poller/steam_client.py",
+        ROOT / "supabase/functions/steam-auth-callback/index.ts",
+        ROOT / "supabase/functions/steam-sync-library/index.ts",
+    ]
+    for path in files:
+        content = path.read_text(encoding="utf-8")
+        assert "https://api.steampowered.com/" in content
+        assert "https://partner.steam-api.com/" not in content

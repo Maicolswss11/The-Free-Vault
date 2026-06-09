@@ -35,10 +35,14 @@ def run(
     now = now or datetime.now(timezone.utc)
 
     try:
-        payloads = pages or iter_catalog_pages(
-            page_size=page_size,
-            max_pages=max_pages,
-            category=category,
+        payloads = (
+            pages
+            if pages is not None
+            else iter_catalog_pages(
+                page_size=page_size,
+                max_pages=max_pages,
+                category=category,
+            )
         )
         parsed: list[StoreGame] = []
         for payload in payloads:

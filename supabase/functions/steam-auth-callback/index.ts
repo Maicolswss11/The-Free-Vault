@@ -61,7 +61,7 @@ Deno.serve(async (request) => {
   let profileUrl: string | null = null;
   let avatarUrl: string | null = null;
   if (steamKey) {
-    const profileEndpoint = new URL("https://partner.steam-api.com/ISteamUser/GetPlayerSummaries/v2/");
+    const profileEndpoint = new URL("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/");
     profileEndpoint.searchParams.set("key", steamKey);
     profileEndpoint.searchParams.set("steamids", steamId);
     const profileResponse = await fetch(profileEndpoint);

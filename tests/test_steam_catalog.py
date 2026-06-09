@@ -77,3 +77,13 @@ def test_steam_catalog_uses_public_web_api_host():
     assert STEAM_APP_LIST_URL == (
         "https://api.steampowered.com/IStoreService/GetAppList/v1/"
     )
+
+
+def test_empty_steam_catalog_preserves_existing_file(tmp_path):
+    output = tmp_path / "steam-catalog.json"
+    output.write_text('{"old":true}', encoding="utf-8")
+
+    code = run(output_path=output, pages=[])
+
+    assert code == 1
+    assert output.read_text(encoding="utf-8") == '{"old":true}'
