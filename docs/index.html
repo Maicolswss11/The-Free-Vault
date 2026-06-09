@@ -52,7 +52,12 @@
         <button id="menu-button" class="icon-button menu-button" type="button" aria-label="Apri menu">☰</button>
         <div class="search-box">
           <span aria-hidden="true">⌕</span>
-          <input id="search-input" type="search" placeholder="Cerca giochi, publisher, sviluppatori…" autocomplete="off">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Cerca giochi..."
+            autocomplete="off"
+          >
           <kbd>/</kbd>
         </div>
         <div class="topbar-actions">
@@ -126,11 +131,25 @@
   </div>
 
   <nav class="mobile-nav" aria-label="Navigazione mobile">
-    <button class="mobile-nav-item is-active" data-view="home"><span>⌂</span>Home</button>
-    <button class="mobile-nav-item" data-view="current"><span>◉</span>Gratis</button>
-    <button class="mobile-nav-item" data-view="catalog"><span>▦</span>Catalogo</button>
-    <button class="mobile-nav-item" data-view="lists"><span>☷</span>Liste</button>
-    <button class="mobile-nav-item" data-view="library"><span>◆</span>Libreria</button>
+    <button class="mobile-nav-item is-active" data-view="home">
+      <span>⌂</span>
+      Home
+    </button>
+  
+    <button class="mobile-nav-item" data-view="current">
+      <span>◉</span>
+      Gratis
+    </button>
+  
+    <button class="mobile-nav-item" data-view="catalog">
+      <span>▦</span>
+      Catalogo
+    </button>
+  
+    <button class="mobile-nav-item" data-view="library">
+      <span>◆</span>
+      Libreria
+    </button>
   </nav>
 
   <dialog id="game-dialog" class="game-dialog">
