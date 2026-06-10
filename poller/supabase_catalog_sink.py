@@ -262,6 +262,75 @@ class SupabaseCatalogSink:
         logger.info("Sincronizzazione Supabase completata: %s", result)
         return result
 
+
+    def rebuild_read_model(
+        self,
+        *,
+        batch_size: int = 1_000,
+        max_batches: int = 1_000,
+    ) -> object:
+        """Rebuild the canonical catalog read model in bounded RPC batches."""
+        batch_size = max(100, min(int(batch_size), 2_500))
+        run_id = str(uuid.uuid4())
+        after_key: str | None = None
+
+        self.rpc("begin_catalog_index_rebuild", {"p_run_id": run_id})
+        logger.info("Ricostruzione indice catalogo avviata: run=%s", run_id)
+
+        try:
+            processed_total = 0
+            for batch_number in range(1, max_batches + 1):
+                result = self.rpc(
+                    "rebuild_catalog_index_batch",
+                    {
+                        "p_run_id": run_id,
+                        "p_after_match_key": after_key,
+                        "p_limit": batch_size,
+                    },
+                )
+                payload = result if isinstance(result, dict) else {}
+                processed = int(payload.get("processed") or 0)
+                processed_total += processed
+                next_key = payload.get("next_key")
+                done = bool(payload.get("done"))
+
+                logger.info(
+                    "Indice catalogo: batch %d, elaborati %d (%d totali)",
+                    batch_number,
+                    processed,
+                    processed_total,
+                )
+
+                if done or processed == 0:
+                    final = self.rpc(
+                        "finalize_catalog_index_rebuild",
+                        {"p_run_id": run_id},
+                    )
+                    logger.info("Indice catalogo completato: %s", final)
+                    return final
+
+                if not isinstance(next_key, str) or not next_key:
+                    raise SupabaseCatalogError(
+                        "Ricostruzione indice senza next_key valido"
+                    )
+                after_key = next_key
+
+            raise SupabaseCatalogError(
+                f"Ricostruzione indice non conclusa dopo {max_batches} batch"
+            )
+        except Exception as exc:
+            try:
+                self.rpc(
+                    "fail_catalog_index_rebuild",
+                    {
+                        "p_run_id": run_id,
+                        "p_error_message": str(exc),
+                    },
+                )
+            except Exception:
+                logger.exception("Impossibile registrare il fallimento indice catalogo")
+            raise
+
     def fail(self, store: str, run_id: str | None, error: Exception) -> None:
         if not run_id:
             return

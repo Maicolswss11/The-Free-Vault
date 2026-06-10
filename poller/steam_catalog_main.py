@@ -113,6 +113,7 @@ def run_to_supabase(
                 "include_dlc": include_dlc,
             },
         )
+        sink.rebuild_read_model()
         logger.info("Catalogo Steam sincronizzato su Supabase: %d listing", len(games))
         return 0
     except Exception as exc:

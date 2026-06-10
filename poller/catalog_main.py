@@ -111,6 +111,7 @@ def run_to_supabase(
                 "received": len(games),
             },
         )
+        sink.rebuild_read_model()
         logger.info("Catalogo Epic sincronizzato su Supabase: %d listing", len(games))
         return 0
     except Exception as exc:

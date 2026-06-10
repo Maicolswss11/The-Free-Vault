@@ -1,9 +1,7 @@
-name: Sync Epic Catalog
+name: Rebuild Catalog Index
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "41 4 * * *"
 
 permissions:
   contents: read
@@ -13,14 +11,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync-catalog:
+  rebuild-index:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
-      CATALOG_SINK: supabase
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      CATALOG_UPSERT_BATCH_SIZE: "1000"
 
     steps:
       - name: Checkout repository
@@ -42,7 +38,7 @@ jobs:
         shell: bash
         run: |
           test -n "$SUPABASE_URL" || (echo "Manca SUPABASE_URL" && exit 1)
-          test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY (o la legacy SUPABASE_SERVICE_ROLE_KEY)" && exit 1)
+          test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY" && exit 1)
 
-      - name: Sync Epic catalog to Supabase
-        run: python -m poller.catalog_main
+      - name: Rebuild canonical catalog index
+        run: python -m poller.catalog_index_main

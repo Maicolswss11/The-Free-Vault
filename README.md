@@ -482,3 +482,10 @@ Dopo la migrazione, eseguire una volta entrambi i workflow:
 Sync Epic Catalog
 Sync Steam Catalog
 ```
+
+## v4.1.2 — Canonical catalog read model
+
+`catalog_items` remains the ingestion table. Public catalog RPCs now query the
+preaggregated `catalog_games` read model, rebuilt in bounded batches after each
+store sync. For an existing populated database, run the manual GitHub Action
+**Rebuild Catalog Index** once after applying the v4.1.2 migration.

@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: steam-catalog-sync
+  group: catalog-database-sync
   cancel-in-progress: false
 
 jobs:
