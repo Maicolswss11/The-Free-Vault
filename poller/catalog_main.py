@@ -97,10 +97,14 @@ def run_to_supabase(
         if not games:
             raise CatalogClientError("Il catalogo Epic ricevuto è vuoto")
 
-        sink.upsert_games(games, run_id=run_id, synced_at=now)
+        listing_count = sink.upsert_games(games, run_id=run_id, synced_at=now)
+        canonical_count = len({game.match_key for game in games})
+        sink.cleanup_stale("epic", run_id)
         sink.finalize(
             "epic",
             run_id,
+            listing_count=listing_count,
+            canonical_count=canonical_count,
             metadata={
                 "source": "Epic GraphQL storefront",
                 "generated_at": now.isoformat(),

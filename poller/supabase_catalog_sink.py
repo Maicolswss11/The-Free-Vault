@@ -197,19 +197,66 @@ class SupabaseCatalogSink:
             logger.info("Supabase catalogo: %d/%d listing caricate", completed, total)
         return total
 
+    def cleanup_stale(
+        self,
+        store: str,
+        run_id: str,
+        *,
+        batch_size: int = 5_000,
+        max_batches: int = 1_000,
+    ) -> int:
+        """Delete stale rows in bounded RPC calls to avoid statement timeouts."""
+        batch_size = max(100, min(int(batch_size), 10_000))
+        deleted_total = 0
+
+        for batch_number in range(1, max_batches + 1):
+            result = self.rpc(
+                "cleanup_catalog_sync",
+                {
+                    "p_store": store,
+                    "p_run_id": run_id,
+                    "p_limit": batch_size,
+                },
+            )
+            deleted = int(result or 0)
+            deleted_total += deleted
+
+            if deleted:
+                logger.info(
+                    "Supabase cleanup %s: batch %d, eliminate %d righe (%d totali)",
+                    store,
+                    batch_number,
+                    deleted,
+                    deleted_total,
+                )
+
+            if deleted < batch_size:
+                return deleted_total
+
+        raise SupabaseCatalogError(
+            f"Cleanup catalogo {store} non concluso dopo {max_batches} batch"
+        )
+
     def finalize(
         self,
         store: str,
         run_id: str,
         *,
+        listing_count: int,
+        canonical_count: int,
         metadata: dict[str, object] | None = None,
     ) -> object:
+        final_metadata = {
+            **(metadata or {}),
+            "listing_count": int(listing_count),
+            "canonical_count": int(canonical_count),
+        }
         result = self.rpc(
             "finalize_catalog_sync",
             {
                 "p_store": store,
                 "p_run_id": run_id,
-                "p_metadata": metadata or {},
+                "p_metadata": final_metadata,
             },
         )
         logger.info("Sincronizzazione Supabase completata: %s", result)

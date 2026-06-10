@@ -85,3 +85,19 @@ def test_workflows_sync_catalog_to_supabase():
         assert "CATALOG_SINK: supabase" in workflow
         assert "SUPABASE_SECRET_KEY" in workflow
         assert "Commit catalog" not in workflow
+
+
+def test_catalog_finalize_uses_batched_cleanup_and_client_counts():
+    root = Path(__file__).resolve().parents[1]
+    sink = (root / "poller" / "supabase_catalog_sink.py").read_text(encoding="utf-8")
+    migration = (root / "supabase" / "migrations" / "20260610_v411_catalog_finalize_timeout.sql").read_text(encoding="utf-8")
+    steam_main = (root / "poller" / "steam_catalog_main.py").read_text(encoding="utf-8")
+
+    assert "def cleanup_stale" in sink
+    assert '"cleanup_catalog_sync"' in sink
+    assert '"listing_count"' in sink
+    assert '"canonical_count"' in sink
+    assert 'sink.cleanup_stale("steam", run_id)' in steam_main
+    assert "create or replace function public.cleanup_catalog_sync" in migration.lower()
+    assert "set statement_timeout = '60s'" in migration.lower()
+    assert "catalog_items_store_run_listing_idx" in migration

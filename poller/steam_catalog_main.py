@@ -98,10 +98,14 @@ def run_to_supabase(
         if not games:
             raise SteamClientError("Il catalogo Steam ricevuto è vuoto")
 
-        sink.upsert_games(games, run_id=run_id, synced_at=now)
+        listing_count = sink.upsert_games(games, run_id=run_id, synced_at=now)
+        canonical_count = len({game.match_key for game in games})
+        sink.cleanup_stale("steam", run_id)
         sink.finalize(
             "steam",
             run_id,
+            listing_count=listing_count,
+            canonical_count=canonical_count,
             metadata={
                 "source": "Steam IStoreService/GetAppList",
                 "generated_at": now.isoformat(),
