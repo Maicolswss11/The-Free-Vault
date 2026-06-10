@@ -3,7 +3,7 @@ name: Sync Steam Catalog
 on:
   workflow_dispatch:
   schedule:
-    - cron: "19 5 * * *"
+    - cron: "19 5 * * 0"
 
 permissions:
   contents: read
@@ -21,7 +21,8 @@ jobs:
       STEAM_WEB_API_KEY: ${{ secrets.STEAM_WEB_API_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      CATALOG_UPSERT_BATCH_SIZE: "1000"
+      CATALOG_INCREMENTAL_BATCH_SIZE: "500"
+      CATALOG_MAX_DATABASE_BYTES: "492830720"
 
     steps:
       - name: Checkout repository

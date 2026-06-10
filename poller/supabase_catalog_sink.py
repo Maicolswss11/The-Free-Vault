@@ -6,6 +6,8 @@ repository secrets. The key is never written to the generated web app.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import time
 import uuid
@@ -24,6 +26,8 @@ ENV_SUPABASE_URL = "SUPABASE_URL"
 ENV_SUPABASE_SECRET_KEY = "SUPABASE_SECRET_KEY"
 ENV_SUPABASE_SERVICE_ROLE_KEY = "SUPABASE_SERVICE_ROLE_KEY"  # legacy fallback
 DEFAULT_BATCH_SIZE = 1_000
+DEFAULT_INCREMENTAL_BATCH_SIZE = 500
+DEFAULT_MAX_DATABASE_BYTES = 470 * 1024 * 1024
 
 
 class SupabaseCatalogError(RuntimeError):
@@ -81,6 +85,82 @@ def game_to_catalog_row(
         "sync_run_id": run_id,
         "last_synced_at": synced_at.isoformat(),
     }
+
+
+def game_to_incremental_row(game: StoreGame) -> dict[str, object]:
+    """Convert a listing to the compact canonical upsert payload.
+
+    The listing object intentionally mirrors the JSON structure already stored
+    in ``catalog_games.store_listings``. PostgreSQL can therefore compare JSONB
+    values directly and skip writes for unchanged games.
+    """
+    listing = {
+        "listing_id": game.listing_id,
+        "store": game.store,
+        "external_id": game.external_id,
+        "namespace": game.namespace,
+        "title": game.title,
+        "store_url": game.store_url,
+        "image_url": game.image_url,
+        "offer_type": game.offer_type,
+        "category_group": game.category_group,
+        "edition_name": game.edition_name,
+        "original_price": game.original_price,
+        "discount_price": game.discount_price,
+        "currency_code": game.currency_code,
+        "currency_decimals": game.currency_decimals,
+        "fmt_original_price": game.fmt_original_price,
+        "fmt_discount_price": game.fmt_discount_price,
+    }
+    row = {
+        "match_key": game.match_key,
+        "canonical_id": game.canonical_id,
+        "title": game.title,
+        "canonical_title": game.canonical_title,
+        "description": game.description or None,
+        "developer": game.developer,
+        "publisher": game.publisher,
+        "image_url": game.image_url,
+        "store_url": game.store_url,
+        "release_date": _date_value(game.release_date),
+        "release_year": game.release_year,
+        "market_segment": game.market_segment,
+        "category_group": game.category_group,
+        "offer_type": game.offer_type,
+        "platforms": game.platforms,
+        "genres": game.genres,
+        "categories": game.categories,
+        "listing": listing,
+    }
+    # Useful in logs/tests and for future remote diffing. PostgreSQL currently
+    # compares JSONB directly, so this hash does not need to be persisted.
+    row["source_hash"] = hashlib.sha256(
+        json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return row
+
+
+@dataclass(slots=True)
+class IncrementalSyncResult:
+    total: int = 0
+    inserted_games: int = 0
+    updated_games: int = 0
+    unchanged_games: int = 0
+
+    def add(self, payload: object) -> None:
+        data = payload if isinstance(payload, dict) else {}
+        self.total += int(data.get("processed") or 0)
+        self.inserted_games += int(data.get("inserted_games") or 0)
+        self.updated_games += int(data.get("updated_games") or 0)
+        self.unchanged_games += int(data.get("unchanged_games") or 0)
+
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "total": self.total,
+            "inserted_games": self.inserted_games,
+            "updated_games": self.updated_games,
+            "unchanged_games": self.unchanged_games,
+        }
 
 
 @dataclass(slots=True)
@@ -175,6 +255,93 @@ class SupabaseCatalogSink:
         self.rpc("begin_catalog_sync", {"p_store": store, "p_run_id": run_id})
         logger.info("Sincronizzazione Supabase avviata: store=%s run=%s", store, run_id)
         return run_id
+
+    def ensure_storage_capacity(self, *, max_bytes: int | None = None) -> dict[str, object]:
+        """Abort before a heavy sync when the database is near the free-plan limit."""
+        configured = max_bytes or int(
+            os.environ.get("CATALOG_MAX_DATABASE_BYTES", DEFAULT_MAX_DATABASE_BYTES)
+        )
+        result = self.rpc("catalog_storage_status", {"p_max_bytes": int(configured)})
+        payload = result if isinstance(result, dict) else {}
+        database_bytes = int(payload.get("database_bytes") or 0)
+        allowed = bool(payload.get("allowed"))
+        logger.info(
+            "Supabase storage: %.1f MiB / %.1f MiB (catalogo %.1f MiB)",
+            database_bytes / 1024 / 1024,
+            int(configured) / 1024 / 1024,
+            int(payload.get("catalog_bytes") or 0) / 1024 / 1024,
+        )
+        if not allowed:
+            raise SupabaseCatalogError(
+                "Sincronizzazione bloccata: il database ha superato la soglia "
+                f"prudenziale di {int(configured) / 1024 / 1024:.0f} MiB"
+            )
+        return payload
+
+    def upsert_games_incremental(
+        self,
+        games: Iterable[StoreGame],
+        *,
+        store: str,
+        run_id: str,
+        batch_size: int | None = None,
+    ) -> IncrementalSyncResult:
+        """Merge only new or changed canonical rows directly into catalog_games."""
+        rows = [game_to_incremental_row(game) for game in games]
+        size = batch_size or int(
+            os.environ.get("CATALOG_INCREMENTAL_BATCH_SIZE", DEFAULT_INCREMENTAL_BATCH_SIZE)
+        )
+        size = max(100, min(size, 1_000))
+        result = IncrementalSyncResult()
+
+        for batch_number, batch in enumerate(_chunks(rows, size), start=1):
+            payload = self.rpc(
+                "upsert_catalog_games_incremental",
+                {
+                    "p_store": store,
+                    "p_run_id": run_id,
+                    "p_rows": batch,
+                },
+            )
+            result.add(payload)
+            logger.info(
+                "Catalogo incrementale %s: %d/%d, nuovi=%d aggiornati=%d invariati=%d",
+                store,
+                min(batch_number * size, len(rows)),
+                len(rows),
+                result.inserted_games,
+                result.updated_games,
+                result.unchanged_games,
+            )
+        return result
+
+    def finalize_incremental(
+        self,
+        store: str,
+        run_id: str,
+        *,
+        listing_count: int,
+        canonical_count: int,
+        sync_result: IncrementalSyncResult,
+        years: list[int],
+        metadata: dict[str, object] | None = None,
+    ) -> object:
+        result = self.rpc(
+            "finalize_incremental_catalog_sync",
+            {
+                "p_store": store,
+                "p_run_id": run_id,
+                "p_listing_count": int(listing_count),
+                "p_canonical_count": int(canonical_count),
+                "p_inserted_games": int(sync_result.inserted_games),
+                "p_updated_games": int(sync_result.updated_games),
+                "p_unchanged_games": int(sync_result.unchanged_games),
+                "p_years": sorted(set(int(year) for year in years if year)),
+                "p_metadata": metadata or {},
+            },
+        )
+        logger.info("Sincronizzazione incrementale completata: %s", result)
+        return result
 
     def upsert_games(
         self,

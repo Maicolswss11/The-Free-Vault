@@ -98,22 +98,27 @@ def run_to_supabase(
         if not games:
             raise SteamClientError("Il catalogo Steam ricevuto è vuoto")
 
-        listing_count = sink.upsert_games(games, run_id=run_id, synced_at=now)
+        sink.ensure_storage_capacity()
+        sync_result = sink.upsert_games_incremental(
+            games, store="steam", run_id=run_id
+        )
         canonical_count = len({game.match_key for game in games})
-        sink.cleanup_stale("steam", run_id)
-        sink.finalize(
+        sink.finalize_incremental(
             "steam",
             run_id,
-            listing_count=listing_count,
+            listing_count=len(games),
             canonical_count=canonical_count,
+            sync_result=sync_result,
+            years=[game.release_year for game in games if game.release_year],
             metadata={
                 "source": "Steam IStoreService/GetAppList",
                 "generated_at": now.isoformat(),
                 "received": len(games),
                 "include_dlc": include_dlc,
+                "mode": "incremental",
+                "stale_cleanup": "deferred",
             },
         )
-        sink.rebuild_read_model()
         logger.info("Catalogo Steam sincronizzato su Supabase: %d listing", len(games))
         return 0
     except Exception as exc:

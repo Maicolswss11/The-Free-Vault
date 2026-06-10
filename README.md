@@ -489,3 +489,29 @@ Sync Steam Catalog
 preaggregated `catalog_games` read model, rebuilt in bounded batches after each
 store sync. For an existing populated database, run the manual GitHub Action
 **Rebuild Catalog Index** once after applying the v4.1.2 migration.
+
+## v4.1.3 — Incremental Catalog Sync
+
+Il catalogo usa ora `catalog_games` come unica fonte persistente per la ricerca.
+I workflow non riempiono più `catalog_items` e non ricostruiscono l'intero indice
+canonico dopo ogni sincronizzazione.
+
+Caratteristiche:
+
+- upsert diretto dei soli giochi nuovi o modificati;
+- confronto JSONB delle listing per evitare update inutili;
+- Steam sincronizzato una volta a settimana;
+- Epic sincronizzato ogni giorno;
+- soglia prudenziale di 470 MiB prima dell'avvio dei workflow;
+- statistiche aggiornate incrementalmente;
+- rimozione degli indici di ricerca duplicati più costosi;
+- workflow di rebuild completo marcato come legacy e protetto da conferma.
+
+Prima di riattivare i workflow eseguire:
+
+```text
+supabase/migrations/20260610_v413_incremental_catalog_sync.sql
+```
+
+Le rimozioni di listing non più presenti sono intenzionalmente differite: questa
+release privilegia stabilità e riduzione delle scritture sul piano Supabase Free.

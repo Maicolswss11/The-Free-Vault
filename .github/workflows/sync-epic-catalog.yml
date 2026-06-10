@@ -20,7 +20,8 @@ jobs:
       CATALOG_SINK: supabase
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      CATALOG_UPSERT_BATCH_SIZE: "1000"
+      CATALOG_INCREMENTAL_BATCH_SIZE: "500"
+      CATALOG_MAX_DATABASE_BYTES: "492830720"
 
     steps:
       - name: Checkout repository

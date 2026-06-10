@@ -1,7 +1,12 @@
-name: Rebuild Catalog Index
+name: LEGACY Rebuild Catalog Index
 
 on:
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type REBUILD to run the legacy full rebuild'
+        required: true
+        default: 'DO_NOT_RUN'
 
 permissions:
   contents: read
@@ -12,6 +17,7 @@ concurrency:
 
 jobs:
   rebuild-index:
+    if: ${{ inputs.confirmation == 'REBUILD' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
