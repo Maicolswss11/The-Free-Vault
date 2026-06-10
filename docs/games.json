@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T04:47:02.421782+00:00",
+  "generated_at": "2026-06-10T10:31:46.885810+00:00",
   "current": [
     {
       "epic_id": "a6a2d59fa54946dbbf16f14730c2e5f0",
@@ -90,6 +90,50 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Wired Productions"
+    },
+    {
+      "epic_id": "ea365d314ecf4224a5f58d2d7430e7aa",
+      "namespace": "e4ef0c8c500a41eaa57c53d32410595d",
+      "title": "Citizen Sleeper",
+      "description": "Roleplaying in the ruins of interplanetary capitalism. Live the life of an escaped worker, washed-up on a lawless station at the edge of an interstellar society. Inspired by the flexibility and freedom of TTRPGs, choose your friends, escape your past and change your future.",
+      "image_url": "./assets/covers/5b8b17eac7e531ca3edfb6c1.jpg",
+      "store_url": "https://store.epicgames.com/it/p/citizen-sleeper-944858",
+      "original_price": 1799,
+      "discount_price": 1799,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "17,99 €",
+      "start_date": "2026-06-18T15:00:00+00:00",
+      "end_date": "2026-06-25T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games"
+    },
+    {
+      "epic_id": "aee7ec395d054078a48d867849e2a550",
+      "namespace": "9704b88f02244a60b9b0ab81e0e31389",
+      "title": "ROBOBEAT",
+      "description": "Keep your trigger finger on the pulse! In rhythm shooter ROBOBEAT, you'll play as Ace - a bounty hunter on a mission to capture robot-gone-rogue Frazzer. Wall run, slide, and shoot to your own beat using the in-game custom music editor, blasting through Frazzer's armies!",
+      "image_url": "./assets/covers/019ff6747821b8fad0126b6f.png",
+      "store_url": "https://store.epicgames.com/it/p/robobeat-5f084b",
+      "original_price": 1949,
+      "discount_price": 1949,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "19,49 €",
+      "start_date": "2026-06-18T15:00:00+00:00",
+      "end_date": "2026-06-25T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Kwalee"
     }
   ]
 }
