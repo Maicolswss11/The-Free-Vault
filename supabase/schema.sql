@@ -1968,3 +1968,7 @@ grant execute on function public.finalize_catalog_sync(text, uuid, jsonb) to ser
 -- supabase/migrations/20260610_v413_incremental_catalog_sync.sql
 -- It intentionally remains a separate migration because it replaces catalog
 -- synchronization functions created by v4.1-v4.1.2.
+
+-- v4.1.4 is installed through:
+-- supabase/migrations/20260610_v414_setbased_catalog_upsert.sql
+-- It replaces the procedural row-by-row catalog upsert with a set-based merge.

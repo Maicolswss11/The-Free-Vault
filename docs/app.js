@@ -1,9 +1,19 @@
 const DATA_URL = "./games.json";
 const HISTORY_URL = "./history.json";
-const LIBRARY_KEY = "the-free-vault-library-v3";
-const LEGACY_LIBRARY_KEYS = ["the-free-vault-library-v2"];
-const LISTS_KEY = "the-free-vault-lists-v1";
 const PLACEHOLDER = "./placeholders/game-placeholder.svg";
+
+const GUEST_LIBRARY_KEY = "tfv:guest:library:v1";
+const GUEST_LISTS_KEY = "tfv:guest:lists:v1";
+const USER_STORAGE_PREFIX = "tfv:user:";
+const LEGACY_LIBRARY_KEYS = [
+  "the-free-vault-library-v3",
+  "the-free-vault-library-v2",
+];
+const LEGACY_LIST_KEYS = ["the-free-vault-lists-v1"];
+
+let activeStorageUserId = null;
+let personalStorageGeneration = 0;
+let synchronizedAccountId = null;
 
 const state = {
   current: [],
@@ -19,8 +29,8 @@ const state = {
   catalogHasMore: false,
   catalogRequestId: 0,
   globalSearchRequestId: 0,
-  library: loadLibrary(),
-  lists: loadJson(LISTS_KEY, {}),
+  library: loadLibrary(null),
+  lists: loadLists(null),
   route: { name: "home", params: {}, query: new URLSearchParams() },
   search: "",
   globalSearch: "",
@@ -274,35 +284,101 @@ let editingListId = null;
 function loadJson(key, fallback) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || "null");
-    return parsed && typeof parsed === "object" ? parsed : fallback;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : fallback;
   } catch {
     return fallback;
   }
 }
 
-function loadLibrary() {
-  const current = loadJson(LIBRARY_KEY, null);
-  if (current) return current;
-  for (const legacyKey of LEGACY_LIBRARY_KEYS) {
-    const legacy = loadJson(legacyKey, null);
-    if (legacy) {
-      localStorage.setItem(LIBRARY_KEY, JSON.stringify(legacy));
-      return legacy;
+function personalStorageKeys(userId = activeStorageUserId) {
+  if (!userId) {
+    return { library: GUEST_LIBRARY_KEY, lists: GUEST_LISTS_KEY };
+  }
+  const prefix = `${USER_STORAGE_PREFIX}${userId}:`;
+  return {
+    library: `${prefix}library:v1`,
+    lists: `${prefix}lists:v1`,
+  };
+}
+
+function migrateLegacyPersonalDataToGuest() {
+  const guestKeys = personalStorageKeys(null);
+
+  if (localStorage.getItem(guestKeys.library) === null) {
+    for (const legacyKey of LEGACY_LIBRARY_KEYS) {
+      const legacy = loadJson(legacyKey, null);
+      if (legacy) {
+        localStorage.setItem(guestKeys.library, JSON.stringify(legacy));
+        break;
+      }
     }
   }
-  return {};
+
+  if (localStorage.getItem(guestKeys.lists) === null) {
+    for (const legacyKey of LEGACY_LIST_KEYS) {
+      const legacy = loadJson(legacyKey, null);
+      if (legacy) {
+        localStorage.setItem(guestKeys.lists, JSON.stringify(legacy));
+        break;
+      }
+    }
+  }
+
+  [...LEGACY_LIBRARY_KEYS, ...LEGACY_LIST_KEYS]
+    .forEach((key) => localStorage.removeItem(key));
+}
+
+function loadLibrary(userId = activeStorageUserId) {
+  if (!userId) migrateLegacyPersonalDataToGuest();
+  return loadJson(personalStorageKeys(userId).library, {});
+}
+
+function loadLists(userId = activeStorageUserId) {
+  if (!userId) migrateLegacyPersonalDataToGuest();
+  return loadJson(personalStorageKeys(userId).lists, {});
+}
+
+function persistPersonalDataLocally() {
+  const keys = personalStorageKeys();
+  localStorage.setItem(keys.library, JSON.stringify(state.library));
+  localStorage.setItem(keys.lists, JSON.stringify(state.lists));
+}
+
+function switchPersonalStorage(userId) {
+  activeStorageUserId = userId || null;
+  state.library = loadLibrary(activeStorageUserId);
+  state.lists = loadLists(activeStorageUserId);
+  rebuildGameIndex();
+  updateStats();
+}
+
+function clearPersonalStorage(userId) {
+  const keys = personalStorageKeys(userId || null);
+  localStorage.removeItem(keys.library);
+  localStorage.removeItem(keys.lists);
+}
+
+function canSyncActiveAccount() {
+  const authUserId = window.VaultAuth?.user?.id || null;
+  return Boolean(activeStorageUserId && authUserId === activeStorageUserId);
 }
 
 function saveLibrary() {
-  localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+  persistPersonalDataLocally();
   updateStats();
-  window.VaultCloud?.schedulePush(state.library, state.lists);
+  if (canSyncActiveAccount()) {
+    window.VaultCloud?.schedulePush(state.library, state.lists);
+  }
 }
 
 function saveLists() {
-  localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
+  persistPersonalDataLocally();
   updateStats();
-  window.VaultCloud?.schedulePush(state.library, state.lists);
+  if (canSyncActiveAccount()) {
+    window.VaultCloud?.schedulePush(state.library, state.lists);
+  }
 }
 
 function showToast(message) {
@@ -2669,42 +2745,80 @@ function renderSettingsPage() {
 
 async function synchronizeSignedInUser(snapshot) {
   updateAccountUI(snapshot);
+
+  const nextUserId = snapshot.user?.id || null;
+  const accountChanged = nextUserId !== activeStorageUserId;
+  if (accountChanged) {
+    personalStorageGeneration += 1;
+    synchronizedAccountId = null;
+    window.VaultCloud?.cancelScheduledPush();
+    switchPersonalStorage(nextUserId);
+  }
+
+  const generation = personalStorageGeneration;
+
   if (!snapshot.user) {
-    if (state.route.name === "profile") renderProfilePage();
-    if (state.route.name === "settings") renderSettingsPage();
-    if (state.route.name === "game") void renderGamePage();
-    if (state.route.name === "public-profile") void renderPublicProfilePage();
-    if (state.route.name === "list") void renderSharedListPage();
-    if (state.route.name === "feed") void renderFeedPage();
-    if (state.route.name === "explore") void renderExplorePage();
-    if (state.route.name === "notifications") void renderNotificationsPage();
+    if (ui.cloudStatus) ui.cloudStatus.textContent = "Solo locale";
+    refreshCurrentPersonalView();
     return;
   }
+
+  if (synchronizedAccountId === nextUserId) {
+    refreshCurrentPersonalView();
+    return;
+  }
+
   ui.cloudStatus.textContent = "Sincronizzazione…";
   try {
-    const merged = await window.VaultCloud.pull(state.library, state.lists);
+    const merged = await window.VaultCloud.pull(
+      state.library,
+      state.lists,
+      nextUserId,
+    );
+
+    if (
+      generation !== personalStorageGeneration ||
+      window.VaultAuth?.user?.id !== nextUserId
+    ) {
+      return;
+    }
+
     state.library = merged.library;
     state.lists = merged.lists;
-    localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
-    localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
-    await window.VaultCloud.push(state.library, state.lists);
+    persistPersonalDataLocally();
+
+    await window.VaultCloud.push(state.library, state.lists, nextUserId);
+
+    if (
+      generation !== personalStorageGeneration ||
+      window.VaultAuth?.user?.id !== nextUserId
+    ) {
+      return;
+    }
+
+    synchronizedAccountId = nextUserId;
     rebuildGameIndex();
     ui.cloudStatus.textContent = "Sincronizzato";
-    if (state.route.name === "profile") renderProfilePage();
-    if (state.route.name === "settings") renderSettingsPage();
-    if (state.route.name === "game") void renderGamePage();
-    if (state.route.name === "public-profile") void renderPublicProfilePage();
-    if (state.route.name === "list") void renderSharedListPage();
-    if (state.route.name === "feed") void renderFeedPage();
-    if (state.route.name === "explore") void renderExplorePage();
-    if (state.route.name === "notifications") void renderNotificationsPage();
-    if (routeToDashboardView(state.route.name)) renderDashboard();
+    refreshCurrentPersonalView();
     void refreshNotificationCount();
   } catch (error) {
+    if (generation !== personalStorageGeneration) return;
     console.error(error);
     ui.cloudStatus.textContent = "Errore di sincronizzazione";
     showToast("Accesso riuscito, ma la sincronizzazione cloud è fallita.");
   }
+}
+
+function refreshCurrentPersonalView() {
+  if (state.route.name === "profile") renderProfilePage();
+  if (state.route.name === "settings") renderSettingsPage();
+  if (state.route.name === "game") void renderGamePage();
+  if (state.route.name === "public-profile") void renderPublicProfilePage();
+  if (state.route.name === "list") void renderSharedListPage();
+  if (state.route.name === "feed") void renderFeedPage();
+  if (state.route.name === "explore") void renderExplorePage();
+  if (state.route.name === "notifications") void renderNotificationsPage();
+  if (routeToDashboardView(state.route.name)) renderDashboard();
 }
 
 async function initializeUserSystem() {
@@ -2793,12 +2907,12 @@ function migratePersonalDataToCanonicalKeys() {
 
   if (libraryChanged) {
     state.library = nextLibrary;
-    localStorage.setItem(LIBRARY_KEY, JSON.stringify(state.library));
+    persistPersonalDataLocally();
     for (const [oldKey] of movedKeys) {
       window.VaultCloud?.deleteLibraryItem(oldKey).catch(console.error);
     }
   }
-  if (listsChanged) localStorage.setItem(LISTS_KEY, JSON.stringify(state.lists));
+  if (listsChanged) persistPersonalDataLocally();
   if (libraryChanged || listsChanged) {
     window.VaultCloud?.schedulePush(state.library, state.lists);
   }
@@ -2888,7 +3002,19 @@ async function importData(file) {
   try {
     const payload = JSON.parse(await file.text());
     state.library = { ...state.library, ...(payload.library || {}) };
-    state.lists = { ...state.lists, ...(payload.lists || {}) };
+
+    const importedLists = Object.values(payload.lists || {}).reduce((result, list) => {
+      const id = crypto.randomUUID();
+      result[id] = {
+        ...list,
+        id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return result;
+    }, {});
+    state.lists = { ...state.lists, ...importedLists };
+
     saveLibrary();
     saveLists();
     rebuildGameIndex();
@@ -3289,11 +3415,13 @@ ui.deleteAccountButton.addEventListener("click", async () => {
   if (!window.confirm("Eliminare definitivamente il tuo account The Free Vault?")) return;
   ui.deleteAccountButton.disabled = true;
   try {
+    const deletedUserId = state.auth.user?.id || activeStorageUserId;
+    window.VaultCloud?.cancelScheduledPush();
     await window.VaultAuth.deleteAccount();
-    localStorage.removeItem(LIBRARY_KEY);
-    localStorage.removeItem(LISTS_KEY);
-    state.library = {};
-    state.lists = {};
+    if (deletedUserId) clearPersonalStorage(deletedUserId);
+    personalStorageGeneration += 1;
+    synchronizedAccountId = null;
+    switchPersonalStorage(null);
     showToast("Account eliminato.");
     navigate("#/home");
   } catch (error) {
@@ -3306,7 +3434,11 @@ ui.deleteAccountButton.addEventListener("click", async () => {
 
 $("#logout-button").addEventListener("click", async () => {
   try {
+    window.VaultCloud?.cancelScheduledPush();
     await window.VaultAuth.signOut();
+    personalStorageGeneration += 1;
+    synchronizedAccountId = null;
+    switchPersonalStorage(null);
     showToast("Disconnessione completata.");
     navigate("#/home");
   } catch (error) {

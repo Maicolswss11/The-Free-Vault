@@ -1,10 +1,24 @@
 (() => {
   let timer = null;
-  let syncing = false;
+  let syncingUserId = null;
 
   function clientAndUser() {
     const auth = window.VaultAuth;
     return { client: auth?.client, user: auth?.user };
+  }
+
+  function cloneValue(value) {
+    if (typeof structuredClone === "function") return structuredClone(value);
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function assertCurrentUser(expectedUserId) {
+    const { client, user } = clientAndUser();
+    if (!client || !user) return { client: null, user: null };
+    if (expectedUserId && user.id !== expectedUserId) {
+      throw new Error("Sessione cambiata durante la sincronizzazione cloud.");
+    }
+    return { client, user };
   }
 
   function entryUpdatedAt(entry) {
@@ -43,38 +57,57 @@
     return merged;
   }
 
-  async function pull(localLibrary, localLists) {
-    const { client, user } = clientAndUser();
+  async function pull(localLibrary, localLists, expectedUserId = null) {
+    const { client, user } = assertCurrentUser(expectedUserId);
     if (!client || !user) return { library: localLibrary, lists: localLists };
+    const userId = user.id;
 
     const [libraryResult, listsResult] = await Promise.all([
-      client.from("user_library").select("game_key, data, updated_at").eq("user_id", user.id),
-      client.from("user_lists").select("id, name, description, visibility, game_keys, created_at, updated_at").eq("user_id", user.id),
+      client.from("user_library").select("game_key, data, updated_at").eq("user_id", userId),
+      client.from("user_lists").select("id, name, description, visibility, game_keys, created_at, updated_at").eq("user_id", userId),
     ]);
     if (libraryResult.error) throw libraryResult.error;
     if (listsResult.error) throw listsResult.error;
 
+    assertCurrentUser(userId);
     return {
       library: mergeLibrary(localLibrary, libraryResult.data),
       lists: mergeLists(localLists, listsResult.data),
     };
   }
 
-  async function push(library, lists) {
-    const { client, user } = clientAndUser();
-    if (!client || !user || syncing) return;
-    syncing = true;
+  function explainListSyncError(error) {
+    if (error?.code === "42501") {
+      return new Error(
+        "Una lista locale appartiene a un altro account. Esportala e importala nuovamente per crearne una copia con un nuovo ID.",
+        { cause: error },
+      );
+    }
+    return error;
+  }
+
+  async function push(library, lists, expectedUserId = null) {
+    const { client, user } = assertCurrentUser(expectedUserId);
+    if (!client || !user) return;
+    const userId = user.id;
+
+    if (syncingUserId) {
+      if (syncingUserId === userId) return;
+      throw new Error("È ancora in corso la sincronizzazione di un altro account.");
+    }
+
+    syncingUserId = userId;
     try {
       const now = new Date().toISOString();
       const libraryRows = Object.entries(library).map(([gameKey, entry]) => ({
-        user_id: user.id,
+        user_id: userId,
         game_key: gameKey,
         data: entry,
         updated_at: entryUpdatedAt(entry) > now ? entryUpdatedAt(entry) : now,
       }));
       const listRows = Object.values(lists).map((list) => ({
         id: list.id,
-        user_id: user.id,
+        user_id: userId,
         name: list.name,
         description: list.description || null,
         visibility: list.visibility || "private",
@@ -84,26 +117,41 @@
       }));
 
       if (libraryRows.length) {
+        assertCurrentUser(userId);
         const { error } = await client.from("user_library").upsert(libraryRows, {
           onConflict: "user_id,game_key",
         });
         if (error) throw error;
       }
       if (listRows.length) {
+        assertCurrentUser(userId);
         const { error } = await client.from("user_lists").upsert(listRows, {
           onConflict: "id",
         });
-        if (error) throw error;
+        if (error) throw explainListSyncError(error);
       }
     } finally {
-      syncing = false;
+      if (syncingUserId === userId) syncingUserId = null;
     }
   }
 
-  function schedulePush(library, lists, delay = 900) {
+  function cancelScheduledPush() {
     clearTimeout(timer);
+    timer = null;
+  }
+
+  function schedulePush(library, lists, delay = 900) {
+    cancelScheduledPush();
+    const { user } = clientAndUser();
+    if (!user) return;
+
+    const expectedUserId = user.id;
+    const librarySnapshot = cloneValue(library);
+    const listsSnapshot = cloneValue(lists);
+
     timer = setTimeout(() => {
-      push(library, lists).catch((error) => {
+      timer = null;
+      push(librarySnapshot, listsSnapshot, expectedUserId).catch((error) => {
         console.error("Sincronizzazione cloud fallita", error);
         window.dispatchEvent(new CustomEvent("tfv:sync-error", { detail: error }));
       });
@@ -111,7 +159,7 @@
   }
 
   async function deleteLibraryItem(gameKey) {
-    const { client, user } = clientAndUser();
+    const { client, user } = assertCurrentUser();
     if (!client || !user) return;
     const { error } = await client
       .from("user_library")
@@ -122,7 +170,7 @@
   }
 
   async function deleteList(listId) {
-    const { client, user } = clientAndUser();
+    const { client, user } = assertCurrentUser();
     if (!client || !user) return;
     const { error } = await client
       .from("user_lists")
@@ -132,5 +180,12 @@
     if (error) throw error;
   }
 
-  window.VaultCloud = { pull, push, schedulePush, deleteLibraryItem, deleteList };
+  window.VaultCloud = {
+    pull,
+    push,
+    schedulePush,
+    cancelScheduledPush,
+    deleteLibraryItem,
+    deleteList,
+  };
 })();

@@ -1,4 +1,4 @@
-const CACHE_NAME = "the-free-vault-v4-1-catalog-performance";
+const CACHE_NAME = "the-free-vault-v4-1-5-account-isolation";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -32,39 +32,63 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   const isData = ["/games.json", "/history.json"]
     .some((ending) => url.pathname.endsWith(ending));
   const isCover = url.pathname.includes("/assets/covers/");
 
   if (isData) {
-    const canonicalUrl = new URL(event.request.url);
-    canonicalUrl.search = "";
-    const cacheKey = new Request(canonicalUrl.toString());
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(cacheKey, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => caches.match(cacheKey))
-    );
+    event.respondWith((async () => {
+      const canonicalUrl = new URL(event.request.url);
+      canonicalUrl.search = "";
+      const cacheKey = new Request(canonicalUrl.toString());
+      try {
+        const response = await fetch(event.request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(cacheKey, response.clone());
+        }
+        return response;
+      } catch {
+        return (await caches.match(cacheKey)) || Response.error();
+      }
+    })());
     return;
   }
 
   if (isCover) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-        if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      try {
+        const response = await fetch(event.request);
+        if (response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
+        }
         return response;
-      }))
-    );
+      } catch {
+        return (await caches.match("./placeholders/game-placeholder.svg")) || Response.error();
+      }
+    })());
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    if (cached) return cached;
+    try {
+      return await fetch(event.request);
+    } catch {
+      if (event.request.mode === "navigate") {
+        return (await caches.match("./index.html")) || Response.error();
+      }
+      return Response.error();
+    }
+  })());
 });

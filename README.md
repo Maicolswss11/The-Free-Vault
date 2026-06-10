@@ -515,3 +515,22 @@ supabase/migrations/20260610_v413_incremental_catalog_sync.sql
 
 Le rimozioni di listing non più presenti sono intenzionalmente differite: questa
 release privilegia stabilità e riduzione delle scritture sul piano Supabase Free.
+
+## v4.1.5 — Account data isolation
+
+Libreria e liste locali sono ora separate per identità:
+
+```text
+tfv:guest:library:v1
+tfv:guest:lists:v1
+tfv:user:<uuid>:library:v1
+tfv:user:<uuid>:lists:v1
+```
+
+Il login non importa più automaticamente i dati guest o quelli dell'account
+precedente. Al logout l'interfaccia torna immediatamente allo spazio guest.
+I push cloud catturano lo user ID che li ha pianificati e vengono annullati al
+cambio account, evitando scritture tardive sull'utente successivo.
+
+Le liste importate da backup ricevono nuovi UUID, così non possono collidere
+con liste appartenenti a un altro account e protette da RLS.
