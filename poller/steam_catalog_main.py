@@ -9,6 +9,7 @@ from typing import Iterable
 
 from . import constants as C
 from .logging_config import configure_logging, get_logger
+from .supabase_catalog_sink import SupabaseCatalogSink
 from .steam_client import SteamClientError, iter_app_list_pages
 from .steam_catalog_store import (
     merge_steam_catalog,
@@ -63,8 +64,63 @@ def run(
         return 1
 
 
+def run_to_supabase(
+    *,
+    pages: Iterable[dict] | None = None,
+    now: datetime | None = None,
+    max_results: int = 50_000,
+    max_pages: int = 20,
+) -> int:
+    """Synchronize Steam listings into Supabase without generating a huge JSON."""
+    now = now or datetime.now(timezone.utc)
+    include_dlc = os.environ.get("STEAM_INCLUDE_DLC", "").casefold() in {
+        "1", "true", "yes", "on",
+    }
+    sink = SupabaseCatalogSink.from_env()
+    run_id: str | None = None
+
+    try:
+        run_id = sink.begin("steam")
+        payloads = (
+            pages
+            if pages is not None
+            else iter_app_list_pages(
+                max_results=max_results,
+                max_pages=max_pages,
+                include_dlc=include_dlc,
+            )
+        )
+        parsed = []
+        for payload in payloads:
+            parsed.extend(parse_steam_page(payload))
+
+        games = merge_steam_catalog(parsed)
+        if not games:
+            raise SteamClientError("Il catalogo Steam ricevuto è vuoto")
+
+        sink.upsert_games(games, run_id=run_id, synced_at=now)
+        sink.finalize(
+            "steam",
+            run_id,
+            metadata={
+                "source": "Steam IStoreService/GetAppList",
+                "generated_at": now.isoformat(),
+                "received": len(games),
+                "include_dlc": include_dlc,
+            },
+        )
+        logger.info("Catalogo Steam sincronizzato su Supabase: %d listing", len(games))
+        return 0
+    except Exception as exc:
+        sink.fail("steam", run_id, exc)
+        logger.exception("Sincronizzazione catalogo Steam su Supabase fallita")
+        return 1
+
+
 def main() -> int:
     configure_logging()
+    if os.environ.get("CATALOG_SINK", "").casefold() == "supabase":
+        return run_to_supabase()
     return run()
 
 

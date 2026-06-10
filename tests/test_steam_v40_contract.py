@@ -9,11 +9,12 @@ def test_frontend_loads_steam_catalog_and_module():
     index = (ROOT / "docs/index.html").read_text(encoding="utf-8")
     worker = (ROOT / "docs/service-worker.js").read_text(encoding="utf-8")
 
-    assert 'const STEAM_CATALOG_URL = "./steam-catalog.json";' in app
-    assert "groupedCatalogGames" in app
+    assert "VaultCatalog.search" in app
+    assert 'const STEAM_CATALOG_URL' not in app
     assert "game-page-store-options" in index
     assert "./steam.js" in index
-    assert "/steam-catalog.json" in worker
+    assert "./catalog-api.js" in index
+    assert "/steam-catalog.json" not in worker
 
 
 def test_steam_backend_and_workflow_exist():

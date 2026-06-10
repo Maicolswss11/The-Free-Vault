@@ -440,3 +440,45 @@ Epic quando disponibili e mostra la listing Steam come disponibilità aggiuntiva
 
 Il matching automatico usa il titolo canonico (`match_key`). I casi ambigui
 saranno gestiti in seguito tramite `canonical_match_queue`.
+
+## v4.1 — Catalog Performance
+
+La PWA non scarica più `catalog.json` e `steam-catalog.json` completi. Con oltre
+160.000 listing, catalogo, ricerca, filtri e paginazione sono eseguiti da
+Postgres/Supabase.
+
+### Architettura
+
+```text
+Epic free tracker → games.json + history.json → PWA
+Epic catalog      → GitHub Actions → Supabase catalog_items
+Steam catalog     → GitHub Actions → Supabase catalog_items
+PWA               → RPC search_catalog (36 risultati per pagina)
+```
+
+La migrazione `20260610_v41_catalog_performance.sql` aggiunge:
+
+- proiezione denormalizzata `catalog_items`;
+- stato delle sincronizzazioni per store;
+- indici GIN full-text e trigram;
+- RPC `search_catalog`, `catalog_stats`, `get_catalog_game` e
+  `get_catalog_games`;
+- paginazione e filtri server-side.
+
+### Secret GitHub richiesti
+
+```text
+SUPABASE_URL
+SUPABASE_SECRET_KEY (oppure la legacy SUPABASE_SERVICE_ROLE_KEY)
+STEAM_WEB_API_KEY
+```
+
+`SUPABASE_SECRET_KEY` (o la legacy `SUPABASE_SERVICE_ROLE_KEY`) viene utilizzata esclusivamente dai workflow e non
+deve mai essere inserita in `docs/config.js` o in altri file pubblici.
+
+Dopo la migrazione, eseguire una volta entrambi i workflow:
+
+```text
+Sync Epic Catalog
+Sync Steam Catalog
+```

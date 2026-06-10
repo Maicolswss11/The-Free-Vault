@@ -1865,3 +1865,28 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
     flex: 1 1 140px;
   }
 }
+
+
+/* v4.1 — server-side catalog pagination */
+.catalog-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(17, 23, 34, .72);
+  color: var(--muted);
+}
+.catalog-pagination[hidden] { display: none; }
+.catalog-pagination .button[hidden] { display: none; }
+.catalog-pagination .button:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 640px) {
+  .catalog-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: center;
+  }
+}

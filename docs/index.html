@@ -242,6 +242,10 @@
 
           <div id="status-message" class="notice" hidden></div>
           <section id="games-grid" class="games-grid" aria-live="polite"></section>
+          <div id="catalog-pagination" class="catalog-pagination" hidden>
+            <span id="catalog-page-summary"></span>
+            <button id="catalog-load-more" class="button button-secondary" type="button">Carica altri giochi</button>
+          </div>
         </section>
 
         <section id="game-page" class="route-page detail-page" hidden>
@@ -846,6 +850,7 @@
   <script src="./cloud-sync.js" defer></script>
   <script src="./social.js" defer></script>
   <script src="./steam.js" defer></script>
+  <script src="./catalog-api.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

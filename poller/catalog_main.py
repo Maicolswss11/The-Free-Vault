@@ -12,6 +12,7 @@ from .catalog_client import CatalogClientError, iter_catalog_pages
 from .catalog_models import StoreGame
 from .catalog_store import merge_catalog, parse_catalog_page, write_catalog_json
 from .logging_config import configure_logging, get_logger
+from .supabase_catalog_sink import SupabaseCatalogSink
 
 logger = get_logger(__name__)
 
@@ -60,8 +61,64 @@ def run(
         return 1
 
 
+def run_to_supabase(
+    *,
+    page_size: int = 100,
+    max_pages: int = 200,
+    category: str | None = None,
+    pages: Iterable[dict] | None = None,
+    now: datetime | None = None,
+) -> int:
+    """Synchronize the Epic catalog into the indexed Supabase projection."""
+    category = category or os.environ.get(
+        "EPIC_CATALOG_CATEGORY",
+        "games/edition/base|bundles/games",
+    )
+    now = now or datetime.now(timezone.utc)
+    sink = SupabaseCatalogSink.from_env()
+    run_id: str | None = None
+
+    try:
+        run_id = sink.begin("epic")
+        payloads = (
+            pages
+            if pages is not None
+            else iter_catalog_pages(
+                page_size=page_size,
+                max_pages=max_pages,
+                category=category,
+            )
+        )
+        parsed: list[StoreGame] = []
+        for payload in payloads:
+            parsed.extend(parse_catalog_page(payload))
+
+        games = merge_catalog(parsed)
+        if not games:
+            raise CatalogClientError("Il catalogo Epic ricevuto è vuoto")
+
+        sink.upsert_games(games, run_id=run_id, synced_at=now)
+        sink.finalize(
+            "epic",
+            run_id,
+            metadata={
+                "source": "Epic GraphQL storefront",
+                "generated_at": now.isoformat(),
+                "received": len(games),
+            },
+        )
+        logger.info("Catalogo Epic sincronizzato su Supabase: %d listing", len(games))
+        return 0
+    except Exception as exc:
+        sink.fail("epic", run_id, exc)
+        logger.exception("Sincronizzazione catalogo Epic su Supabase fallita")
+        return 1
+
+
 def main() -> int:
     configure_logging()
+    if os.environ.get("CATALOG_SINK", "").casefold() == "supabase":
+        return run_to_supabase()
     return run()
 
 

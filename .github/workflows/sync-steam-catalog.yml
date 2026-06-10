@@ -3,11 +3,10 @@ name: Sync Steam Catalog
 on:
   workflow_dispatch:
   schedule:
-    # UTC: ogni giorno alle 05:19, separato dal catalogo Epic.
     - cron: "19 5 * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: steam-catalog-sync
@@ -16,15 +15,17 @@ concurrency:
 jobs:
   sync-steam:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     env:
+      CATALOG_SINK: supabase
       STEAM_WEB_API_KEY: ${{ secrets.STEAM_WEB_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CATALOG_UPSERT_BATCH_SIZE: "1000"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -38,29 +39,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r poller/requirements.txt
 
-      - name: Verify Steam secret
+      - name: Verify secrets
         shell: bash
         run: |
-          if [ -z "$STEAM_WEB_API_KEY" ]; then
-            echo "Manca il repository secret STEAM_WEB_API_KEY."
-            exit 1
-          fi
+          test -n "$STEAM_WEB_API_KEY" || (echo "Manca STEAM_WEB_API_KEY" && exit 1)
+          test -n "$SUPABASE_URL" || (echo "Manca SUPABASE_URL" && exit 1)
+          test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY (o la legacy SUPABASE_SERVICE_ROLE_KEY)" && exit 1)
 
-      - name: Sync Steam catalog
+      - name: Sync Steam catalog to Supabase
         run: python -m poller.steam_catalog_main
-
-      - name: Commit Steam catalog
-        shell: bash
-        run: |
-          git add docs/steam-catalog.json
-
-          if git diff --cached --quiet; then
-            echo "Catalogo Steam invariato."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: sync Steam catalog"
-          git pull --rebase origin main
-          git push origin main

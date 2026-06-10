@@ -1,7 +1,5 @@
 const DATA_URL = "./games.json";
 const HISTORY_URL = "./history.json";
-const CATALOG_URL = "./catalog.json";
-const STEAM_CATALOG_URL = "./steam-catalog.json";
 const LIBRARY_KEY = "the-free-vault-library-v3";
 const LEGACY_LIBRARY_KEYS = ["the-free-vault-library-v2"];
 const LISTS_KEY = "the-free-vault-lists-v1";
@@ -13,9 +11,14 @@ const state = {
   history: [],
   catalog: [],
   catalogMeta: null,
-  epicCatalogMeta: null,
-  steamCatalogMeta: null,
   gameIndex: new Map(),
+  catalogTotal: 0,
+  catalogOffset: 0,
+  catalogLimit: 36,
+  catalogLoading: false,
+  catalogHasMore: false,
+  catalogRequestId: 0,
+  globalSearchRequestId: 0,
   library: loadLibrary(),
   lists: loadJson(LISTS_KEY, {}),
   route: { name: "home", params: {}, query: new URLSearchParams() },
@@ -97,6 +100,9 @@ const ui = {
   listsGrid: $("#lists-grid"),
   createListButton: $("#create-list-button"),
   catalogMeta: $("#catalog-meta"),
+  catalogPagination: $("#catalog-pagination"),
+  catalogPageSummary: $("#catalog-page-summary"),
+  catalogLoadMore: $("#catalog-load-more"),
   toolbar: $("#content-toolbar"),
   listDialog: $("#list-dialog"),
   listDialogTitle: $("#list-dialog-title"),
@@ -543,38 +549,124 @@ function listingRichness(game) {
 }
 
 function groupedCatalogGames() {
-  const groups = new Map();
-  for (const raw of state.catalog.map(normalizeCatalog)) {
-    const key = raw.match_key || raw.canonical_id || raw.listing_id;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(raw);
+  return state.catalog.map(normalizeCatalog);
+}
+
+function registerCatalogGame(game) {
+  if (!game?.title) return;
+  const normalized = normalizeCatalog(game);
+  for (const alias of gameAliases(normalized)) state.gameIndex.set(alias, normalized);
+  state.gameIndex.set(gameKey(normalized), normalized);
+  if (normalized.canonical_id) state.gameIndex.set(normalized.canonical_id, normalized);
+  if (normalized.match_key) state.gameIndex.set(normalized.match_key, normalized);
+  for (const listing of normalized.store_listings || []) {
+    if (listing.listing_id) state.gameIndex.set(listing.listing_id, normalized);
+  }
+}
+
+function personalCatalogKeys({ favorite = false } = {}) {
+  return [...new Set(Object.entries(state.library)
+    .filter(([, entry]) => !favorite || entry?.favorite)
+    .map(([key, entry]) => entry?.game?.match_key || entry?.game?.canonical_id || (/^(?:title|game):/.test(key) ? key : null))
+    .filter(Boolean))];
+}
+
+function catalogSearchOptions(offset = 0) {
+  return {
+    query: state.search,
+    stores: state.storeFilter === "all" ? null : [state.storeFilter],
+    category: state.categoryFilter,
+    segment: state.segmentFilter,
+    price: state.priceFilter,
+    year: state.yearFilter === "all" ? null : Number(state.yearFilter),
+    libraryKeys: personalCatalogKeys(),
+    favoriteKeys: personalCatalogKeys({ favorite: true }),
+    personalFilter: state.statusFilter,
+    sort: state.sort,
+    limit: state.catalogLimit,
+    offset,
+  };
+}
+
+async function loadCatalogPage({ reset = true, force = false } = {}) {
+  if (state.route.name !== "catalog") return;
+  if (!window.VaultCatalog?.configured()) {
+    state.catalog = [];
+    state.catalogTotal = 0;
+    state.catalogLoading = false;
+    ui.status.hidden = false;
+    ui.status.textContent = "Configura Supabase ed esegui la migrazione v4.1 per usare il catalogo.";
+    renderDashboard();
+    return;
   }
 
-  return [...groups.values()].map((listings) => {
-    const ordered = [...listings].sort((a, b) => listingRichness(b) - listingRichness(a));
-    const representative = ordered[0];
-    const stores = [...new Set(ordered.map((item) => item.store))];
-    return {
-      ...representative,
-      match_key: representative.match_key || representative.canonical_id,
-      stores,
-      store_listings: ordered.map((item) => ({
-        store: item.store,
-        listing_id: item.listing_id,
-        external_id: item.external_id,
-        title: item.title,
-        store_url: item.store_url,
-        image_url: item.image_url,
-        fmt_original_price: item.fmt_original_price,
-        fmt_discount_price: item.fmt_discount_price,
-        original_price: item.original_price,
-        discount_price: item.discount_price,
-        currency_code: item.currency_code,
-        category_group: item.category_group,
-        edition_name: item.edition_name,
-      })),
-    };
-  });
+  const requestId = ++state.catalogRequestId;
+  const offset = reset ? 0 : state.catalog.length;
+  state.catalogLoading = true;
+  if (reset) {
+    state.catalog = [];
+    state.catalogOffset = 0;
+  }
+  renderGames();
+
+  try {
+    const response = await window.VaultCatalog.search({
+      ...catalogSearchOptions(offset),
+      force,
+    });
+    if (requestId !== state.catalogRequestId || state.route.name !== "catalog") return;
+
+    const incoming = response.items.map(normalizeCatalog);
+    if (reset) {
+      state.catalog = incoming;
+    } else {
+      const merged = new Map(state.catalog.map((game) => [gameKey(game), game]));
+      for (const game of incoming) merged.set(gameKey(game), game);
+      state.catalog = [...merged.values()];
+    }
+    state.catalogTotal = response.total;
+    state.catalogOffset = state.catalog.length;
+    state.catalogHasMore = state.catalog.length < response.total;
+    for (const game of incoming) registerCatalogGame(game);
+    ui.status.hidden = true;
+  } catch (error) {
+    console.error("Caricamento catalogo fallito", error);
+    if (requestId !== state.catalogRequestId) return;
+    ui.status.hidden = false;
+    ui.status.textContent = "Catalogo temporaneamente non disponibile. Controlla la migrazione e i workflow v4.1.";
+  } finally {
+    if (requestId === state.catalogRequestId) {
+      state.catalogLoading = false;
+      renderDashboard();
+    }
+  }
+}
+
+function renderCatalogPagination() {
+  const visible = state.route.name === "catalog";
+  ui.catalogPagination.hidden = !visible;
+  if (!visible) return;
+  const shown = state.catalog.length;
+  const total = state.catalogTotal;
+  ui.catalogPageSummary.textContent = total
+    ? `${shown.toLocaleString("it-IT")} di ${total.toLocaleString("it-IT")} giochi`
+    : state.catalogLoading ? "Caricamento…" : "Nessun risultato";
+  ui.catalogLoadMore.hidden = !state.catalogHasMore;
+  ui.catalogLoadMore.disabled = state.catalogLoading;
+  ui.catalogLoadMore.textContent = state.catalogLoading ? "Caricamento…" : "Carica altri giochi";
+}
+
+async function hydrateCatalogKeys(keys) {
+  const missing = [...new Set((keys || []).filter((key) => key && !resolveGameByKey(key)))];
+  if (!missing.length || !window.VaultCatalog?.configured()) return [];
+  try {
+    const games = await window.VaultCatalog.getGames(missing);
+    for (const game of games) registerCatalogGame(game);
+    return games;
+  } catch (error) {
+    console.warn("Impossibile caricare i giochi della lista", error);
+    return [];
+  }
 }
 
 function listingsForGame(game) {
@@ -751,12 +843,13 @@ function handleRoute() {
   if (routeToDashboardView(state.route.name)) {
     setPageVisibility("dashboard");
     renderDashboard();
+    if (state.route.name === "catalog") void loadCatalogPage({ reset: true });
   } else if (state.route.name === "list") {
     setPageVisibility("shared-list");
     void renderSharedListPage();
   } else if (state.route.name === "game") {
     setPageVisibility("game");
-    renderGamePage();
+    void renderGamePage();
   } else if (state.route.name === "public-profile") {
     setPageVisibility("public-profile");
     void renderPublicProfilePage();
@@ -872,7 +965,7 @@ function gamesForDashboard() {
   if (route === "current") games = state.current.map(normalizePromotion);
   if (route === "upcoming") games = state.upcoming.map(normalizePromotion);
   if (route === "history") games = historyGames();
-  if (route === "catalog") games = groupedCatalogGames();
+  if (route === "catalog") return state.catalog;
   if (route === "library") games = libraryGames();
   if (route === "list") {
     const list = state.lists[state.route.params.id];
@@ -889,7 +982,13 @@ function gamesForDashboard() {
 
 function uniqueSearchGames() {
   const unique = new Map();
-  for (const game of state.gameIndex.values()) {
+  for (const game of [
+    ...state.current.map(normalizePromotion),
+    ...state.upcoming.map(normalizePromotion),
+    ...historyGames(),
+    ...libraryGames(),
+    ...state.catalog,
+  ]) {
     if (!game?.title) continue;
     const key = gameKey(game);
     if (!unique.has(key)) unique.set(key, game);
@@ -903,70 +1002,85 @@ function hideGlobalSearchResults() {
   ui.search.setAttribute("aria-expanded", "false");
 }
 
-function renderGlobalSearchResults() {
-  const query = state.globalSearch.trim().toLocaleLowerCase("it");
+async function renderGlobalSearchResults() {
+  const rawQuery = state.globalSearch.trim();
+  const query = rawQuery.toLocaleLowerCase("it");
   if (query.length < 2) {
     hideGlobalSearchResults();
     return;
   }
 
-  const results = uniqueSearchGames()
-    .filter((game) => allSearchText(game).includes(query))
-    .sort((a, b) => {
-      const aTitle = a.title.toLocaleLowerCase("it");
-      const bTitle = b.title.toLocaleLowerCase("it");
-      const aStarts = aTitle.startsWith(query) ? 0 : 1;
-      const bStarts = bTitle.startsWith(query) ? 0 : 1;
-      return aStarts - bStarts || a.title.localeCompare(b.title, "it");
-    })
-    .slice(0, 8);
-
-  ui.globalSearchResults.replaceChildren();
-  if (!results.length) {
-    const empty = document.createElement("div");
-    empty.className = "global-search-empty";
-    empty.textContent = "Nessun risultato.";
-    ui.globalSearchResults.append(empty);
-  } else {
-    for (const game of results) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "global-search-result";
-      button.setAttribute("role", "option");
-      button.innerHTML = `
-        <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
-        <span>
-          <strong>${escapeHtml(game.title)}</strong>
-          <small>${escapeHtml(game.developer || game.publisher || storeLabel(game.store))}</small>
-        </span>
-        <em>${escapeHtml(storeLabel(game.store))}</em>`;
-      button.onclick = () => {
-        state.globalSearch = "";
-        ui.search.value = "";
-        hideGlobalSearchResults();
-        navigate(gameRoute(game));
-      };
-      ui.globalSearchResults.append(button);
-    }
-  }
-
-  const openCatalog = document.createElement("button");
-  openCatalog.type = "button";
-  openCatalog.className = "global-search-all";
-  openCatalog.textContent = `Vedi tutti i risultati per “${state.globalSearch.trim()}”`;
-  openCatalog.onclick = () => {
-    const queryValue = state.globalSearch.trim();
-    hideGlobalSearchResults();
-    navigate(`#/catalog?q=${encodeURIComponent(queryValue)}`);
-  };
-  ui.globalSearchResults.append(openCatalog);
+  const requestId = ++state.globalSearchRequestId;
   ui.globalSearchResults.hidden = false;
+  ui.globalSearchResults.innerHTML = '<div class="global-search-empty">Ricerca…</div>';
   ui.search.setAttribute("aria-expanded", "true");
+
+  try {
+    let results = [];
+    if (window.VaultCatalog?.configured()) {
+      const response = await window.VaultCatalog.search({
+        query: rawQuery,
+        limit: 8,
+        offset: 0,
+        sort: "relevance",
+      });
+      if (requestId !== state.globalSearchRequestId || state.globalSearch.trim() !== rawQuery) return;
+      results = response.items;
+    } else {
+      results = uniqueSearchGames()
+        .filter((game) => allSearchText(game).includes(query))
+        .slice(0, 8);
+    }
+
+    ui.globalSearchResults.replaceChildren();
+    if (!results.length) {
+      const empty = document.createElement("div");
+      empty.className = "global-search-empty";
+      empty.textContent = "Nessun risultato.";
+      ui.globalSearchResults.append(empty);
+    } else {
+      for (const game of results) {
+        registerCatalogGame(game);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "global-search-result";
+        button.setAttribute("role", "option");
+        button.innerHTML = `
+          <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+          <span>
+            <strong>${escapeHtml(game.title)}</strong>
+            <small>${escapeHtml(game.developer || game.publisher || (game.stores || []).map(storeLabel).join(" · "))}</small>
+          </span>
+          <em>${escapeHtml((game.stores || [game.store]).map(storeLabel).join(" + "))}</em>`;
+        button.onclick = () => {
+          state.globalSearch = "";
+          ui.search.value = "";
+          hideGlobalSearchResults();
+          navigate(gameRoute(game));
+        };
+        ui.globalSearchResults.append(button);
+      }
+    }
+
+    const openCatalog = document.createElement("button");
+    openCatalog.type = "button";
+    openCatalog.className = "global-search-all";
+    openCatalog.textContent = `Vedi tutti i risultati per “${rawQuery}”`;
+    openCatalog.onclick = () => {
+      hideGlobalSearchResults();
+      navigate(`#/catalog?q=${encodeURIComponent(rawQuery)}`);
+    };
+    ui.globalSearchResults.append(openCatalog);
+  } catch (error) {
+    console.error("Ricerca globale fallita", error);
+    if (requestId !== state.globalSearchRequestId) return;
+    ui.globalSearchResults.innerHTML = '<div class="global-search-empty">Ricerca temporaneamente non disponibile.</div>';
+  }
 }
 
 function updateStats() {
   $("#stat-current").textContent = state.current.length;
-  ui.statCatalog.textContent = groupedCatalogGames().length;
+  ui.statCatalog.textContent = Number(state.catalogMeta?.total_games || 0).toLocaleString("it-IT");
   $("#stat-library").textContent = Object.keys(state.library).length;
   ui.statLists.textContent = Object.keys(state.lists).length;
 }
@@ -1124,20 +1238,17 @@ function renderGames() {
   if (!games.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = `<strong>Nessun gioco trovato</strong><span>Modifica ricerca o filtri.</span>`;
+    if (state.route.name === "catalog" && state.catalogLoading) {
+      empty.innerHTML = `<strong>Caricamento catalogo…</strong><span>La ricerca viene eseguita sul database, senza scaricare 160.000 titoli.</span>`;
+    } else {
+      empty.innerHTML = `<strong>Nessun gioco trovato</strong><span>Modifica ricerca o filtri.</span>`;
+    }
     ui.grid.append(empty);
-    return;
+  } else {
+    for (const game of games) ui.grid.append(renderCard(game));
   }
-  const limit = state.route.name === "catalog" ? 300 : games.length;
-  for (const game of games.slice(0, limit)) ui.grid.append(renderCard(game));
-  if (games.length > limit) {
-    const notice = document.createElement("div");
-    notice.className = "catalog-limit-note";
-    notice.textContent = `Mostrati i primi ${limit} risultati su ${games.length}. Usa la ricerca per restringere.`;
-    ui.grid.append(notice);
-  }
+  renderCatalogPagination();
 }
-
 
 function setSelectOptions(select, options, currentValue) {
   select.replaceChildren();
@@ -1151,11 +1262,10 @@ function setSelectOptions(select, options, currentValue) {
 }
 
 function populateYearFilter() {
-  const years = [...new Set(
-    [...state.catalog.map(normalizeCatalog), ...historyGames(), ...libraryGames()]
-      .map(releaseYearOf)
-      .filter(Boolean)
-  )].sort((a, b) => b - a);
+  const catalogYears = Array.isArray(state.catalogMeta?.years) ? state.catalogMeta.years : [];
+  const localYears = [...historyGames(), ...libraryGames()].map(releaseYearOf).filter(Boolean);
+  const years = [...new Set([...catalogYears, ...localYears].map(Number).filter(Boolean))]
+    .sort((a, b) => b - a);
 
   const current = state.yearFilter;
   setSelectOptions(
@@ -1238,13 +1348,18 @@ function renderDashboardHeader() {
   configureContextualFilters();
 
   if (state.route.name === "catalog") {
-    const generated = state.catalogMeta?.generated_at;
-    const canonicalTotal = groupedCatalogGames().length;
-    const epicTotal = Number(state.catalogMeta?.epic_total || 0);
-    const steamTotal = Number(state.catalogMeta?.steam_total || 0);
-    ui.catalogMeta.textContent = state.catalog.length
-      ? `${canonicalTotal.toLocaleString("it-IT")} giochi · ${epicTotal.toLocaleString("it-IT")} Epic · ${steamTotal.toLocaleString("it-IT")} Steam · aggiornato ${formatDate(generated, true)}`
-      : "Cataloghi non ancora sincronizzati. Avvia i workflow Epic e Steam.";
+    const stores = state.catalogMeta?.stores || {};
+    const epicTotal = Number(stores.epic || 0);
+    const steamTotal = Number(stores.steam || 0);
+    const totalGames = Number(state.catalogMeta?.total_games || 0);
+    const completed = (state.catalogMeta?.sync || [])
+      .filter((entry) => entry.status === "completed" && entry.completed_at)
+      .map((entry) => entry.completed_at)
+      .sort()
+      .at(-1);
+    ui.catalogMeta.textContent = totalGames
+      ? `${totalGames.toLocaleString("it-IT")} giochi canonici · ${epicTotal.toLocaleString("it-IT")} Epic · ${steamTotal.toLocaleString("it-IT")} Steam${completed ? ` · aggiornato ${formatDate(completed, true)}` : ""}`
+      : "Catalogo Supabase vuoto. Esegui la migrazione v4.1 e poi i workflow Epic e Steam.";
   }
 }
 
@@ -1255,6 +1370,14 @@ function renderListsOverview() {
     ui.listsGrid.innerHTML = `<div class="empty-state"><strong>Nessuna lista</strong><span>Crea raccolte ordinate come su Letterboxd.</span></div>`;
     return;
   }
+  const coverKeys = lists.flatMap((list) => (list.games || []).slice(0, 4));
+  const missingCoverKeys = coverKeys.filter((key) => !resolveGameByKey(key));
+  if (missingCoverKeys.length) {
+    void hydrateCatalogKeys(missingCoverKeys).then(() => {
+      if (state.route.name === "lists") renderListsOverview();
+    });
+  }
+
   for (const list of lists) {
     const card = document.createElement("article");
     card.className = "list-card";
@@ -1382,7 +1505,7 @@ function renderRating(game, entry) {
     button.setAttribute("aria-label", `${rating} stelle`);
     button.onclick = () => {
       setLibraryEntry(game, { rating: selected === rating ? 0 : rating });
-      renderGamePage();
+      void renderGamePage();
     };
     ui.gamePageRating.append(button);
   }
@@ -1446,14 +1569,26 @@ function renderStoreOptions(game) {
   }
 }
 
-function renderGamePage() {
-  const game = resolveGameByKey(state.route.params.key);
-  if (!game) {
+async function renderGamePage() {
+  let game = resolveGameByKey(state.route.params.key);
+  if (!game && window.VaultCatalog?.configured()) {
+    updateDocumentTitle("Caricamento gioco");
+    ui.gamePageTitle.textContent = "Caricamento…";
+    ui.gamePageDescription.textContent = "Recupero la scheda dal catalogo.";
+    ui.gamePageImage.src = PLACEHOLDER;
+    ui.gamePageMeta.replaceChildren();
+    ui.gamePagePromotions.replaceChildren();
+    try {
+      game = await window.VaultCatalog.getGame(state.route.params.key);
+      if (game) registerCatalogGame(game);
+    } catch (error) {
+      console.error("Caricamento scheda gioco fallito", error);
+    }
+  }
+  if (!game || state.route.name !== "game") {
     updateDocumentTitle("Gioco non trovato");
-    ui.gamePageTitle.textContent = state.dataLoaded ? "Gioco non trovato" : "Caricamento…";
-    ui.gamePageDescription.textContent = state.dataLoaded
-      ? "Il titolo richiesto non è presente nel catalogo locale."
-      : "Sto caricando il catalogo.";
+    ui.gamePageTitle.textContent = "Gioco non trovato";
+    ui.gamePageDescription.textContent = "Il titolo richiesto non è disponibile nel catalogo.";
     ui.gamePageImage.src = PLACEHOLDER;
     ui.gamePageMeta.replaceChildren();
     ui.gamePagePromotions.replaceChildren();
@@ -1493,21 +1628,21 @@ function renderGamePage() {
   ui.gamePageLibrary.onclick = () => {
     if (getLibraryEntry(game)) removeLibraryEntry(game);
     else setLibraryEntry(game);
-    renderGamePage();
+    void renderGamePage();
   };
   ui.gamePageFavorite.onclick = () => {
     setLibraryEntry(game, { favorite: !getLibraryEntry(game)?.favorite });
-    renderGamePage();
+    void renderGamePage();
   };
   ui.gamePageList.onclick = () => openListPicker(game);
   ui.gamePageStatus.onchange = () => {
     setLibraryEntry(game, { status: ui.gamePageStatus.value });
-    renderGamePage();
+    void renderGamePage();
   };
   ui.gamePageSaveNotes.onclick = () => {
     setLibraryEntry(game, { notes: ui.gamePageNotes.value.trim() });
     showToast("Diario aggiornato.");
-    renderGamePage();
+    void renderGamePage();
   };
 }
 
@@ -2211,6 +2346,8 @@ async function renderSharedListPage() {
     ui.sharedListAuthor.href = list.author?.username ? profileRoute(list.author.username) : "#/profile";
     updateDocumentTitle(list.name);
 
+    await hydrateCatalogKeys(list.game_keys || []);
+    if (state.route.name !== "list" || state.route.params.id !== id) return;
     const games = (list.game_keys || []).map(resolveGameByKey).filter(Boolean);
     if (!games.length) {
       ui.sharedListGames.innerHTML = `<div class="empty-state"><strong>Lista vuota</strong><span>I giochi potrebbero non essere ancora presenti nel catalogo locale.</span></div>`;
@@ -2535,7 +2672,7 @@ async function synchronizeSignedInUser(snapshot) {
   if (!snapshot.user) {
     if (state.route.name === "profile") renderProfilePage();
     if (state.route.name === "settings") renderSettingsPage();
-    if (state.route.name === "game") renderGamePage();
+    if (state.route.name === "game") void renderGamePage();
     if (state.route.name === "public-profile") void renderPublicProfilePage();
     if (state.route.name === "list") void renderSharedListPage();
     if (state.route.name === "feed") void renderFeedPage();
@@ -2555,7 +2692,7 @@ async function synchronizeSignedInUser(snapshot) {
     ui.cloudStatus.textContent = "Sincronizzato";
     if (state.route.name === "profile") renderProfilePage();
     if (state.route.name === "settings") renderSettingsPage();
-    if (state.route.name === "game") renderGamePage();
+    if (state.route.name === "game") void renderGamePage();
     if (state.route.name === "public-profile") void renderPublicProfilePage();
     if (state.route.name === "list") void renderSharedListPage();
     if (state.route.name === "feed") void renderFeedPage();
@@ -2686,36 +2823,25 @@ async function loadData() {
     const promotionsResponse = await fetch(`${DATA_URL}?v=${Date.now()}`, { cache: "no-store" });
     if (!promotionsResponse.ok) throw new Error(`Promotions HTTP ${promotionsResponse.status}`);
 
-    const [promotions, history, epicCatalog, steamCatalog] = await Promise.all([
+    const [promotions, history, catalogStats] = await Promise.all([
       promotionsResponse.json(),
       fetchOptionalJson(HISTORY_URL, { games: [] }),
-      fetchOptionalJson(CATALOG_URL, { games: [], total: 0, store: "epic" }),
-      fetchOptionalJson(STEAM_CATALOG_URL, { games: [], total: 0, store: "steam" }),
+      window.VaultCatalog?.configured()
+        ? window.VaultCatalog.getStats({ force: true }).catch((error) => {
+            console.warn("Statistiche catalogo non disponibili", error);
+            return { total_listings: 0, total_games: 0, stores: {}, years: [], sync: [] };
+          })
+        : Promise.resolve({ total_listings: 0, total_games: 0, stores: {}, years: [], sync: [] }),
     ]);
 
     state.current = promotions.current || [];
     state.upcoming = promotions.upcoming || [];
     state.history = history.games || history.history || [];
-    state.catalog = [
-      ...(epicCatalog.games || []),
-      ...(steamCatalog.games || []),
-    ];
-    state.epicCatalogMeta = epicCatalog;
-    state.steamCatalogMeta = steamCatalog;
-    state.catalogMeta = {
-      generated_at: [epicCatalog.generated_at, steamCatalog.generated_at]
-        .filter(Boolean)
-        .sort()
-        .at(-1) || null,
-      total: state.catalog.length,
-      canonical_total: groupedCatalogGames().length,
-      stores: ["epic", "steam"],
-      epic_total: Number(epicCatalog.total || 0),
-      steam_total: Number(steamCatalog.total || 0),
-    };
+    state.catalog = [];
+    state.catalogMeta = catalogStats;
     state.dataLoaded = true;
-    migratePersonalDataToCanonicalKeys();
     rebuildGameIndex();
+    migratePersonalDataToCanonicalKeys();
     ui.sidebarUpdate.textContent = promotions.generated_at
       ? `Aggiornato ${formatDate(promotions.generated_at, true)}`
       : "Dati caricati";
@@ -2776,16 +2902,26 @@ async function importData(file) {
   }
 }
 
+let globalSearchTimer = null;
+let catalogSearchTimer = null;
 ui.search.addEventListener("input", () => {
   state.globalSearch = ui.search.value.trim();
+  clearTimeout(globalSearchTimer);
+  globalSearchTimer = setTimeout(() => { void renderGlobalSearchResults(); }, 240);
+
   if (state.route.name === "catalog") {
-    state.search = state.globalSearch;
-    renderDashboard();
+    clearTimeout(catalogSearchTimer);
+    catalogSearchTimer = setTimeout(() => {
+      const query = state.globalSearch;
+      const nextHash = query ? `#/catalog?q=${encodeURIComponent(query)}` : "#/catalog";
+      window.history.replaceState({}, "", nextHash);
+      state.search = query;
+      void loadCatalogPage({ reset: true });
+    }, 380);
   }
-  renderGlobalSearchResults();
 });
 
-ui.search.addEventListener("focus", renderGlobalSearchResults);
+ui.search.addEventListener("focus", () => { void renderGlobalSearchResults(); });
 ui.search.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -2802,14 +2938,24 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest(".search-box")) hideGlobalSearchResults();
 });
 
-ui.filter.addEventListener("change", () => { state.statusFilter = ui.filter.value; renderDashboard(); });
-ui.storeFilter.addEventListener("change", () => { state.storeFilter = ui.storeFilter.value; renderDashboard(); });
-ui.categoryFilter.addEventListener("change", () => { state.categoryFilter = ui.categoryFilter.value; renderDashboard(); });
-ui.segmentFilter.addEventListener("change", () => { state.segmentFilter = ui.segmentFilter.value; renderDashboard(); });
-ui.priceFilter.addEventListener("change", () => { state.priceFilter = ui.priceFilter.value; renderDashboard(); });
-ui.yearFilter.addEventListener("change", () => { state.yearFilter = ui.yearFilter.value; renderDashboard(); });
-ui.sort.addEventListener("change", () => { state.sort = ui.sort.value; renderDashboard(); });
-ui.refresh.addEventListener("click", loadData);
+function applyDashboardFilter(update) {
+  update();
+  if (state.route.name === "catalog") void loadCatalogPage({ reset: true });
+  else renderDashboard();
+}
+
+ui.filter.addEventListener("change", () => applyDashboardFilter(() => { state.statusFilter = ui.filter.value; }));
+ui.storeFilter.addEventListener("change", () => applyDashboardFilter(() => { state.storeFilter = ui.storeFilter.value; }));
+ui.categoryFilter.addEventListener("change", () => applyDashboardFilter(() => { state.categoryFilter = ui.categoryFilter.value; }));
+ui.segmentFilter.addEventListener("change", () => applyDashboardFilter(() => { state.segmentFilter = ui.segmentFilter.value; }));
+ui.priceFilter.addEventListener("change", () => applyDashboardFilter(() => { state.priceFilter = ui.priceFilter.value; }));
+ui.yearFilter.addEventListener("change", () => applyDashboardFilter(() => { state.yearFilter = ui.yearFilter.value; }));
+ui.sort.addEventListener("change", () => applyDashboardFilter(() => { state.sort = ui.sort.value; }));
+ui.catalogLoadMore.addEventListener("click", () => { void loadCatalogPage({ reset: false }); });
+ui.refresh.addEventListener("click", () => {
+  window.VaultCatalog?.clearCache();
+  void loadData();
+});
 ui.createListButton.addEventListener("click", () => openListEditor());
 $("#list-dialog-close").addEventListener("click", () => ui.listDialog.close());
 ui.saveList.addEventListener("click", saveListEditor);
