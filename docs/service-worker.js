@@ -1,4 +1,5 @@
-const CACHE_NAME = "the-free-vault-v4-1-5-account-isolation";
+
+const CACHE_NAME = "the-free-vault-v4-2-game-journal";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +9,8 @@ const APP_SHELL = [
   "./social.js",
   "./steam.js",
   "./catalog-api.js",
+
+  "./journal.js",
   "./auth.js",
   "./config.js",
   "./manifest.webmanifest",

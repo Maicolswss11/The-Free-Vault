@@ -534,3 +534,49 @@ cambio account, evitando scritture tardive sull'utente successivo.
 
 Le liste importate da backup ricevono nuovi UUID, così non possono collidere
 con liste appartenenti a un altro account e protette da RLS.
+
+
+## v4.2 — Game Journal
+
+La v4.2 introduce il diario personale di gioco senza modificare il tracker Epic
+né i workflow del catalogo.
+
+Nuove route:
+
+```text
+#/diary
+#/stats
+```
+
+Funzioni principali:
+
+- stato personale esteso: backlog, in corso, pausa, completato, abbandonato e replay;
+- percentuale di avanzamento;
+- data di inizio e completamento;
+- conteggio completamenti;
+- piattaforma principale e difficoltà;
+- registrazione di sessioni con durata, progresso, piattaforma e note;
+- sessioni private o pubbliche;
+- diario filtrabile per testo, mese e piattaforma;
+- statistiche mensili, completamenti, backlog e giochi più giocati;
+- visualizzazione separata del tempo registrato manualmente e del playtime Steam;
+- diario pubblico opzionale nel profilo;
+- backup completo di libreria, liste, progressi e sessioni;
+- storage locale separato per guest e per UUID account.
+
+Prima del deploy del frontend eseguire:
+
+```text
+supabase/migrations/20260610_v42_game_journal.sql
+```
+
+La migrazione crea:
+
+```text
+user_game_progress
+game_diary_entries
+user_settings.show_diary
+```
+
+Le sessioni pubbliche sono leggibili soltanto se il profilo è pubblico e le
+preferenze `show_activity` e `show_diary` sono abilitate.

@@ -44,4 +44,5 @@ def test_imported_lists_are_rekeyed_to_avoid_cross_account_pk_collisions():
 def test_service_worker_does_not_intercept_external_cdn_requests():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
     assert "if (url.origin !== self.location.origin)" in worker
-    assert 'the-free-vault-v4-1-5-account-isolation' in worker
+
+    assert 'the-free-vault-v4-2-game-journal' in worker

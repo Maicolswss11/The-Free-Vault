@@ -15,6 +15,7 @@
     show_library: true,
     show_lists: true,
     show_activity: true,
+    show_diary: true,
     email_notifications: true,
   });
 
@@ -100,7 +101,7 @@
         .maybeSingle(),
       client
         .from('user_settings')
-        .select('show_library, show_lists, show_activity, email_notifications, updated_at')
+        .select('show_library, show_lists, show_activity, show_diary, email_notifications, updated_at')
         .eq('user_id', session.user.id)
         .maybeSingle(),
     ]);
@@ -272,10 +273,11 @@
           show_library: Boolean(nextSettings.show_library),
           show_lists: Boolean(nextSettings.show_lists),
           show_activity: Boolean(nextSettings.show_activity),
+          show_diary: Boolean(nextSettings.show_diary),
           email_notifications: Boolean(nextSettings.email_notifications),
           updated_at: new Date().toISOString(),
         })
-        .select('show_library, show_lists, show_activity, email_notifications, updated_at')
+        .select('show_library, show_lists, show_activity, show_diary, email_notifications, updated_at')
         .single(),
     ]);
 

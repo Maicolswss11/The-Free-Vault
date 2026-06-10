@@ -72,6 +72,8 @@ const ui = {
   feedPage: $("#feed-page"),
   explorePage: $("#explore-page"),
   notificationsPage: $("#notifications-page"),
+  diaryPage: $("#diary-page"),
+  statsPage: $("#stats-page"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
@@ -184,6 +186,7 @@ const ui = {
   privacyLibrary: $("#privacy-library"),
   privacyLists: $("#privacy-lists"),
   privacyActivity: $("#privacy-activity"),
+  privacyDiary: $("#privacy-diary"),
   privacyEmails: $("#privacy-emails"),
   privacyMessage: $("#privacy-message"),
   settingsExportData: $("#settings-export-data"),
@@ -212,9 +215,29 @@ const ui = {
   gamePageFavorite: $("#game-page-favorite"),
   gamePageList: $("#game-page-list"),
   gamePageStatus: $("#game-page-status"),
+  gamePageProgress: $("#game-page-progress"),
+  gamePageProgressOutput: $("#game-page-progress-output"),
+  gamePageStartedAt: $("#game-page-started-at"),
+  gamePageCompletedAt: $("#game-page-completed-at"),
+  gamePageCompletionCount: $("#game-page-completion-count"),
+  gamePagePrimaryPlatform: $("#game-page-primary-platform"),
+  gamePageDifficulty: $("#game-page-difficulty"),
+  gamePageManualPlaytime: $("#game-page-manual-playtime"),
+  gamePageSaveProgress: $("#game-page-save-progress"),
   gamePageRating: $("#game-page-rating"),
   gamePageNotes: $("#game-page-notes"),
   gamePageSaveNotes: $("#game-page-save-notes"),
+  gameSessionForm: $("#game-session-form"),
+  gameSessionDate: $("#game-session-date"),
+  gameSessionMinutes: $("#game-session-minutes"),
+  gameSessionProgress: $("#game-session-progress"),
+  gameSessionPlatform: $("#game-session-platform"),
+  gameSessionVisibility: $("#game-session-visibility"),
+  gameSessionSpoilers: $("#game-session-spoilers"),
+  gameSessionNote: $("#game-session-note"),
+  gameSessionError: $("#game-session-error"),
+  gameSessionSubmit: $("#game-session-submit"),
+  gamePageSessions: $("#game-page-sessions"),
   gamePagePromotions: $("#game-page-promotions"),
   gamePageStoreOptions: $("#game-page-store-options"),
   publicRatingAverage: $("#public-rating-average"),
@@ -261,6 +284,27 @@ const ui = {
   publicProfileLoginToFollow: $("#public-profile-login-to-follow"),
   publicProfileStatFollowers: $("#public-profile-stat-followers"),
   publicProfileStatFollowing: $("#public-profile-stat-following"),
+  publicProfileDiary: $("#public-profile-diary"),
+  diarySearch: $("#diary-search"),
+  diaryPlatformFilter: $("#diary-platform-filter"),
+  diaryMonthFilter: $("#diary-month-filter"),
+  diaryClearFilters: $("#diary-clear-filters"),
+  diaryEntryList: $("#diary-entry-list"),
+  diaryEmpty: $("#diary-empty"),
+  diaryStatSessions: $("#diary-stat-sessions"),
+  diaryStatHours: $("#diary-stat-hours"),
+  diaryStatGames: $("#diary-stat-games"),
+  diaryStatMonth: $("#diary-stat-month"),
+  statsTotalHours: $("#stats-total-hours"),
+  statsSteamHours: $("#stats-steam-hours"),
+  statsCompleted: $("#stats-completed"),
+  statsCompletionRate: $("#stats-completion-rate"),
+  statsBacklog: $("#stats-backlog"),
+  statsSessions: $("#stats-sessions"),
+  statsMonthlyChart: $("#stats-monthly-chart"),
+  statsPlatforms: $("#stats-platforms"),
+  statsStatuses: $("#stats-statuses"),
+  statsTopGames: $("#stats-top-games"),
   notificationButton: $("#notification-button"),
   notificationBadge: $("#notification-badge"),
   sidebarNotificationBadge: $("#sidebar-notification-badge"),
@@ -835,6 +879,8 @@ function parseRoute() {
     feed: "feed",
     explore: "explore",
     notifications: "notifications",
+    diary: "diary",
+    stats: "stats",
     login: "login",
     register: "register",
     "forgot-password": "forgot-password",
@@ -873,6 +919,8 @@ function setPageVisibility(page) {
   ui.feedPage.hidden = page !== "feed";
   ui.explorePage.hidden = page !== "explore";
   ui.notificationsPage.hidden = page !== "notifications";
+  ui.diaryPage.hidden = page !== "diary";
+  ui.statsPage.hidden = page !== "stats";
 }
 
 function updateDocumentTitle(label) {
@@ -938,6 +986,12 @@ function handleRoute() {
   } else if (state.route.name === "notifications") {
     setPageVisibility("notifications");
     void renderNotificationsPage();
+  } else if (state.route.name === "diary") {
+    setPageVisibility("diary");
+    renderDiaryPage();
+  } else if (state.route.name === "stats") {
+    setPageVisibility("stats");
+    void renderStatsPage();
   } else if (["login", "register", "forgot-password", "reset-password", "auth-callback"].includes(state.route.name)) {
     setPageVisibility("auth");
     renderAuthPage();
@@ -1386,9 +1440,11 @@ function configureContextualFilters() {
       ["all", "Tutti gli stati"],
       ["saved", "In libreria"],
       ["backlog", "Da giocare"],
-      ["playing", "In gioco"],
+      ["playing", "In corso"],
+      ["paused", "In pausa"],
       ["completed", "Completati"],
       ["abandoned", "Abbandonati"],
+      ["replay", "Da rigiocare"],
       ["favorite", "Preferiti"],
     ], state.statusFilter);
   } else if (route === "history") {
@@ -1645,6 +1701,228 @@ function renderStoreOptions(game) {
   }
 }
 
+
+
+function formatMinutes(minutes) {
+  const value = Math.max(0, Number(minutes) || 0);
+  const hours = Math.floor(value / 60);
+  const mins = Math.round(value % 60);
+  if (!hours) return `${mins} min`;
+  return mins ? `${hours} h ${mins} min` : `${hours} h`;
+}
+
+function statusLabel(status) {
+  return ({
+    saved: "In libreria",
+    backlog: "Da giocare",
+    playing: "In corso",
+    paused: "In pausa",
+    completed: "Completato",
+    abandoned: "Abbandonato",
+    replay: "Da rigiocare",
+  })[status] || "In libreria";
+}
+
+function journalGame(entry) {
+  return resolveGameByKey(entry.gameKey) || {
+    match_key: entry.gameKey,
+    canonical_id: entry.gameKey,
+    title: entry.gameTitle,
+    image_url: entry.gameImageUrl,
+    source_kind: "catalog",
+    store: "other",
+  };
+}
+
+function createDiaryEntryCard(entry, { publicView = false, compact = false } = {}) {
+  const game = journalGame(entry);
+  const article = document.createElement("article");
+  article.className = `diary-entry-card${compact ? " diary-entry-card-compact" : ""}`;
+  const note = entry.note
+    ? entry.containsSpoilers
+      ? `<details class="spoiler-note"><summary>Nota con spoiler</summary><p>${escapeHtml(entry.note)}</p></details>`
+      : `<p class="diary-entry-note">${escapeHtml(entry.note)}</p>`
+    : "";
+  article.innerHTML = `
+    <a class="diary-entry-cover" href="${gameRoute(game)}">
+      <img src="${escapeAttr(entry.gameImageUrl || game.image_url || PLACEHOLDER)}" alt="">
+    </a>
+    <div class="diary-entry-body">
+      <div class="diary-entry-heading">
+        <div>
+          <span class="eyebrow">${escapeHtml(formatDate(entry.playedAt))}</span>
+          <h3><a href="${gameRoute(game)}">${escapeHtml(entry.gameTitle || game.title)}</a></h3>
+        </div>
+        <strong>${escapeHtml(formatMinutes(entry.minutesPlayed))}</strong>
+      </div>
+      <div class="diary-entry-meta">
+        ${entry.platform ? `<span>${escapeHtml(entry.platform)}</span>` : ""}
+        ${entry.progressPercent !== null && entry.progressPercent !== undefined ? `<span>${Number(entry.progressPercent)}%</span>` : ""}
+        <span>${entry.visibility === "public" ? "Pubblica" : "Privata"}</span>
+      </div>
+      ${note}
+    </div>
+    ${publicView ? "" : `<button class="diary-entry-delete" type="button" aria-label="Elimina sessione">×</button>`}`;
+
+  if (!publicView) {
+    article.querySelector(".diary-entry-delete").onclick = async () => {
+      if (!confirm("Eliminare questa sessione dal diario?")) return;
+      try {
+        await window.VaultJournal.deleteEntry(entry.id);
+        showToast("Sessione eliminata.");
+        if (state.route.name === "game") void renderGamePage();
+        if (state.route.name === "diary") renderDiaryPage();
+        if (state.route.name === "stats") void renderStatsPage();
+      } catch (error) {
+        showToast(error.message || "Eliminazione fallita.");
+      }
+    };
+  }
+  return article;
+}
+
+function renderGameSessions(game) {
+  if (!window.VaultJournal || !ui.gamePageSessions) return;
+  const entries = window.VaultJournal.listEntries({ gameKey: gameKey(game), limit: 5 });
+  ui.gamePageSessions.replaceChildren();
+  if (!entries.length) {
+    ui.gamePageSessions.innerHTML = `<div class="timeline-empty">Nessuna sessione registrata per questo gioco.</div>`;
+    return;
+  }
+  entries.forEach((entry) => ui.gamePageSessions.append(createDiaryEntryCard(entry, { compact: true })));
+}
+
+function populateDiaryPlatformFilter(entries) {
+  const current = ui.diaryPlatformFilter.value || "all";
+  const platforms = [...new Set(entries.map((entry) => entry.platform).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+  ui.diaryPlatformFilter.replaceChildren();
+  const all = document.createElement("option");
+  all.value = "all";
+  all.textContent = "Tutte";
+  ui.diaryPlatformFilter.append(all);
+  platforms.forEach((platform) => {
+    const option = document.createElement("option");
+    option.value = platform;
+    option.textContent = platform;
+    ui.diaryPlatformFilter.append(option);
+  });
+  ui.diaryPlatformFilter.value = platforms.includes(current) ? current : "all";
+}
+
+function renderDiaryPage() {
+  updateDocumentTitle("Diario di gioco");
+  if (!window.VaultJournal) return;
+  const allEntries = window.VaultJournal.listEntries();
+  populateDiaryPlatformFilter(allEntries);
+
+  const query = (ui.diarySearch.value || "").trim().toLocaleLowerCase("it");
+  const platform = ui.diaryPlatformFilter.value || "all";
+  const month = ui.diaryMonthFilter.value || "";
+  const entries = allEntries.filter((entry) => {
+    const searchText = `${entry.gameTitle || ""} ${entry.note || ""}`.toLocaleLowerCase("it");
+    return (!query || searchText.includes(query))
+      && (platform === "all" || entry.platform === platform)
+      && (!month || String(entry.playedAt || "").startsWith(month));
+  });
+
+  const summary = window.VaultJournal.summarize();
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthMinutes = allEntries
+    .filter((entry) => String(entry.playedAt || "").startsWith(currentMonth))
+    .reduce((sum, entry) => sum + Number(entry.minutesPlayed || 0), 0);
+  ui.diaryStatSessions.textContent = allEntries.length;
+  ui.diaryStatHours.textContent = formatMinutes(summary.sessionMinutes);
+  ui.diaryStatGames.textContent = new Set(allEntries.map((entry) => entry.gameKey)).size;
+  ui.diaryStatMonth.textContent = formatMinutes(currentMonthMinutes);
+
+  ui.diaryEntryList.replaceChildren();
+  ui.diaryEmpty.hidden = Boolean(entries.length);
+  entries.forEach((entry) => ui.diaryEntryList.append(createDiaryEntryCard(entry)));
+}
+
+function renderBreakdown(container, rows, total, labeler = (value) => value) {
+  container.replaceChildren();
+  if (!rows.length) {
+    container.innerHTML = `<div class="timeline-empty">Dati non ancora disponibili.</div>`;
+    return;
+  }
+  for (const [label, value] of rows) {
+    const percent = total ? Math.max(2, Math.round((value / total) * 100)) : 0;
+    const row = document.createElement("div");
+    row.className = "breakdown-row";
+    row.innerHTML = `<div><strong>${escapeHtml(labeler(label))}</strong><span>${escapeHtml(formatMinutes(value))}</span></div><div class="breakdown-track"><span style="width:${percent}%"></span></div>`;
+    container.append(row);
+  }
+}
+
+async function renderStatsPage() {
+  updateDocumentTitle("Statistiche personali");
+  if (!window.VaultJournal) return;
+  let ownedListings = [];
+  try {
+    if (state.auth.user && window.VaultSteam) ownedListings = await window.VaultSteam.getOwnedListings();
+  } catch (error) {
+    console.warn("Statistiche Steam non disponibili", error);
+  }
+  if (state.route.name !== "stats") return;
+
+  const summary = window.VaultJournal.summarize({ ownedListings });
+  ui.statsTotalHours.textContent = formatMinutes(summary.sessionMinutes);
+  ui.statsSteamHours.textContent = `Steam: ${formatMinutes(summary.steamMinutes)}`;
+  ui.statsCompleted.textContent = summary.completed;
+  ui.statsCompletionRate.textContent = `${summary.completionRate}% dei giochi iniziati`;
+  ui.statsBacklog.textContent = summary.backlog;
+  ui.statsSessions.textContent = summary.sessions;
+
+  ui.statsMonthlyChart.replaceChildren();
+  const lastMonths = [];
+  const cursor = new Date();
+  cursor.setDate(1);
+  for (let offset = 11; offset >= 0; offset -= 1) {
+    const date = new Date(cursor.getFullYear(), cursor.getMonth() - offset, 1);
+    lastMonths.push(date.toISOString().slice(0, 7));
+  }
+  const monthlyMap = new Map(summary.monthly);
+  const maxMinutes = Math.max(1, ...lastMonths.map((month) => monthlyMap.get(month) || 0));
+  lastMonths.forEach((month) => {
+    const minutes = monthlyMap.get(month) || 0;
+    const date = new Date(`${month}-01T12:00:00`);
+    const item = document.createElement("div");
+    item.className = "month-bar-item";
+    item.innerHTML = `<span class="month-bar-value">${minutes ? formatMinutes(minutes) : ""}</span><div class="month-bar"><span style="height:${Math.max(minutes ? 5 : 0, Math.round((minutes / maxMinutes) * 100))}%"></span></div><small>${new Intl.DateTimeFormat("it-IT", { month: "short" }).format(date)}</small>`;
+    ui.statsMonthlyChart.append(item);
+  });
+
+  renderBreakdown(ui.statsPlatforms, summary.platforms, summary.sessionMinutes);
+
+  const statusRows = Object.entries(summary.statusCounts).sort((a, b) => b[1] - a[1]);
+  ui.statsStatuses.replaceChildren();
+  if (!statusRows.length) {
+    ui.statsStatuses.innerHTML = `<div class="timeline-empty">Aggiungi progressi ai giochi della libreria.</div>`;
+  } else {
+    const total = statusRows.reduce((sum, [, count]) => sum + count, 0);
+    statusRows.forEach(([status, count]) => {
+      const row = document.createElement("div");
+      row.className = "status-stat-row";
+      row.innerHTML = `<span>${escapeHtml(statusLabel(status))}</span><strong>${count}</strong><div class="breakdown-track"><span style="width:${Math.round((count / total) * 100)}%"></span></div>`;
+      ui.statsStatuses.append(row);
+    });
+  }
+
+  ui.statsTopGames.replaceChildren();
+  if (!summary.topGames.length) {
+    ui.statsTopGames.innerHTML = `<div class="timeline-empty">Registra sessioni per costruire la classifica.</div>`;
+  } else {
+    summary.topGames.forEach((game) => {
+      const link = document.createElement("a");
+      link.className = "top-game-row";
+      link.href = `#/game/${encodeURIComponent(game.gameKey)}`;
+      link.innerHTML = `<img src="${escapeAttr(game.gameImageUrl || PLACEHOLDER)}" alt=""><span><strong>${escapeHtml(game.gameTitle)}</strong><small>${game.sessions} sessioni</small></span><b>${escapeHtml(formatMinutes(game.minutes))}</b>`;
+      ui.statsTopGames.append(link);
+    });
+  }
+}
+
 async function renderGamePage() {
   let game = resolveGameByKey(state.route.params.key);
   if (!game && window.VaultCatalog?.configured()) {
@@ -1672,6 +1950,9 @@ async function renderGamePage() {
   }
 
   const entry = getLibraryEntry(game);
+  const journalProgress = window.VaultJournal?.getProgress(gameKey(game)) || null;
+  const journalEntries = window.VaultJournal?.listEntries({ gameKey: gameKey(game) }) || [];
+  const sessionMinutes = journalEntries.reduce((sum, item) => sum + Number(item.minutesPlayed || 0), 0);
   updateDocumentTitle(game.title);
   ui.gamePageImage.src = game.image_url || PLACEHOLDER;
   ui.gamePageImage.alt = `Immagine di ${game.title}`;
@@ -1693,12 +1974,26 @@ async function renderGamePage() {
   ui.gamePageStoreLink.textContent = `Apri su ${storeLabel(game.store)}`;
   ui.gamePageLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
   ui.gamePageFavorite.textContent = entry?.favorite ? "♥ Preferito" : "♡ Preferito";
-  ui.gamePageStatus.value = entry?.status || "saved";
-  ui.gamePageStatus.disabled = !entry;
+  ui.gamePageStatus.value = journalProgress?.status || entry?.status || "saved";
+  ui.gamePageStatus.disabled = false;
+  ui.gamePageProgress.value = String(journalProgress?.progressPercent ?? entry?.progressPercent ?? 0);
+  ui.gamePageProgressOutput.textContent = `${ui.gamePageProgress.value}%`;
+  ui.gamePageStartedAt.value = journalProgress?.startedAt || "";
+  ui.gamePageCompletedAt.value = journalProgress?.completedAt || "";
+  ui.gamePageCompletionCount.value = String(journalProgress?.completionCount || 0);
+  ui.gamePagePrimaryPlatform.value = journalProgress?.primaryPlatform || "";
+  ui.gamePageDifficulty.value = journalProgress?.difficulty || "";
+  ui.gamePageManualPlaytime.textContent = formatMinutes(sessionMinutes || journalProgress?.manualPlaytimeMinutes || 0);
   ui.gamePageNotes.value = entry?.notes || "";
+  ui.gameSessionDate.value = new Date().toISOString().slice(0, 10);
+  ui.gameSessionProgress.value = journalProgress?.progressPercent ?? "";
+  ui.gameSessionPlatform.value = journalProgress?.primaryPlatform || "";
+  ui.gameSessionVisibility.value = state.auth.user ? "private" : "private";
+  ui.gameSessionVisibility.disabled = !state.auth.user;
   renderRating(game, entry);
   renderStoreOptions(game);
   renderPromotionTimeline(game);
+  renderGameSessions(game);
   void renderGameSocial(game);
 
   ui.gamePageLibrary.onclick = () => {
@@ -1711,14 +2006,103 @@ async function renderGamePage() {
     void renderGamePage();
   };
   ui.gamePageList.onclick = () => openListPicker(game);
+  ui.gamePageProgress.oninput = () => {
+    ui.gamePageProgressOutput.textContent = `${ui.gamePageProgress.value}%`;
+  };
   ui.gamePageStatus.onchange = () => {
-    setLibraryEntry(game, { status: ui.gamePageStatus.value });
-    void renderGamePage();
+
+    if (ui.gamePageStatus.value === "completed" && !ui.gamePageCompletedAt.value) {
+      ui.gamePageCompletedAt.value = new Date().toISOString().slice(0, 10);
+      ui.gamePageProgress.value = "100";
+      ui.gamePageProgressOutput.textContent = "100%";
+    }
+  };
+  ui.gamePageSaveProgress.onclick = async () => {
+    ui.gamePageSaveProgress.disabled = true;
+    try {
+      const status = ui.gamePageStatus.value;
+      const progressPercent = Number(ui.gamePageProgress.value || 0);
+      setLibraryEntry(game, {
+        status,
+        progressPercent,
+        startedAt: ui.gamePageStartedAt.value || null,
+        completedAt: ui.gamePageCompletedAt.value || null,
+        completionCount: Number(ui.gamePageCompletionCount.value || 0),
+        primaryPlatform: ui.gamePagePrimaryPlatform.value || null,
+      });
+      await window.VaultJournal.saveProgress({
+        gameKey: gameKey(game),
+        gameTitle: game.title,
+        gameImageUrl: game.image_url,
+        status,
+        progressPercent,
+        startedAt: ui.gamePageStartedAt.value,
+        completedAt: ui.gamePageCompletedAt.value,
+        completionCount: ui.gamePageCompletionCount.value,
+        manualPlaytimeMinutes: sessionMinutes,
+        primaryPlatform: ui.gamePagePrimaryPlatform.value,
+        difficulty: ui.gamePageDifficulty.value,
+      });
+      showToast("Progressi salvati.");
+      void renderGamePage();
+    } catch (error) {
+      showToast(error.message || "Salvataggio progressi fallito.");
+    } finally {
+      ui.gamePageSaveProgress.disabled = false;
+    }
   };
   ui.gamePageSaveNotes.onclick = () => {
     setLibraryEntry(game, { notes: ui.gamePageNotes.value.trim() });
-    showToast("Diario aggiornato.");
-    void renderGamePage();
+    showToast("Note private aggiornate.");
+  };
+  ui.gameSessionForm.onsubmit = async (event) => {
+    event.preventDefault();
+    ui.gameSessionError.hidden = true;
+    ui.gameSessionSubmit.disabled = true;
+    try {
+      const minutes = Number(ui.gameSessionMinutes.value);
+      if (!Number.isFinite(minutes) || minutes < 1) throw new Error("Inserisci una durata valida.");
+      const progressValue = ui.gameSessionProgress.value === "" ? null : Number(ui.gameSessionProgress.value);
+      await window.VaultJournal.addEntry({
+        gameKey: gameKey(game),
+        gameTitle: game.title,
+        gameImageUrl: game.image_url,
+        playedAt: ui.gameSessionDate.value,
+        minutesPlayed: minutes,
+        progressPercent: progressValue,
+        platform: ui.gameSessionPlatform.value,
+        note: ui.gameSessionNote.value,
+        containsSpoilers: ui.gameSessionSpoilers.checked,
+        visibility: state.auth.user ? ui.gameSessionVisibility.value : "private",
+      });
+      const nextMinutes = sessionMinutes + minutes;
+      const currentProgress = window.VaultJournal.getProgress(gameKey(game)) || journalProgress || {};
+      await window.VaultJournal.saveProgress({
+        ...currentProgress,
+        gameKey: gameKey(game),
+        gameTitle: game.title,
+        gameImageUrl: game.image_url,
+        status: currentProgress.status || entry?.status || "playing",
+        progressPercent: progressValue ?? currentProgress.progressPercent ?? 0,
+        manualPlaytimeMinutes: nextMinutes,
+        primaryPlatform: ui.gameSessionPlatform.value || currentProgress.primaryPlatform,
+      });
+      setLibraryEntry(game, {
+        status: currentProgress.status || entry?.status || "playing",
+        progressPercent: progressValue ?? currentProgress.progressPercent ?? 0,
+      });
+      ui.gameSessionForm.reset();
+      ui.gameSessionDate.value = new Date().toISOString().slice(0, 10);
+      ui.gameSessionMinutes.value = "60";
+      ui.gameSessionVisibility.value = "private";
+      showToast("Sessione registrata nel diario.");
+      void renderGamePage();
+    } catch (error) {
+      ui.gameSessionError.textContent = error.message || "Registrazione sessione fallita.";
+      ui.gameSessionError.hidden = false;
+    } finally {
+      ui.gameSessionSubmit.disabled = false;
+    }
   };
 }
 
@@ -2368,6 +2752,19 @@ async function renderPublicProfilePage() {
         ui.publicProfileLists.append(link);
       }
     }
+
+    ui.publicProfileDiary.replaceChildren();
+    try {
+      const diaryEntries = await window.VaultJournal?.getPublicEntries(profile.id, 8) || [];
+      if (!diaryEntries.length) {
+        ui.publicProfileDiary.innerHTML = `<div class="timeline-empty">Nessuna sessione pubblica.</div>`;
+      } else {
+        diaryEntries.forEach((entry) => ui.publicProfileDiary.append(createDiaryEntryCard(entry, { publicView: true, compact: true })));
+      }
+    } catch (diaryError) {
+      console.warn("Diario pubblico non disponibile", diaryError);
+      ui.publicProfileDiary.innerHTML = `<div class="timeline-empty">Diario pubblico temporaneamente non disponibile.</div>`;
+    }
   } catch (error) {
     console.error("Profilo pubblico non disponibile", error);
     ui.publicProfileLoading.hidden = true;
@@ -2534,11 +2931,14 @@ function renderAuthPage() {
 
 function profileStats() {
   const entries = Object.values(state.library);
+  const journal = window.VaultJournal?.summarize() || { sessionMinutes: 0, sessions: 0 };
   return {
     library: entries.length,
     completed: entries.filter((entry) => entry.status === "completed").length,
     favorites: entries.filter((entry) => entry.favorite).length,
     lists: Object.keys(state.lists).length,
+    hours: formatMinutes(journal.sessionMinutes),
+    sessions: journal.sessions,
   };
 }
 
@@ -2593,6 +2993,8 @@ function renderProfilePage() {
   $("#profile-stat-completed").textContent = stats.completed;
   $("#profile-stat-favorites").textContent = stats.favorites;
   $("#profile-stat-lists").textContent = stats.lists;
+  $("#profile-stat-hours").textContent = stats.hours;
+  $("#profile-stat-sessions").textContent = stats.sessions;
   renderProfileRecentGames();
 }
 
@@ -2739,6 +3141,7 @@ function renderSettingsPage() {
   ui.privacyLibrary.checked = settings?.show_library !== false;
   ui.privacyLists.checked = settings?.show_lists !== false;
   ui.privacyActivity.checked = settings?.show_activity !== false;
+  ui.privacyDiary.checked = settings?.show_diary !== false;
   ui.privacyEmails.checked = settings?.email_notifications !== false;
   if (section === "connections") void renderSteamConnectionPanel();
 }
@@ -2753,6 +3156,12 @@ async function synchronizeSignedInUser(snapshot) {
     synchronizedAccountId = null;
     window.VaultCloud?.cancelScheduledPush();
     switchPersonalStorage(nextUserId);
+
+    try {
+      await window.VaultJournal?.setUser(nextUserId);
+    } catch (journalError) {
+      console.error("Caricamento diario fallito", journalError);
+    }
   }
 
   const generation = personalStorageGeneration;
@@ -2818,6 +3227,9 @@ function refreshCurrentPersonalView() {
   if (state.route.name === "feed") void renderFeedPage();
   if (state.route.name === "explore") void renderExplorePage();
   if (state.route.name === "notifications") void renderNotificationsPage();
+
+  if (state.route.name === "diary") renderDiaryPage();
+  if (state.route.name === "stats") void renderStatsPage();
   if (routeToDashboardView(state.route.name)) renderDashboard();
 }
 
@@ -2983,10 +3395,11 @@ function updateCountdowns() {
 function exportData() {
   const payload = {
     app: "The Free Vault",
-    schemaVersion: 4,
+    schemaVersion: 5,
     exportedAt: new Date().toISOString(),
     library: state.library,
     lists: state.lists,
+    journal: window.VaultJournal?.snapshot() || { progress: {}, entries: {} },
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -3017,6 +3430,7 @@ async function importData(file) {
 
     saveLibrary();
     saveLists();
+    if (payload.journal) await window.VaultJournal?.importData(payload.journal);
     rebuildGameIndex();
     handleRoute();
     showToast("Backup importato.");
@@ -3337,6 +3751,7 @@ ui.privacyForm.addEventListener("submit", async (event) => {
       show_library: ui.privacyLibrary.checked,
       show_lists: ui.privacyLists.checked,
       show_activity: ui.privacyActivity.checked,
+      show_diary: ui.privacyDiary.checked,
       email_notifications: ui.privacyEmails.checked,
     });
     ui.privacyMessage.textContent = "Preferenze salvate.";
@@ -3403,6 +3818,25 @@ window.addEventListener("tfv:steam-library-import", (event) => {
   if (state.route.name === "profile") renderProfilePage();
 });
 
+ui.diarySearch?.addEventListener("input", renderDiaryPage);
+ui.diaryPlatformFilter?.addEventListener("change", renderDiaryPage);
+ui.diaryMonthFilter?.addEventListener("change", renderDiaryPage);
+ui.diaryClearFilters?.addEventListener("click", () => {
+  ui.diarySearch.value = "";
+  ui.diaryPlatformFilter.value = "all";
+  ui.diaryMonthFilter.value = "";
+  renderDiaryPage();
+});
+
+window.addEventListener("tfv:journal-changed", () => {
+  if (state.route.name === "diary") renderDiaryPage();
+  if (state.route.name === "stats") void renderStatsPage();
+  if (state.route.name === "profile") renderProfilePage();
+});
+window.addEventListener("tfv:journal-sync-error", () => {
+  showToast("Diario salvato localmente; sincronizzazione cloud non disponibile.");
+});
+
 ui.settingsExportData.addEventListener("click", exportData);
 ui.settingsImportData.addEventListener("click", () => ui.importLibraryFile.click());
 ui.deleteAccountButton.addEventListener("click", async () => {
@@ -3418,7 +3852,12 @@ ui.deleteAccountButton.addEventListener("click", async () => {
     const deletedUserId = state.auth.user?.id || activeStorageUserId;
     window.VaultCloud?.cancelScheduledPush();
     await window.VaultAuth.deleteAccount();
-    if (deletedUserId) clearPersonalStorage(deletedUserId);
+
+    if (deletedUserId) {
+      clearPersonalStorage(deletedUserId);
+      window.VaultJournal?.clearScope(deletedUserId);
+    }
+    await window.VaultJournal?.setUser(null);
     personalStorageGeneration += 1;
     synchronizedAccountId = null;
     switchPersonalStorage(null);
@@ -3436,6 +3875,8 @@ $("#logout-button").addEventListener("click", async () => {
   try {
     window.VaultCloud?.cancelScheduledPush();
     await window.VaultAuth.signOut();
+
+    await window.VaultJournal?.setUser(null);
     personalStorageGeneration += 1;
     synchronizedAccountId = null;
     switchPersonalStorage(null);
@@ -3478,6 +3919,7 @@ document.addEventListener("keydown", (event) => {
 if (!window.location.hash) window.history.replaceState({}, "", "#/home");
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(console.error);
 
+window.VaultJournal?.setUser(null);
 handleRoute();
 loadData();
 initializeUserSystem();

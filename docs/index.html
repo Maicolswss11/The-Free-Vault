@@ -29,8 +29,14 @@
       <p class="nav-section-label">DISCOVER</p>
       <nav class="main-nav">
         <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo multi-store</a>
-        <a class="nav-item" data-route="lists" href="#/lists"><span>☷</span> Le mie liste</a>
+      </nav>
+
+      <p class="nav-section-label">PERSONALE</p>
+      <nav class="main-nav">
         <a class="nav-item" data-route="library" href="#/library"><span>◆</span> La mia libreria</a>
+        <a class="nav-item" data-route="lists" href="#/lists"><span>☷</span> Le mie liste</a>
+        <a class="nav-item" data-route="diary" href="#/diary"><span>▤</span> Diario di gioco</a>
+        <a class="nav-item" data-route="stats" href="#/stats"><span>◫</span> Statistiche</a>
       </nav>
 
       <p class="nav-section-label">COMMUNITY</p>
@@ -272,27 +278,109 @@
 
           <div class="game-detail-grid">
             <section class="detail-panel">
-              <p class="eyebrow">IL TUO DIARIO</p>
-              <h2>Stato personale</h2>
-              <div class="personal-fields">
+              <p class="eyebrow">PROGRESSI PERSONALI</p>
+              <h2>Il tuo percorso</h2>
+              <div class="personal-fields progress-form-grid">
                 <label>Stato
                   <select id="game-page-status">
                     <option value="saved">In libreria</option>
                     <option value="backlog">Da giocare</option>
-                    <option value="playing">In gioco</option>
+                    <option value="playing">In corso</option>
+                    <option value="paused">In pausa</option>
                     <option value="completed">Completato</option>
                     <option value="abandoned">Abbandonato</option>
+                    <option value="replay">Da rigiocare</option>
                   </select>
                 </label>
-                <fieldset class="rating-field">
+                <label>Progresso
+                  <div class="progress-input-row">
+                    <input id="game-page-progress" type="range" min="0" max="100" step="1" value="0">
+                    <output id="game-page-progress-output">0%</output>
+                  </div>
+                </label>
+                <label>Data di inizio
+                  <input id="game-page-started-at" type="date">
+                </label>
+                <label>Data di completamento
+                  <input id="game-page-completed-at" type="date">
+                </label>
+                <label>Completamenti
+                  <input id="game-page-completion-count" type="number" min="0" max="999" value="0">
+                </label>
+                <label>Piattaforma principale
+                  <select id="game-page-primary-platform">
+                    <option value="">Non indicata</option>
+                    <option value="Steam">Steam</option>
+                    <option value="Epic Games">Epic Games</option>
+                    <option value="PlayStation">PlayStation</option>
+                    <option value="Xbox">Xbox</option>
+                    <option value="Nintendo Switch">Nintendo Switch</option>
+                    <option value="Altro">Altro</option>
+                  </select>
+                </label>
+                <label>Difficoltà
+                  <input id="game-page-difficulty" maxlength="80" placeholder="Es. Normale, difficile...">
+                </label>
+                <div class="playtime-summary">
+                  <small>Tempo registrato</small>
+                  <strong id="game-page-manual-playtime">0 min</strong>
+                </div>
+                <button id="game-page-save-progress" class="button button-primary" type="button">Salva progressi</button>
+                <fieldset class="rating-field progress-wide">
                   <legend>Valutazione personale</legend>
                   <div id="game-page-rating" class="rating-control" aria-label="Valutazione da uno a cinque"></div>
                 </fieldset>
-                <label>Note personali
-                  <textarea id="game-page-notes" rows="6" maxlength="2000" placeholder="Impressioni, progresso, cose da ricordare..."></textarea>
+                <label class="progress-wide">Note personali
+                  <textarea id="game-page-notes" rows="5" maxlength="2000" placeholder="Impressioni private, cose da ricordare..."></textarea>
                 </label>
-                <button id="game-page-save-notes" class="button button-primary" type="button">Salva nel diario</button>
+                <button id="game-page-save-notes" class="button button-secondary progress-wide" type="button">Salva note private</button>
               </div>
+            </section>
+
+            <section class="detail-panel">
+              <p class="eyebrow">SESSIONE DI GIOCO</p>
+              <h2>Aggiungi al diario</h2>
+              <form id="game-session-form" class="session-form">
+                <div class="session-form-grid">
+                  <label>Data
+                    <input id="game-session-date" type="date" required>
+                  </label>
+                  <label>Durata in minuti
+                    <input id="game-session-minutes" type="number" min="1" max="1440" value="60" required>
+                  </label>
+                  <label>Progresso dopo la sessione
+                    <input id="game-session-progress" type="number" min="0" max="100" placeholder="Facoltativo">
+                  </label>
+                  <label>Piattaforma
+                    <select id="game-session-platform">
+                      <option value="">Non indicata</option>
+                      <option value="Steam">Steam</option>
+                      <option value="Epic Games">Epic Games</option>
+                      <option value="PlayStation">PlayStation</option>
+                      <option value="Xbox">Xbox</option>
+                      <option value="Nintendo Switch">Nintendo Switch</option>
+                      <option value="Altro">Altro</option>
+                    </select>
+                  </label>
+                  <label>Visibilità
+                    <select id="game-session-visibility">
+                      <option value="private">Privata</option>
+                      <option value="public">Pubblica sul profilo</option>
+                    </select>
+                  </label>
+                  <label class="checkbox-row session-spoiler-row">
+                    <input id="game-session-spoilers" type="checkbox">
+                    <span>Contiene spoiler</span>
+                  </label>
+                </div>
+                <label>Nota della sessione
+                  <textarea id="game-session-note" rows="4" maxlength="3000" placeholder="Cosa hai fatto, dove sei arrivato, impressioni..."></textarea>
+                </label>
+                <p id="game-session-error" class="auth-error" hidden></p>
+                <button id="game-session-submit" class="button button-primary" type="submit">Registra sessione</button>
+              </form>
+              <div class="session-list-header"><strong>Sessioni recenti</strong><a href="#/diary">Apri diario completo</a></div>
+              <div id="game-page-sessions" class="diary-entry-list compact"></div>
             </section>
 
             <section class="detail-panel">
@@ -358,6 +446,76 @@
               </section>
             </div>
           </section>
+        </section>
+
+        <section id="diary-page" class="route-page journal-page" hidden>
+          <header class="page-heading journal-heading">
+            <div>
+              <p class="eyebrow">GAME JOURNAL</p>
+              <h1>Diario di gioco</h1>
+              <p>Sessioni, avanzamento e ricordi di gioco in ordine cronologico.</p>
+            </div>
+            <a class="button button-secondary" href="#/stats">Apri statistiche</a>
+          </header>
+          <section class="journal-summary-grid">
+            <article><strong id="diary-stat-sessions">0</strong><span>Sessioni</span></article>
+            <article><strong id="diary-stat-hours">0 h</strong><span>Tempo registrato</span></article>
+            <article><strong id="diary-stat-games">0</strong><span>Giochi annotati</span></article>
+            <article><strong id="diary-stat-month">0 h</strong><span>Questo mese</span></article>
+          </section>
+          <div class="journal-toolbar">
+            <label>Cerca
+              <input id="diary-search" type="search" placeholder="Titolo o nota...">
+            </label>
+            <label>Piattaforma
+              <select id="diary-platform-filter"><option value="all">Tutte</option></select>
+            </label>
+            <label>Mese
+              <input id="diary-month-filter" type="month">
+            </label>
+            <button id="diary-clear-filters" class="button button-secondary" type="button">Azzera filtri</button>
+          </div>
+          <div id="diary-empty" class="empty-state" hidden><strong>Il diario è ancora vuoto</strong><span>Apri un gioco e registra la prima sessione.</span></div>
+          <div id="diary-entry-list" class="diary-entry-list"></div>
+        </section>
+
+        <section id="stats-page" class="route-page stats-page" hidden>
+          <header class="page-heading journal-heading">
+            <div>
+              <p class="eyebrow">IL TUO ANNO DI GIOCO</p>
+              <h1>Statistiche personali</h1>
+              <p>Tempo, completamenti, backlog e piattaforme riuniti in un unico riepilogo.</p>
+            </div>
+            <a class="button button-secondary" href="#/diary">Apri diario</a>
+          </header>
+          <section class="stats-overview-grid">
+            <article><small>Ore nel diario</small><strong id="stats-total-hours">0 h</strong><span id="stats-steam-hours">Steam: 0 h</span></article>
+            <article><small>Completati</small><strong id="stats-completed">0</strong><span id="stats-completion-rate">0% dei giochi iniziati</span></article>
+            <article><small>Backlog</small><strong id="stats-backlog">0</strong><span>Ancora da iniziare</span></article>
+            <article><small>Sessioni</small><strong id="stats-sessions">0</strong><span>Registrate nel diario</span></article>
+          </section>
+          <div class="stats-dashboard-grid">
+            <section class="detail-panel">
+              <p class="eyebrow">ATTIVITÀ MENSILE</p>
+              <h2>Ore giocate</h2>
+              <div id="stats-monthly-chart" class="monthly-chart"></div>
+            </section>
+            <section class="detail-panel">
+              <p class="eyebrow">PIATTAFORME</p>
+              <h2>Dove giochi</h2>
+              <div id="stats-platforms" class="breakdown-list"></div>
+            </section>
+            <section class="detail-panel">
+              <p class="eyebrow">STATO LIBRERIA</p>
+              <h2>Il tuo percorso</h2>
+              <div id="stats-statuses" class="breakdown-list"></div>
+            </section>
+            <section class="detail-panel">
+              <p class="eyebrow">PIÙ GIOCATI</p>
+              <h2>Top dal diario</h2>
+              <div id="stats-top-games" class="top-games-list"></div>
+            </section>
+          </div>
         </section>
 
         <section id="auth-page" class="route-page auth-page" hidden>
@@ -457,6 +615,8 @@
                 <a class="button button-secondary" href="#/feed">Feed</a>
                 <a class="button button-secondary" href="#/explore">Esplora</a>
                 <a class="button button-secondary" href="#/notifications">Notifiche</a>
+                <a class="button button-secondary" href="#/diary">Diario</a>
+                <a class="button button-secondary" href="#/stats">Statistiche</a>
                 <a class="button button-primary" href="#/settings/profile">Impostazioni</a>
                 <button id="logout-button" class="button button-secondary" type="button">Esci</button>
               </div>
@@ -467,6 +627,8 @@
               <article><strong id="profile-stat-completed">0</strong><span>Completati</span></article>
               <article><strong id="profile-stat-favorites">0</strong><span>Preferiti</span></article>
               <article><strong id="profile-stat-lists">0</strong><span>Liste</span></article>
+              <article><strong id="profile-stat-hours">0 h</strong><span>Ore nel diario</span></article>
+              <article><strong id="profile-stat-sessions">0</strong><span>Sessioni</span></article>
             </section>
 
             <div class="profile-layout">
@@ -534,6 +696,11 @@
                 <p class="eyebrow">LISTE</p>
                 <h2>Liste pubbliche</h2>
                 <div id="public-profile-lists" class="public-list-links"></div>
+              </section>
+              <section class="detail-panel public-diary-panel">
+                <p class="eyebrow">DIARIO PUBBLICO</p>
+                <h2>Sessioni recenti</h2>
+                <div id="public-profile-diary" class="diary-entry-list compact"></div>
               </section>
             </div>
           </div>
@@ -743,7 +910,8 @@
                     <label class="toggle-row"><span><strong>Profilo pubblico</strong><small>Consente agli altri utenti di vedere il profilo quando arriveranno le funzioni social.</small></span><input id="privacy-public" type="checkbox"></label>
                     <label class="toggle-row"><span><strong>Mostra libreria</strong><small>Rendi visibile la libreria nel profilo pubblico.</small></span><input id="privacy-library" type="checkbox"></label>
                     <label class="toggle-row"><span><strong>Mostra liste</strong><small>Mostra le liste impostate come pubbliche.</small></span><input id="privacy-lists" type="checkbox"></label>
-                    <label class="toggle-row"><span><strong>Mostra attività</strong><small>Abilita la futura attività pubblica di recensioni e progressi.</small></span><input id="privacy-activity" type="checkbox"></label>
+                    <label class="toggle-row"><span><strong>Mostra attività</strong><small>Consente la visualizzazione delle attività sociali pubbliche.</small></span><input id="privacy-activity" type="checkbox"></label>
+                    <label class="toggle-row"><span><strong>Mostra diario pubblico</strong><small>Mostra sul profilo solo le sessioni impostate come pubbliche.</small></span><input id="privacy-diary" type="checkbox"></label>
                     <label class="toggle-row"><span><strong>Email di servizio</strong><small>Preferenza predisposta per promemoria e notifiche account.</small></span><input id="privacy-emails" type="checkbox"></label>
                     <p id="privacy-message" class="auth-error" hidden></p>
                     <button class="button button-primary" type="submit">Salva privacy</button>
@@ -780,6 +948,7 @@
     <a class="mobile-nav-item is-active" data-route="home" href="#/home"><span>⌂</span>Home</a>
     <a class="mobile-nav-item" data-route="current" href="#/free"><span>◉</span>Gratis</a>
     <a class="mobile-nav-item" data-route="catalog" href="#/catalog"><span>▦</span>Catalogo</a>
+    <a class="mobile-nav-item" data-route="diary" href="#/diary"><span>▤</span>Diario</a>
     <a class="mobile-nav-item" data-route="lists" href="#/lists"><span>☷</span>Liste</a>
     <a class="mobile-nav-item" data-route="library" href="#/library"><span>◆</span>Libreria</a>
   </nav>
@@ -851,6 +1020,8 @@
   <script src="./social.js" defer></script>
   <script src="./steam.js" defer></script>
   <script src="./catalog-api.js" defer></script>
+
+  <script src="./journal.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
