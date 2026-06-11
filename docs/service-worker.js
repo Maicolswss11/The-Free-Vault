@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "the-free-vault-v4-4-1-hotfix";
+const CACHE_NAME = "the-free-vault-v4-5-admin-tools";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "./social.js",
   "./steam.js",
   "./catalog-api.js",
+  "./admin.js",
 
   "./journal.js",
   "./auth.js",

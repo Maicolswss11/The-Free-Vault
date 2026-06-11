@@ -494,6 +494,21 @@
     if (error) throw error;
   }
 
+
+  async function reportContent(targetType, targetId, reason) {
+    const db = requireClient();
+    requireUser();
+    const cleanReason = String(reason || "").trim();
+    if (cleanReason.length < 3) throw new Error("Descrivi brevemente il problema.");
+    const { data, error } = await db.rpc("report_content", {
+      p_target_type: targetType,
+      p_target_id: targetId,
+      p_reason: cleanReason,
+    });
+    if (error) throw error;
+    return data;
+  }
+
   function summarizeRatings(reviews) {
     const ratings = (reviews || [])
       .map((review) => Number(review.rating))
@@ -527,6 +542,7 @@
     getUnreadNotificationCount,
     markNotificationRead,
     markAllNotificationsRead,
+    reportContent,
     getEngagement,
     summarizeRatings,
   };

@@ -45,4 +45,4 @@ def test_service_worker_does_not_intercept_external_cdn_requests():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
     assert "if (url.origin !== self.location.origin)" in worker
 
-    assert 'the-free-vault-v4-4-1-hotfix' in worker
+    assert 'the-free-vault-v4-5-admin-tools' in worker

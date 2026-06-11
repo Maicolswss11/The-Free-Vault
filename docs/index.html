@@ -57,6 +57,17 @@
         <a class="nav-item" data-route="settings" href="#/settings/profile"><span>⚙</span> Impostazioni</a>
       </nav>
 
+
+      <div id="admin-nav-section" class="admin-nav-section" hidden>
+        <p class="nav-section-label">AMMINISTRAZIONE</p>
+        <nav class="main-nav">
+          <a class="nav-item" data-route="admin-catalog" href="#/admin/catalog"><span>◇</span> Qualità catalogo</a>
+          <a class="nav-item" data-route="admin-matching" href="#/admin/matching"><span>⇄</span> Coda matching</a>
+          <a class="nav-item" data-route="admin-moderation" href="#/admin/moderation"><span>⚑</span> Moderazione</a>
+          <a class="nav-item" data-route="admin-system" href="#/admin/system"><span>▣</span> Stato sistema</a>
+        </nav>
+      </div>
+
       <div class="sidebar-foot">
         <div class="sync-card">
           <span class="status-dot"></span>
@@ -792,6 +803,7 @@
               <div class="shared-list-actions">
                 <button id="shared-list-like" class="button button-secondary" type="button">♡ <span id="shared-list-like-count">0</span></button>
                 <button id="shared-list-share" class="button button-secondary" type="button">Condividi lista</button>
+                <button id="shared-list-report" class="button button-ghost report-content-button" type="button" hidden>Segnala</button>
               </div>
             </header>
             <section id="shared-list-games" class="games-grid"></section>
@@ -1005,6 +1017,84 @@
             </div>
           </div>
         </section>
+
+        <section id="admin-page" class="route-page admin-page" hidden>
+          <header class="admin-page-header">
+            <div>
+              <p class="eyebrow">CONTROL ROOM</p>
+              <h1>Amministrazione</h1>
+              <p>Qualità del catalogo, matching, moderazione e stato tecnico.</p>
+            </div>
+            <span id="admin-role-badge" class="pill">VERIFICA ACCESSO</span>
+          </header>
+
+          <div id="admin-access-required" class="auth-required">
+            <span class="account-avatar account-avatar-large">!</span>
+            <h2>Accesso amministratore richiesto</h2>
+            <p>Questa area è visibile soltanto agli account autorizzati.</p>
+            <a class="button button-primary" href="#/login">Accedi</a>
+          </div>
+
+          <div id="admin-content" hidden>
+            <nav class="admin-tabs" aria-label="Sezioni amministrazione">
+              <a data-admin-tab="catalog" href="#/admin/catalog">Catalogo</a>
+              <a data-admin-tab="matching" href="#/admin/matching">Matching</a>
+              <a data-admin-tab="moderation" href="#/admin/moderation">Moderazione</a>
+              <a data-admin-tab="system" href="#/admin/system">Sistema</a>
+            </nav>
+
+            <section id="admin-panel-catalog" class="admin-panel">
+              <div class="admin-panel-heading">
+                <div><p class="eyebrow">CATALOG QUALITY</p><h2>Override editoriali</h2><p>Correggi i metadati senza perderli al prossimo sync.</p></div>
+              </div>
+              <form id="admin-catalog-search-form" class="admin-search-form">
+                <input id="admin-catalog-search" type="search" minlength="2" placeholder="Cerca titolo, sviluppatore o publisher..." required>
+                <button class="button button-primary" type="submit">Cerca</button>
+              </form>
+              <div id="admin-catalog-results" class="admin-result-list"></div>
+              <div id="admin-catalog-editor" class="admin-editor" hidden>
+                <div class="admin-editor-title">
+                  <div><p class="eyebrow">GIOCO SELEZIONATO</p><h3 id="admin-catalog-title"></h3><small id="admin-catalog-key"></small></div>
+                  <a id="admin-catalog-open" class="button button-secondary" href="#">Apri scheda</a>
+                </div>
+                <div id="admin-catalog-listings" class="admin-listings"></div>
+                <form id="admin-override-form" class="admin-override-form">
+                  <div class="admin-override-grid">
+                    <label data-admin-field="title"><span><input type="checkbox" data-lock-field="title"> Blocca titolo</span><input data-override-input="title" maxlength="200"></label>
+                    <label data-admin-field="canonical_title"><span><input type="checkbox" data-lock-field="canonical_title"> Blocca titolo canonico</span><input data-override-input="canonical_title" maxlength="200"></label>
+                    <label data-admin-field="developer"><span><input type="checkbox" data-lock-field="developer"> Blocca sviluppatore</span><input data-override-input="developer" maxlength="200"></label>
+                    <label data-admin-field="publisher"><span><input type="checkbox" data-lock-field="publisher"> Blocca publisher</span><input data-override-input="publisher" maxlength="200"></label>
+                    <label data-admin-field="image_url"><span><input type="checkbox" data-lock-field="image_url"> Blocca copertina</span><input data-override-input="image_url" type="url"></label>
+                    <label data-admin-field="store_url"><span><input type="checkbox" data-lock-field="store_url"> Blocca URL store</span><input data-override-input="store_url" type="url"></label>
+                    <label data-admin-field="release_year"><span><input type="checkbox" data-lock-field="release_year"> Blocca anno</span><input data-override-input="release_year" type="number" min="1950" max="2100"></label>
+                    <label data-admin-field="market_segment"><span><input type="checkbox" data-lock-field="market_segment"> Blocca segmento</span><select data-override-input="market_segment"><option value="unclassified">Non classificato</option><option value="aaa">AAA</option><option value="indie">Indie</option></select></label>
+                    <label data-admin-field="category_group"><span><input type="checkbox" data-lock-field="category_group"> Blocca categoria</span><select data-override-input="category_group"><option value="base_game">Gioco base</option><option value="dlc">DLC</option><option value="bundle">Bundle</option><option value="edition">Edizione</option><option value="other">Altro</option></select></label>
+                    <label class="admin-description-field" data-admin-field="description"><span><input type="checkbox" data-lock-field="description"> Blocca descrizione</span><textarea data-override-input="description" rows="6" maxlength="5000"></textarea></label>
+                  </div>
+                  <p id="admin-override-message" class="auth-error" hidden></p>
+                  <div class="admin-form-actions"><button class="button button-primary" type="submit">Salva override</button><button id="admin-clear-override" class="button button-secondary" type="button">Rimuovi override</button></div>
+                </form>
+              </div>
+            </section>
+
+            <section id="admin-panel-matching" class="admin-panel" hidden>
+              <div class="admin-panel-heading"><div><p class="eyebrow">MATCHING</p><h2>Coda Epic ↔ Steam</h2><p>Conferma o rifiuta le corrispondenze dubbie.</p></div><div class="admin-inline-controls"><select id="admin-match-status"><option value="pending">In attesa</option><option value="verified">Confermati</option><option value="rejected">Rifiutati</option><option value="all">Tutti</option></select><button id="admin-match-refresh" class="button button-secondary" type="button">Aggiorna</button></div></div>
+              <div id="admin-match-list" class="admin-card-list"></div>
+            </section>
+
+            <section id="admin-panel-moderation" class="admin-panel" hidden>
+              <div class="admin-panel-heading"><div><p class="eyebrow">MODERAZIONE</p><h2>Segnalazioni</h2><p>Esamina contenuti segnalati dalla community.</p></div><div class="admin-inline-controls"><select id="admin-report-status"><option value="open">Aperte</option><option value="dismissed">Archiviate</option><option value="removed">Rimosse</option><option value="all">Tutte</option></select><button id="admin-report-refresh" class="button button-secondary" type="button">Aggiorna</button></div></div>
+              <div id="admin-report-list" class="admin-card-list"></div>
+            </section>
+
+            <section id="admin-panel-system" class="admin-panel" hidden>
+              <div class="admin-panel-heading"><div><p class="eyebrow">SYSTEM STATUS</p><h2>Stato tecnico</h2><p>Metriche leggere del database e delle sincronizzazioni.</p></div><button id="admin-system-refresh" class="button button-secondary" type="button">Aggiorna</button></div>
+              <div id="admin-system-stats" class="admin-system-grid"></div>
+              <div id="admin-sync-list" class="admin-card-list"></div>
+            </section>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -1084,6 +1174,7 @@
   <script src="./social.js" defer></script>
   <script src="./steam.js" defer></script>
   <script src="./catalog-api.js" defer></script>
+  <script src="./admin.js" defer></script>
 
   <script src="./journal.js" defer></script>
   <script src="./app.js" defer></script>

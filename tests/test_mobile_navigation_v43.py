@@ -61,4 +61,4 @@ def test_mobile_filters_are_accessible_as_panel():
 
 def test_v43_service_worker_cache_is_versioned():
     service_worker = read("docs/service-worker.js")
-    assert 'the-free-vault-v4-4-1-hotfix' in service_worker
+    assert 'the-free-vault-v4-5-admin-tools' in service_worker

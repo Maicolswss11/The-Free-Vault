@@ -59,4 +59,4 @@ def test_game_page_links_developer_and_publisher_entities():
 
 def test_v44_service_worker_cache_is_versioned():
     worker = read("docs/service-worker.js")
-    assert 'the-free-vault-v4-4-1-hotfix' in worker
+    assert 'the-free-vault-v4-5-admin-tools' in worker

@@ -632,3 +632,48 @@ catalog_related_games
 ```
 
 Non crea tabelle aggiuntive né nuovi indici pesanti.
+
+## v4.5 — Catalog Quality & Admin Tools
+
+La sidebar desktop è ora scrollabile anche su finestre basse. L'area
+amministrativa è disponibile tramite route protette:
+
+```text
+#/admin/catalog
+#/admin/matching
+#/admin/moderation
+#/admin/system
+```
+
+Funzioni:
+
+- override persistenti di titolo, descrizione, sviluppatore, publisher,
+  copertina, categoria, segmento e anno;
+- trigger che riapplica gli override durante i successivi sync Epic/Steam;
+- revisione della coda di matching canonico;
+- segnalazioni di recensioni, commenti e liste;
+- rimozione o archiviazione dei contenuti segnalati;
+- audit log delle operazioni amministrative;
+- dashboard leggera con dimensione database, catalogo e stato sync.
+
+Prima del deploy eseguire:
+
+```text
+supabase/migrations/20260611_v45_admin_tools.sql
+```
+
+Dopo la migrazione assegnare manualmente il primo amministratore dal SQL
+Editor, sostituendo l'indirizzo email:
+
+```sql
+insert into public.admin_users (user_id, role)
+select id, 'admin'
+from auth.users
+where email = 'tuo-indirizzo@example.com'
+on conflict (user_id) do update set
+  role = excluded.role,
+  updated_at = now();
+```
+
+La tabella del catalogo non viene duplicata e la migrazione non aggiunge indici
+GIN o altre strutture pesanti.

@@ -62,6 +62,15 @@ const state = {
     unreadNotifications: 0,
     exploreUsers: [],
   },
+  admin: {
+    loaded: false,
+    context: { role: null, is_admin: false, can_moderate: false },
+    selectedCatalog: null,
+    matches: [],
+    reports: [],
+    system: null,
+    requestId: 0,
+  },
   dataLoaded: false,
 };
 
@@ -102,6 +111,36 @@ const ui = {
   entityPagination: $("#entity-pagination"),
   entityPageSummary: $("#entity-page-summary"),
   entityLoadMore: $("#entity-load-more"),
+  adminPage: $("#admin-page"),
+  adminNavSection: $("#admin-nav-section"),
+  adminRoleBadge: $("#admin-role-badge"),
+  adminAccessRequired: $("#admin-access-required"),
+  adminContent: $("#admin-content"),
+  adminCatalogPanel: $("#admin-panel-catalog"),
+  adminMatchingPanel: $("#admin-panel-matching"),
+  adminModerationPanel: $("#admin-panel-moderation"),
+  adminSystemPanel: $("#admin-panel-system"),
+  adminCatalogSearchForm: $("#admin-catalog-search-form"),
+  adminCatalogSearch: $("#admin-catalog-search"),
+  adminCatalogResults: $("#admin-catalog-results"),
+  adminCatalogEditor: $("#admin-catalog-editor"),
+  adminCatalogTitle: $("#admin-catalog-title"),
+  adminCatalogKey: $("#admin-catalog-key"),
+  adminCatalogOpen: $("#admin-catalog-open"),
+  adminCatalogListings: $("#admin-catalog-listings"),
+  adminOverrideForm: $("#admin-override-form"),
+  adminOverrideMessage: $("#admin-override-message"),
+  adminClearOverride: $("#admin-clear-override"),
+  adminMatchStatus: $("#admin-match-status"),
+  adminMatchRefresh: $("#admin-match-refresh"),
+  adminMatchList: $("#admin-match-list"),
+  adminReportStatus: $("#admin-report-status"),
+  adminReportRefresh: $("#admin-report-refresh"),
+  adminReportList: $("#admin-report-list"),
+  adminSystemRefresh: $("#admin-system-refresh"),
+  adminSystemStats: $("#admin-system-stats"),
+  adminSyncList: $("#admin-sync-list"),
+  sharedListReport: $("#shared-list-report"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
@@ -1046,6 +1085,12 @@ function parseRoute() {
   if (first === "settings") {
     return { name: "settings", params: { section: segments[1] || "profile" }, query };
   }
+  if (first === "admin") {
+    const section = ["catalog", "matching", "moderation", "system"].includes(segments[1])
+      ? segments[1]
+      : "catalog";
+    return { name: "admin", params: { section }, query };
+  }
   return { name: simple[first] || "home", params: {}, query };
 }
 
@@ -1068,6 +1113,7 @@ function setPageVisibility(page) {
   ui.statsPage.hidden = page !== "stats";
   ui.discoveryPage.hidden = page !== "discovery";
   ui.entityPage.hidden = page !== "entity";
+  ui.adminPage.hidden = page !== "admin";
 }
 
 function updateDocumentTitle(label) {
@@ -1083,7 +1129,9 @@ function setActiveNavigation(routeName) {
         ? "settings"
         : routeName === "entity"
           ? "discover"
-          : routeName;
+          : routeName === "admin"
+            ? `admin-${state.route.params.section || "catalog"}`
+            : routeName;
   $$("[data-route]").forEach((node) => {
     node.classList.toggle("is-active", node.dataset.route === normalized);
   });
@@ -1157,6 +1205,9 @@ function handleRoute() {
   } else if (state.route.name === "settings") {
     setPageVisibility("settings");
     renderSettingsPage();
+  } else if (state.route.name === "admin") {
+    setPageVisibility("admin");
+    void renderAdminPage();
   } else {
     navigate("#/home");
   }
@@ -2603,10 +2654,17 @@ function commentElement(comment, onDeleted = null) {
     <p>${escapeHtml(comment.body)}</p>
     <footer>
       <span>${relativeTime(comment.created_at)}</span>
-      ${own ? `<button class="comment-delete" type="button">Elimina</button>` : ""}
+      <span class="comment-actions">
+        ${!own && state.auth.user ? `<button class="comment-report" type="button">Segnala</button>` : ""}
+        ${own ? `<button class="comment-delete" type="button">Elimina</button>` : ""}
+      </span>
     </footer>`;
   const avatar = article.querySelector(".comment-avatar");
   if (author.avatar_url) avatar.style.backgroundImage = `url("${author.avatar_url}")`;
+  const reportButton = article.querySelector(".comment-report");
+  if (reportButton) {
+    reportButton.onclick = () => requestContentReport("comment", comment.id, "questo commento");
+  }
   const deleteButton = article.querySelector(".comment-delete");
   if (deleteButton) {
     deleteButton.onclick = async () => {
@@ -2980,6 +3038,7 @@ function reviewCard(review, { showGame = false } = {}) {
   const author = review.author || {};
   const authorName = author.display_name || author.username || "Utente The Free Vault";
   const authorLink = author.username ? profileRoute(author.username) : "#/home";
+  const own = Boolean(state.auth.user && state.auth.user.id === review.user_id);
   const avatarStyle = author.avatar_url
     ? `style="background-image:url('${escapeAttr(author.avatar_url)}')"`
     : "";
@@ -3015,6 +3074,7 @@ function reviewCard(review, { showGame = false } = {}) {
         <button class="review-comments-button" type="button" aria-label="Commenti">
           💬 <span>${review.comment_count || 0}</span>
         </button>
+        ${!own && state.auth.user ? `<button class="review-report-button" type="button">Segnala</button>` : ""}
       </div>
     </footer>
     <div class="review-comment-thread comment-thread" hidden></div>`;
@@ -3030,6 +3090,8 @@ function reviewCard(review, { showGame = false } = {}) {
     };
   }
   wireReviewEngagement(article, review);
+  const reportButton = article.querySelector(".review-report-button");
+  if (reportButton) reportButton.onclick = () => requestContentReport("review", review.id, "questa recensione");
   return article;
 }
 
@@ -3243,6 +3305,11 @@ async function renderSharedListPage() {
     state.social.sharedList = list;
     ui.sharedListLoading.hidden = true;
     ui.sharedListContent.hidden = false;
+    const canReportList = Boolean(state.auth.user && list.user_id && state.auth.user.id !== list.user_id);
+    ui.sharedListReport.hidden = !canReportList;
+    ui.sharedListReport.onclick = canReportList
+      ? () => requestContentReport("list", list.id, "questa lista")
+      : null;
     ui.sharedListVisibility.textContent = list.visibility === "public" ? "LISTA PUBBLICA" : "LISTA PRIVATA";
     ui.sharedListTitle.textContent = list.name;
     ui.sharedListDescription.textContent = list.description || "Nessuna descrizione.";
@@ -3285,6 +3352,8 @@ function applyAvatar(element, user, profile) {
 
 function updateAccountUI(snapshot) {
   state.auth = snapshot;
+  state.admin.loaded = false;
+  void refreshAdminContext();
   if (!snapshot.configured) {
     ui.accountLabel.textContent = "Configura account";
     ui.accountAvatar.textContent = "!";
@@ -3305,6 +3374,323 @@ function updateAccountUI(snapshot) {
   applyAvatar(ui.accountAvatar, snapshot.user, snapshot.profile);
   ui.sidebarDataNote.textContent = "Libreria, liste e attività sono collegate al tuo account.";
   void refreshNotificationCount();
+}
+
+
+function formatBytes(value) {
+  const bytes = Math.max(0, Number(value) || 0);
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["kB", "MB", "GB", "TB"];
+  let current = bytes / 1024;
+  let index = 0;
+  while (current >= 1024 && index < units.length - 1) {
+    current /= 1024;
+    index += 1;
+  }
+  return `${current.toFixed(current >= 100 ? 0 : current >= 10 ? 1 : 2)} ${units[index]}`;
+}
+
+function adminCanAccessSection(section) {
+  const context = state.admin.context || {};
+  if (section === "moderation") return Boolean(context.can_moderate);
+  return Boolean(context.is_admin);
+}
+
+function updateAdminNavigation() {
+  const context = state.admin.context || {};
+  const visible = Boolean(state.auth.user && (context.is_admin || context.can_moderate));
+  if (ui.adminNavSection) ui.adminNavSection.hidden = !visible;
+  $$('[data-route^="admin-"]').forEach((link) => {
+    const section = link.dataset.route.replace("admin-", "");
+    link.hidden = !adminCanAccessSection(section);
+  });
+}
+
+async function refreshAdminContext() {
+  const requestId = ++state.admin.requestId;
+  if (!state.auth.user || !window.VaultAdmin) {
+    state.admin.loaded = true;
+    state.admin.context = { role: null, is_admin: false, can_moderate: false };
+    updateAdminNavigation();
+    if (state.route.name === "admin") void renderAdminPage();
+    return state.admin.context;
+  }
+  try {
+    const context = await window.VaultAdmin.getContext();
+    if (requestId !== state.admin.requestId) return state.admin.context;
+    state.admin.context = context;
+  } catch (error) {
+    console.warn("Contesto amministratore non disponibile", error);
+    state.admin.context = { role: null, is_admin: false, can_moderate: false };
+  } finally {
+    if (requestId === state.admin.requestId) {
+      state.admin.loaded = true;
+      updateAdminNavigation();
+      if (state.route.name === "admin") void renderAdminPage();
+    }
+  }
+  return state.admin.context;
+}
+
+function setAdminPanel(section) {
+  const panels = {
+    catalog: ui.adminCatalogPanel,
+    matching: ui.adminMatchingPanel,
+    moderation: ui.adminModerationPanel,
+    system: ui.adminSystemPanel,
+  };
+  Object.entries(panels).forEach(([name, panel]) => {
+    if (panel) panel.hidden = name !== section;
+  });
+  $$('[data-admin-tab]').forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.adminTab === section);
+  });
+}
+
+async function renderAdminPage() {
+  const section = state.route.params.section || "catalog";
+  updateDocumentTitle("Amministrazione");
+  setAdminPanel(section);
+
+  if (!state.admin.loaded) {
+    ui.adminAccessRequired.hidden = false;
+    ui.adminContent.hidden = true;
+    ui.adminRoleBadge.textContent = "VERIFICA ACCESSO";
+    void refreshAdminContext();
+    return;
+  }
+
+  const allowed = adminCanAccessSection(section);
+  ui.adminAccessRequired.hidden = allowed;
+  ui.adminContent.hidden = !allowed;
+  ui.adminRoleBadge.textContent = state.admin.context.role
+    ? state.admin.context.role.toLocaleUpperCase("it")
+    : "NESSUN RUOLO";
+  if (!allowed) return;
+
+  if (section === "matching") await loadAdminMatches();
+  if (section === "moderation") await loadAdminReports();
+  if (section === "system") await loadAdminSystemStatus();
+}
+
+function renderAdminCatalogResults(games) {
+  ui.adminCatalogResults.replaceChildren();
+  if (!games.length) {
+    ui.adminCatalogResults.innerHTML = `<div class="timeline-empty">Nessun gioco trovato.</div>`;
+    return;
+  }
+  for (const game of games) {
+    const button = document.createElement("button");
+    button.className = "admin-result-item";
+    button.type = "button";
+    button.innerHTML = `
+      <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+      <span><strong>${escapeHtml(game.title || "Senza titolo")}</strong><small>${escapeHtml([game.developer, game.publisher, (game.stores || []).map(storeLabel).join(" · ")].filter(Boolean).join(" · "))}</small></span>
+      <b>Modifica →</b>`;
+    button.onclick = () => loadAdminCatalogRecord(game.match_key || game.canonical_id);
+    ui.adminCatalogResults.append(button);
+  }
+}
+
+async function searchAdminCatalog() {
+  const query = ui.adminCatalogSearch.value.trim();
+  if (query.length < 2) {
+    ui.adminCatalogResults.innerHTML = `<div class="timeline-empty">Inserisci almeno due caratteri.</div>`;
+    return;
+  }
+  ui.adminCatalogResults.innerHTML = `<div class="route-loading">Ricerca nel catalogo…</div>`;
+  try {
+    const result = await window.VaultCatalog.search({ query, limit: 20, offset: 0, force: true });
+    renderAdminCatalogResults(result.items || []);
+  } catch (error) {
+    console.error("Ricerca admin fallita", error);
+    ui.adminCatalogResults.innerHTML = `<div class="timeline-empty">Ricerca non disponibile.</div>`;
+  }
+}
+
+function populateAdminOverrideForm(record) {
+  const game = record?.game || {};
+  const override = record?.override || {};
+  const locks = new Set(override.locked_fields || []);
+  $$('[data-override-input]').forEach((input) => {
+    const field = input.dataset.overrideInput;
+    const value = locks.has(field) ? override[field] : game[field];
+    input.value = value ?? "";
+  });
+  $$('[data-lock-field]').forEach((checkbox) => {
+    checkbox.checked = locks.has(checkbox.dataset.lockField);
+  });
+}
+
+async function loadAdminCatalogRecord(key) {
+  ui.adminCatalogEditor.hidden = false;
+  ui.adminCatalogTitle.textContent = "Caricamento…";
+  ui.adminCatalogListings.replaceChildren();
+  try {
+    const record = await window.VaultAdmin.getCatalogRecord(key);
+    if (!record?.game) throw new Error("Gioco non trovato.");
+    state.admin.selectedCatalog = record;
+    const game = record.game;
+    ui.adminCatalogTitle.textContent = game.title;
+    ui.adminCatalogKey.textContent = game.match_key;
+    ui.adminCatalogOpen.href = gameRoute({ internal_id: game.match_key });
+    ui.adminCatalogListings.replaceChildren();
+    for (const listing of game.store_listings || []) {
+      const item = document.createElement("article");
+      item.className = "admin-listing-card";
+      item.innerHTML = `<strong>${escapeHtml(storeLabel(listing.store))}</strong><span>${escapeHtml(listing.title || listing.external_id || listing.listing_id || "Listing")}</span><small>${escapeHtml(listing.listing_id || "")}</small>`;
+      ui.adminCatalogListings.append(item);
+    }
+    if (!(game.store_listings || []).length) {
+      ui.adminCatalogListings.innerHTML = `<div class="timeline-empty">Nessuna listing associata.</div>`;
+    }
+    populateAdminOverrideForm(record);
+    ui.adminOverrideMessage.hidden = true;
+  } catch (error) {
+    console.error("Record admin non disponibile", error);
+    ui.adminCatalogTitle.textContent = "Errore di caricamento";
+    showToast(error.message || "Gioco non disponibile.");
+  }
+}
+
+function adminOverridePayload() {
+  const patch = {};
+  const lockedFields = [];
+  $$('[data-override-input]').forEach((input) => {
+    patch[input.dataset.overrideInput] = input.value;
+  });
+  $$('[data-lock-field]').forEach((checkbox) => {
+    if (checkbox.checked) lockedFields.push(checkbox.dataset.lockField);
+  });
+  return { patch, lockedFields };
+}
+
+async function loadAdminMatches() {
+  ui.adminMatchList.innerHTML = `<div class="route-loading">Caricamento coda…</div>`;
+  try {
+    const result = await window.VaultAdmin.listMatches({ status: ui.adminMatchStatus.value });
+    state.admin.matches = result?.items || [];
+    ui.adminMatchList.replaceChildren();
+    if (!state.admin.matches.length) {
+      ui.adminMatchList.innerHTML = `<div class="timeline-empty">Nessun match in questa sezione.</div>`;
+      return;
+    }
+    for (const match of state.admin.matches) {
+      const card = document.createElement("article");
+      card.className = "admin-action-card";
+      card.innerHTML = `
+        <div class="admin-action-card-head"><span class="pill">${Math.round(Number(match.confidence || 0) * 100)}%</span><small>${escapeHtml(match.status)}</small></div>
+        <div class="admin-match-pair"><div><small>${escapeHtml(match.source_store)}</small><strong>${escapeHtml(match.source_title)}</strong><span>${escapeHtml(match.source_external_id)}</span></div><b>⇄</b><div><small>${escapeHtml(match.candidate_store)}</small><strong>${escapeHtml(match.candidate_title)}</strong><span>${escapeHtml(match.candidate_external_id)}</span></div></div>
+        <label>Nota revisione<textarea rows="2" maxlength="1000"></textarea></label>
+        <div class="admin-card-actions"><button class="button button-primary admin-match-verify" type="button">Conferma</button><button class="button button-danger admin-match-reject" type="button">Rifiuta</button></div>`;
+      const note = card.querySelector("textarea");
+      card.querySelector(".admin-match-verify").onclick = async () => {
+        await window.VaultAdmin.reviewMatch(match.id, "verified", { note: note.value });
+        showToast("Match confermato.");
+        await loadAdminMatches();
+      };
+      card.querySelector(".admin-match-reject").onclick = async () => {
+        await window.VaultAdmin.reviewMatch(match.id, "rejected", { note: note.value });
+        showToast("Match rifiutato.");
+        await loadAdminMatches();
+      };
+      ui.adminMatchList.append(card);
+    }
+  } catch (error) {
+    console.error("Coda matching non disponibile", error);
+    ui.adminMatchList.innerHTML = `<div class="timeline-empty">Coda non disponibile.</div>`;
+  }
+}
+
+async function loadAdminReports() {
+  ui.adminReportList.innerHTML = `<div class="route-loading">Caricamento segnalazioni…</div>`;
+  try {
+    const result = await window.VaultAdmin.listReports({ status: ui.adminReportStatus.value });
+    state.admin.reports = result?.items || [];
+    ui.adminReportList.replaceChildren();
+    if (!state.admin.reports.length) {
+      ui.adminReportList.innerHTML = `<div class="timeline-empty">Nessuna segnalazione in questa sezione.</div>`;
+      return;
+    }
+    for (const report of state.admin.reports) {
+      const target = report.target || {};
+      const card = document.createElement("article");
+      card.className = "admin-action-card";
+      card.innerHTML = `
+        <div class="admin-action-card-head"><span class="pill">${escapeHtml(report.target_type)}</span><small>${formatDate(report.created_at, true)}</small></div>
+        <h3>${escapeHtml(target.label || "Contenuto non più disponibile")}</h3>
+        <p>${escapeHtml(target.body || "")}</p>
+        <blockquote>${escapeHtml(report.reason)}</blockquote>
+        <small>Segnalato da @${escapeHtml(report.reporter_username || "utente")}</small>
+        <label>Nota moderazione<textarea rows="2" maxlength="2000"></textarea></label>
+        <div class="admin-card-actions"><button class="button button-secondary admin-report-dismiss" type="button">Archivia</button><button class="button button-danger admin-report-remove" type="button">Rimuovi contenuto</button></div>`;
+      const note = card.querySelector("textarea");
+      card.querySelector(".admin-report-dismiss").onclick = async () => {
+        await window.VaultAdmin.resolveReport(report.id, "dismiss", note.value);
+        showToast("Segnalazione archiviata.");
+        await loadAdminReports();
+      };
+      card.querySelector(".admin-report-remove").onclick = async () => {
+        if (!confirm("Rimuovere definitivamente il contenuto segnalato?")) return;
+        await window.VaultAdmin.resolveReport(report.id, "remove", note.value);
+        showToast("Contenuto rimosso.");
+        await loadAdminReports();
+      };
+      ui.adminReportList.append(card);
+    }
+  } catch (error) {
+    console.error("Moderazione non disponibile", error);
+    ui.adminReportList.innerHTML = `<div class="timeline-empty">Segnalazioni non disponibili.</div>`;
+  }
+}
+
+async function loadAdminSystemStatus() {
+  ui.adminSystemStats.innerHTML = `<div class="route-loading">Lettura metriche…</div>`;
+  ui.adminSyncList.replaceChildren();
+  try {
+    const status = await window.VaultAdmin.getSystemStatus();
+    state.admin.system = status;
+    const limit = 500 * 1024 * 1024;
+    const ratio = Math.min(100, Math.round((Number(status.database_size_bytes || 0) / limit) * 100));
+    const stats = [
+      ["Database", `${formatBytes(status.database_size_bytes)} · ${ratio}% del piano Free`],
+      ["Catalogo", formatBytes(status.catalog_size_bytes)],
+      ["Giochi canonici", Number(status.catalog_games || 0).toLocaleString("it-IT")],
+      ["Listing", Number(status.catalog_listings || 0).toLocaleString("it-IT")],
+      ["Match da revisionare", Number(status.pending_matches || 0).toLocaleString("it-IT")],
+      ["Segnalazioni aperte", Number(status.open_reports || 0).toLocaleString("it-IT")],
+    ];
+    ui.adminSystemStats.replaceChildren();
+    for (const [label, value] of stats) {
+      const item = document.createElement("article");
+      item.innerHTML = `<small>${escapeHtml(label)}</small><strong>${escapeHtml(value)}</strong>`;
+      ui.adminSystemStats.append(item);
+    }
+    for (const sync of status.sync || []) {
+      const card = document.createElement("article");
+      card.className = "admin-sync-card";
+      card.innerHTML = `<div><strong>${escapeHtml(storeLabel(sync.store))}</strong><span>${escapeHtml(sync.status || "unknown")}</span></div><small>${Number(sync.listing_count || 0).toLocaleString("it-IT")} listing · ${sync.completed_at ? formatDate(sync.completed_at, true) : "mai completato"}</small>${sync.error_message ? `<p>${escapeHtml(sync.error_message)}</p>` : ""}`;
+      ui.adminSyncList.append(card);
+    }
+  } catch (error) {
+    console.error("Stato sistema non disponibile", error);
+    ui.adminSystemStats.innerHTML = `<div class="timeline-empty">Metriche non disponibili.</div>`;
+  }
+}
+
+async function requestContentReport(targetType, targetId, label) {
+  if (!state.auth.user) {
+    navigate("#/login");
+    return;
+  }
+  const reason = window.prompt(`Perché vuoi segnalare ${label || "questo contenuto"}?`);
+  if (reason === null) return;
+  try {
+    await window.VaultSocial.reportContent(targetType, targetId, reason);
+    showToast("Segnalazione inviata ai moderatori.");
+  } catch (error) {
+    showToast(error.message || "Segnalazione non inviata.");
+  }
 }
 
 function renderAuthPage() {
@@ -3665,6 +4051,7 @@ function refreshCurrentPersonalView() {
 
   if (state.route.name === "diary") renderDiaryPage();
   if (state.route.name === "stats") void renderStatsPage();
+  if (state.route.name === "admin") void renderAdminPage();
   if (routeToDashboardView(state.route.name)) renderDashboard();
 }
 
@@ -3884,6 +4271,52 @@ ui.mobileFilterToggle?.addEventListener("click", openMobileFilters);
 ui.mobileFilterClose?.addEventListener("click", requestCloseMobileFilters);
 ui.mobileFilterApply?.addEventListener("click", requestCloseMobileFilters);
 ui.filterBackdrop?.addEventListener("click", requestCloseMobileFilters);
+
+ui.adminCatalogSearchForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await searchAdminCatalog();
+});
+
+ui.adminOverrideForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const matchKey = state.admin.selectedCatalog?.game?.match_key;
+  if (!matchKey) return;
+  const { patch, lockedFields } = adminOverridePayload();
+  ui.adminOverrideMessage.hidden = true;
+  try {
+    const record = await window.VaultAdmin.saveCatalogOverride(matchKey, patch, lockedFields);
+    state.admin.selectedCatalog = record;
+    populateAdminOverrideForm(record);
+    ui.adminCatalogTitle.textContent = record.game.title;
+    ui.adminOverrideMessage.textContent = "Override salvato e protetto dai prossimi sync.";
+    ui.adminOverrideMessage.classList.add("auth-success");
+    ui.adminOverrideMessage.hidden = false;
+    window.VaultCatalog?.clearCache();
+  } catch (error) {
+    ui.adminOverrideMessage.classList.remove("auth-success");
+    ui.adminOverrideMessage.textContent = error.message || "Salvataggio override fallito.";
+    ui.adminOverrideMessage.hidden = false;
+  }
+});
+
+ui.adminClearOverride?.addEventListener("click", async () => {
+  const matchKey = state.admin.selectedCatalog?.game?.match_key;
+  if (!matchKey || !confirm("Rimuovere l’override? I dati automatici torneranno al prossimo sync.")) return;
+  try {
+    const result = await window.VaultAdmin.clearCatalogOverride(matchKey);
+    state.admin.selectedCatalog.override = null;
+    populateAdminOverrideForm(state.admin.selectedCatalog);
+    showToast(result?.message || "Override rimosso.");
+  } catch (error) {
+    showToast(error.message || "Rimozione override fallita.");
+  }
+});
+
+ui.adminMatchRefresh?.addEventListener("click", loadAdminMatches);
+ui.adminMatchStatus?.addEventListener("change", loadAdminMatches);
+ui.adminReportRefresh?.addEventListener("click", loadAdminReports);
+ui.adminReportStatus?.addEventListener("change", loadAdminReports);
+ui.adminSystemRefresh?.addEventListener("click", loadAdminSystemStatus);
 
 ui.sidebar?.addEventListener("click", (event) => {
   const link = event.target.closest('a[href^="#/"]');
