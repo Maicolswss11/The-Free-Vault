@@ -684,3 +684,54 @@ GIN o altre strutture pesanti.
 La selezione delle stelle nella scheda gioco aggiorna soltanto il voto personale.
 Il form dei progressi non viene più ricostruito e conserva stato, percentuale,
 date, piattaforma, difficoltà e note già inserite.
+
+## v4.6 — Franchise, saghe e collezioni editoriali
+
+La sezione **Franchise e collezioni** organizza il catalogo esistente senza
+crearne copie. Le nuove pagine pubbliche sono:
+
+```text
+#/franchises
+#/franchise/<slug>
+#/collection/<slug>
+```
+
+Le pagine franchise supportano:
+
+- giochi principali, spin-off, remake, remaster, DLC ed espansioni;
+- ordine di uscita e ordine narrativo configurabili separatamente;
+- note editoriali per ogni titolo;
+- avanzamento personale calcolato dalla libreria e dal diario già esistenti;
+- collegamenti alle saghe e alle collezioni ufficiali dalle schede gioco.
+
+Le collezioni editoriali sono curate dagli amministratori e vengono mostrate
+come contenuti ufficiali, distinti dalle liste personali degli utenti.
+
+L'area amministrativa aggiunge la route:
+
+```text
+#/admin/editorial
+```
+
+Da qui è possibile creare, modificare, pubblicare ed eliminare franchise e
+collezioni, cercare i giochi nel catalogo e ordinarli senza duplicarne i dati.
+
+Prima del deploy del frontend eseguire:
+
+```text
+supabase/migrations/20260611_v46_franchises_editorial.sql
+```
+
+La migrazione crea esclusivamente quattro tabelle relazionali leggere:
+
+```text
+franchises
+franchise_games
+editorial_collections
+editorial_collection_games
+```
+
+I giochi sono referenziati tramite `catalog_games.match_key`. La migrazione non
+crea una seconda copia del catalogo né indici GIN. Include le bozze iniziali
+`resident-evil` e `alan-wake`: dall'area admin occorre associare i giochi reali
+e pubblicare le pagine quando complete.

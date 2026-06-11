@@ -30,6 +30,7 @@
       <p class="nav-section-label">DISCOVER</p>
       <nav class="main-nav">
         <a class="nav-item" data-route="discover" href="#/discover"><span>✦</span> Scopri giochi</a>
+        <a class="nav-item" data-route="editorial" href="#/franchises"><span>◈</span> Franchise e collezioni</a>
         <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo multi-store</a>
       </nav>
 
@@ -62,6 +63,7 @@
         <p class="nav-section-label">AMMINISTRAZIONE</p>
         <nav class="main-nav">
           <a class="nav-item" data-route="admin-catalog" href="#/admin/catalog"><span>◇</span> Qualità catalogo</a>
+          <a class="nav-item" data-route="admin-editorial" href="#/admin/editorial"><span>◈</span> Franchise e collezioni</a>
           <a class="nav-item" data-route="admin-matching" href="#/admin/matching"><span>⇄</span> Coda matching</a>
           <a class="nav-item" data-route="admin-moderation" href="#/admin/moderation"><span>⚑</span> Moderazione</a>
           <a class="nav-item" data-route="admin-system" href="#/admin/system"><span>▣</span> Stato sistema</a>
@@ -300,6 +302,74 @@
           <div id="discovery-sections" class="discovery-sections"></div>
         </section>
 
+        <section id="editorial-directory-page" class="route-page editorial-directory-page" hidden>
+          <header class="page-heading editorial-directory-heading">
+            <div>
+              <p class="eyebrow">ARCHIVIO EDITORIALE</p>
+              <h1>Franchise, saghe e collezioni</h1>
+              <p>Ordini di uscita e narrativi, spin-off, remake, DLC e selezioni ufficiali curate da The Free Vault.</p>
+            </div>
+            <a class="button button-secondary" href="#/lists">Apri le tue liste personali</a>
+          </header>
+          <div id="editorial-directory-status" class="notice" hidden></div>
+          <section class="editorial-directory-section">
+            <div class="editorial-section-heading"><div><p class="eyebrow">SAGHE</p><h2>Franchise</h2></div><span class="official-badge">UFFICIALI</span></div>
+            <div id="franchise-directory-grid" class="editorial-card-grid"></div>
+          </section>
+          <section class="editorial-directory-section">
+            <div class="editorial-section-heading"><div><p class="eyebrow">SELEZIONI CURATE</p><h2>Collezioni editoriali</h2></div><span class="official-badge">THE FREE VAULT</span></div>
+            <p class="muted editorial-distinction">Le collezioni editoriali sono pubblicate dagli amministratori. Le liste personali restano separate e appartengono agli utenti.</p>
+            <div id="collection-directory-grid" class="editorial-card-grid"></div>
+          </section>
+        </section>
+
+        <section id="franchise-page" class="route-page franchise-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <header id="franchise-hero" class="editorial-detail-hero">
+            <img id="franchise-hero-image" alt="" hidden>
+            <div class="editorial-detail-scrim"></div>
+            <div class="editorial-detail-copy">
+              <p class="eyebrow">FRANCHISE UFFICIALE</p>
+              <h1 id="franchise-title">Franchise</h1>
+              <p id="franchise-description"></p>
+              <div id="franchise-meta" class="editorial-detail-meta"></div>
+            </div>
+          </header>
+          <div id="franchise-status" class="notice" hidden></div>
+          <section id="franchise-progress" class="saga-progress-panel" hidden>
+            <div><p class="eyebrow">IL TUO PERCORSO</p><h2>Progresso sulla saga</h2></div>
+            <div class="saga-progress-stats">
+              <article><strong id="franchise-progress-completed">0</strong><span>Completati</span></article>
+              <article><strong id="franchise-progress-started">0</strong><span>Iniziati</span></article>
+              <article><strong id="franchise-progress-percent">0%</strong><span>Completamento</span></article>
+            </div>
+            <div class="saga-progress-track"><span id="franchise-progress-fill"></span></div>
+          </section>
+          <div class="franchise-order-toolbar" role="group" aria-label="Ordinamento saga">
+            <span>Ordina per</span>
+            <button class="button button-secondary is-active" data-franchise-order="release" type="button">Uscita</button>
+            <button class="button button-secondary" data-franchise-order="narrative" type="button">Narrativa</button>
+          </div>
+          <div id="franchise-sections" class="franchise-sections"></div>
+        </section>
+
+        <section id="editorial-collection-page" class="route-page editorial-collection-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <header id="editorial-collection-hero" class="editorial-detail-hero collection-detail-hero">
+            <img id="editorial-collection-image" alt="" hidden>
+            <div class="editorial-detail-scrim"></div>
+            <div class="editorial-detail-copy">
+              <span class="official-badge">COLLEZIONE UFFICIALE</span>
+              <h1 id="editorial-collection-title">Collezione</h1>
+              <p id="editorial-collection-description"></p>
+              <blockquote id="editorial-collection-curator-note" hidden></blockquote>
+              <div id="editorial-collection-meta" class="editorial-detail-meta"></div>
+            </div>
+          </header>
+          <div id="editorial-collection-status" class="notice" hidden></div>
+          <div id="editorial-collection-games" class="editorial-collection-games"></div>
+        </section>
+
         <section id="entity-page" class="route-page entity-page" hidden>
           <button class="page-back" data-back type="button">← Indietro</button>
           <header class="entity-hero">
@@ -339,6 +409,11 @@
               </div>
             </div>
           </article>
+
+          <section id="game-editorial-memberships" class="game-editorial-memberships" hidden>
+            <p class="eyebrow">ARCHIVIO EDITORIALE</p>
+            <div id="game-editorial-membership-links" class="game-editorial-membership-links"></div>
+          </section>
 
           <div class="game-detail-grid">
             <section class="detail-panel">
@@ -1038,6 +1113,7 @@
           <div id="admin-content" hidden>
             <nav class="admin-tabs" aria-label="Sezioni amministrazione">
               <a data-admin-tab="catalog" href="#/admin/catalog">Catalogo</a>
+              <a data-admin-tab="editorial" href="#/admin/editorial">Franchise e collezioni</a>
               <a data-admin-tab="matching" href="#/admin/matching">Matching</a>
               <a data-admin-tab="moderation" href="#/admin/moderation">Moderazione</a>
               <a data-admin-tab="system" href="#/admin/system">Sistema</a>
@@ -1074,6 +1150,78 @@
                   <p id="admin-override-message" class="auth-error" hidden></p>
                   <div class="admin-form-actions"><button class="button button-primary" type="submit">Salva override</button><button id="admin-clear-override" class="button button-secondary" type="button">Rimuovi override</button></div>
                 </form>
+              </div>
+            </section>
+
+            <section id="admin-panel-editorial" class="admin-panel" hidden>
+              <div class="admin-panel-heading">
+                <div><p class="eyebrow">EDITORIAL DATABASE</p><h2>Franchise e collezioni ufficiali</h2><p>Gestisci relazioni leggere ai match_key già presenti in catalog_games.</p></div>
+                <button id="admin-editorial-refresh" class="button button-secondary" type="button">Aggiorna</button>
+              </div>
+
+              <div class="admin-editorial-grid">
+                <section class="admin-editorial-manager">
+                  <div class="admin-editorial-manager-head"><div><p class="eyebrow">SAGHE</p><h3>Franchise</h3></div><button id="admin-franchise-new" class="button button-secondary" type="button">Nuovo</button></div>
+                  <div id="admin-franchise-list" class="admin-entity-list"></div>
+                  <form id="admin-franchise-form" class="admin-editorial-form">
+                    <input id="admin-franchise-id" type="hidden">
+                    <div class="admin-override-grid">
+                      <label>Nome<input id="admin-franchise-name" maxlength="160" required></label>
+                      <label>Slug<input id="admin-franchise-slug" maxlength="100" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label>
+                      <label>Stato<select id="admin-franchise-status"><option value="draft">Bozza</option><option value="published">Pubblicato</option></select></label>
+                      <label>Immagine hero<input id="admin-franchise-image" type="url"></label>
+                      <label class="admin-description-field">Descrizione<textarea id="admin-franchise-description" rows="4" maxlength="5000"></textarea></label>
+                    </div>
+                    <p id="admin-franchise-message" class="auth-error" hidden></p>
+                    <div class="admin-form-actions"><button class="button button-primary" type="submit">Salva franchise</button><button id="admin-franchise-delete" class="button button-danger" type="button" hidden>Elimina</button></div>
+                  </form>
+                  <div id="admin-franchise-games-editor" class="admin-item-editor" hidden>
+                    <div class="admin-item-editor-head"><h4>Giochi della saga</h4><a id="admin-franchise-open" class="button button-secondary" href="#">Apri pagina</a></div>
+                    <form id="admin-franchise-game-search-form" class="admin-search-form"><input id="admin-franchise-game-search" type="search" minlength="2" placeholder="Cerca un gioco nel catalogo..." required><button class="button button-secondary" type="submit">Cerca</button></form>
+                    <div id="admin-franchise-game-search-results" class="admin-result-list compact"></div>
+                    <form id="admin-franchise-game-form" class="admin-editorial-item-form">
+                      <input id="admin-franchise-game-key" type="hidden">
+                      <strong id="admin-franchise-game-selected">Nessun gioco selezionato</strong>
+                      <label>Tipo<select id="admin-franchise-game-type"><option value="main">Gioco principale</option><option value="spin_off">Spin-off</option><option value="remake">Remake</option><option value="remaster">Remaster</option><option value="dlc">DLC</option><option value="expansion">Espansione</option><option value="other">Altro</option></select></label>
+                      <label>Ordine di uscita<input id="admin-franchise-release-order" type="number" min="1" required></label>
+                      <label>Ordine narrativo<input id="admin-franchise-narrative-order" type="number" min="1" placeholder="Facoltativo"></label>
+                      <label class="admin-item-note">Nota<textarea id="admin-franchise-game-note" rows="2" maxlength="1000"></textarea></label>
+                      <button class="button button-primary" type="submit">Aggiungi o aggiorna</button>
+                    </form>
+                    <div id="admin-franchise-games" class="admin-card-list compact"></div>
+                  </div>
+                </section>
+
+                <section class="admin-editorial-manager">
+                  <div class="admin-editorial-manager-head"><div><p class="eyebrow">SELEZIONI</p><h3>Collezioni editoriali</h3></div><button id="admin-collection-new" class="button button-secondary" type="button">Nuova</button></div>
+                  <div id="admin-collection-list" class="admin-entity-list"></div>
+                  <form id="admin-collection-form" class="admin-editorial-form">
+                    <input id="admin-collection-id" type="hidden">
+                    <div class="admin-override-grid">
+                      <label>Titolo<input id="admin-collection-title" maxlength="160" required></label>
+                      <label>Slug<input id="admin-collection-slug" maxlength="100" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></label>
+                      <label>Stato<select id="admin-collection-status"><option value="draft">Bozza</option><option value="published">Pubblicata</option></select></label>
+                      <label>Immagine copertina<input id="admin-collection-image" type="url"></label>
+                      <label class="admin-description-field">Descrizione<textarea id="admin-collection-description" rows="3" maxlength="5000"></textarea></label>
+                      <label class="admin-description-field">Nota curatoriale<textarea id="admin-collection-curator-note" rows="3" maxlength="5000"></textarea></label>
+                    </div>
+                    <p id="admin-collection-message" class="auth-error" hidden></p>
+                    <div class="admin-form-actions"><button class="button button-primary" type="submit">Salva collezione</button><button id="admin-collection-delete" class="button button-danger" type="button" hidden>Elimina</button></div>
+                  </form>
+                  <div id="admin-collection-games-editor" class="admin-item-editor" hidden>
+                    <div class="admin-item-editor-head"><h4>Giochi della collezione</h4><a id="admin-collection-open" class="button button-secondary" href="#">Apri pagina</a></div>
+                    <form id="admin-collection-game-search-form" class="admin-search-form"><input id="admin-collection-game-search" type="search" minlength="2" placeholder="Cerca un gioco nel catalogo..." required><button class="button button-secondary" type="submit">Cerca</button></form>
+                    <div id="admin-collection-game-search-results" class="admin-result-list compact"></div>
+                    <form id="admin-collection-game-form" class="admin-editorial-item-form collection-item-form">
+                      <input id="admin-collection-game-key" type="hidden">
+                      <strong id="admin-collection-game-selected">Nessun gioco selezionato</strong>
+                      <label>Posizione<input id="admin-collection-position" type="number" min="1" required></label>
+                      <label class="admin-item-note">Nota editoriale<textarea id="admin-collection-game-note" rows="2" maxlength="2000"></textarea></label>
+                      <button class="button button-primary" type="submit">Aggiungi o aggiorna</button>
+                    </form>
+                    <div id="admin-collection-games" class="admin-card-list compact"></div>
+                  </div>
+                </section>
               </div>
             </section>
 
@@ -1132,7 +1280,7 @@
     <button id="list-picker-close" class="dialog-close" type="button">×</button>
     <div class="dialog-content">
       <p class="eyebrow">AGGIUNGI A UNA LISTA</p>
-      <h2>Scegli una raccolta</h2>
+      <h2>Scegli una lista personale</h2>
       <div id="list-picker-items" class="list-picker-items"></div>
       <button id="picker-create-list" class="button button-secondary" type="button">Crea una nuova lista</button>
     </div>
@@ -1175,6 +1323,7 @@
   <script src="./steam.js" defer></script>
   <script src="./catalog-api.js" defer></script>
   <script src="./admin.js" defer></script>
+  <script src="./franchise.js" defer></script>
 
   <script src="./journal.js" defer></script>
   <script src="./app.js" defer></script>

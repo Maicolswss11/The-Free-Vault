@@ -36,6 +36,11 @@ const state = {
   entityData: null,
   entityLoading: false,
   entityRequestId: 0,
+  editorialDirectory: null,
+  franchiseData: null,
+  franchiseOrder: "release",
+  collectionData: null,
+  editorialRequestId: 0,
   library: loadLibrary(null),
   lists: loadLists(null),
   route: { name: "home", params: {}, query: new URLSearchParams() },
@@ -69,6 +74,10 @@ const state = {
     matches: [],
     reports: [],
     system: null,
+    franchises: [],
+    collections: [],
+    selectedFranchise: null,
+    selectedCollection: null,
     requestId: 0,
   },
   dataLoaded: false,
@@ -111,12 +120,41 @@ const ui = {
   entityPagination: $("#entity-pagination"),
   entityPageSummary: $("#entity-page-summary"),
   entityLoadMore: $("#entity-load-more"),
+  editorialDirectoryPage: $("#editorial-directory-page"),
+  editorialDirectoryStatus: $("#editorial-directory-status"),
+  franchiseDirectoryGrid: $("#franchise-directory-grid"),
+  collectionDirectoryGrid: $("#collection-directory-grid"),
+  franchisePage: $("#franchise-page"),
+  franchiseHero: $("#franchise-hero"),
+  franchiseHeroImage: $("#franchise-hero-image"),
+  franchiseTitle: $("#franchise-title"),
+  franchiseDescription: $("#franchise-description"),
+  franchiseMeta: $("#franchise-meta"),
+  franchiseStatus: $("#franchise-status"),
+  franchiseProgress: $("#franchise-progress"),
+  franchiseProgressCompleted: $("#franchise-progress-completed"),
+  franchiseProgressStarted: $("#franchise-progress-started"),
+  franchiseProgressPercent: $("#franchise-progress-percent"),
+  franchiseProgressFill: $("#franchise-progress-fill"),
+  franchiseSections: $("#franchise-sections"),
+  editorialCollectionPage: $("#editorial-collection-page"),
+  editorialCollectionHero: $("#editorial-collection-hero"),
+  editorialCollectionImage: $("#editorial-collection-image"),
+  editorialCollectionTitle: $("#editorial-collection-title"),
+  editorialCollectionDescription: $("#editorial-collection-description"),
+  editorialCollectionCuratorNote: $("#editorial-collection-curator-note"),
+  editorialCollectionMeta: $("#editorial-collection-meta"),
+  editorialCollectionStatus: $("#editorial-collection-status"),
+  editorialCollectionGames: $("#editorial-collection-games"),
+  gameEditorialMemberships: $("#game-editorial-memberships"),
+  gameEditorialMembershipLinks: $("#game-editorial-membership-links"),
   adminPage: $("#admin-page"),
   adminNavSection: $("#admin-nav-section"),
   adminRoleBadge: $("#admin-role-badge"),
   adminAccessRequired: $("#admin-access-required"),
   adminContent: $("#admin-content"),
   adminCatalogPanel: $("#admin-panel-catalog"),
+  adminEditorialPanel: $("#admin-panel-editorial"),
   adminMatchingPanel: $("#admin-panel-matching"),
   adminModerationPanel: $("#admin-panel-moderation"),
   adminSystemPanel: $("#admin-panel-system"),
@@ -140,6 +178,54 @@ const ui = {
   adminSystemRefresh: $("#admin-system-refresh"),
   adminSystemStats: $("#admin-system-stats"),
   adminSyncList: $("#admin-sync-list"),
+  adminEditorialRefresh: $("#admin-editorial-refresh"),
+  adminFranchiseList: $("#admin-franchise-list"),
+  adminFranchiseNew: $("#admin-franchise-new"),
+  adminFranchiseForm: $("#admin-franchise-form"),
+  adminFranchiseId: $("#admin-franchise-id"),
+  adminFranchiseName: $("#admin-franchise-name"),
+  adminFranchiseSlug: $("#admin-franchise-slug"),
+  adminFranchiseStatus: $("#admin-franchise-status"),
+  adminFranchiseImage: $("#admin-franchise-image"),
+  adminFranchiseDescription: $("#admin-franchise-description"),
+  adminFranchiseMessage: $("#admin-franchise-message"),
+  adminFranchiseDelete: $("#admin-franchise-delete"),
+  adminFranchiseGamesEditor: $("#admin-franchise-games-editor"),
+  adminFranchiseOpen: $("#admin-franchise-open"),
+  adminFranchiseGameSearchForm: $("#admin-franchise-game-search-form"),
+  adminFranchiseGameSearch: $("#admin-franchise-game-search"),
+  adminFranchiseGameSearchResults: $("#admin-franchise-game-search-results"),
+  adminFranchiseGameForm: $("#admin-franchise-game-form"),
+  adminFranchiseGameKey: $("#admin-franchise-game-key"),
+  adminFranchiseGameSelected: $("#admin-franchise-game-selected"),
+  adminFranchiseGameType: $("#admin-franchise-game-type"),
+  adminFranchiseReleaseOrder: $("#admin-franchise-release-order"),
+  adminFranchiseNarrativeOrder: $("#admin-franchise-narrative-order"),
+  adminFranchiseGameNote: $("#admin-franchise-game-note"),
+  adminFranchiseGames: $("#admin-franchise-games"),
+  adminCollectionList: $("#admin-collection-list"),
+  adminCollectionNew: $("#admin-collection-new"),
+  adminCollectionForm: $("#admin-collection-form"),
+  adminCollectionId: $("#admin-collection-id"),
+  adminCollectionTitle: $("#admin-collection-title"),
+  adminCollectionSlug: $("#admin-collection-slug"),
+  adminCollectionStatus: $("#admin-collection-status"),
+  adminCollectionImage: $("#admin-collection-image"),
+  adminCollectionDescription: $("#admin-collection-description"),
+  adminCollectionCuratorNote: $("#admin-collection-curator-note"),
+  adminCollectionMessage: $("#admin-collection-message"),
+  adminCollectionDelete: $("#admin-collection-delete"),
+  adminCollectionGamesEditor: $("#admin-collection-games-editor"),
+  adminCollectionOpen: $("#admin-collection-open"),
+  adminCollectionGameSearchForm: $("#admin-collection-game-search-form"),
+  adminCollectionGameSearch: $("#admin-collection-game-search"),
+  adminCollectionGameSearchResults: $("#admin-collection-game-search-results"),
+  adminCollectionGameForm: $("#admin-collection-game-form"),
+  adminCollectionGameKey: $("#admin-collection-game-key"),
+  adminCollectionGameSelected: $("#admin-collection-game-selected"),
+  adminCollectionPosition: $("#admin-collection-position"),
+  adminCollectionGameNote: $("#admin-collection-game-note"),
+  adminCollectionGames: $("#admin-collection-games"),
   sharedListReport: $("#shared-list-report"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
@@ -926,6 +1012,14 @@ function listRoute(id) {
   return `#/list/${encodeURIComponent(id)}`;
 }
 
+function franchiseRoute(slug) {
+  return `#/franchise/${encodeURIComponent(slug)}`;
+}
+
+function editorialCollectionRoute(slug) {
+  return `#/collection/${encodeURIComponent(slug)}`;
+}
+
 function entityRoute(kind, name) {
   const safeKind = kind === "publisher" ? "publisher" : "developer";
   return `#/${safeKind}/${encodeURIComponent(name)}`;
@@ -1047,6 +1141,7 @@ function parseRoute() {
     history: "history",
     catalog: "catalog",
     discover: "discover",
+    franchises: "editorial-directory",
     library: "library",
     lists: "lists",
     profile: "profile",
@@ -1073,6 +1168,12 @@ function parseRoute() {
       query,
     };
   }
+  if (first === "franchise" && segments[1]) {
+    return { name: "franchise", params: { slug: decodeURIComponent(segments.slice(1).join("/")) }, query };
+  }
+  if (first === "collection" && segments[1]) {
+    return { name: "editorial-collection", params: { slug: decodeURIComponent(segments.slice(1).join("/")) }, query };
+  }
   if (first === "list" && segments[1]) {
     return { name: "list", params: { id: decodeURIComponent(segments[1]) }, query };
   }
@@ -1086,7 +1187,7 @@ function parseRoute() {
     return { name: "settings", params: { section: segments[1] || "profile" }, query };
   }
   if (first === "admin") {
-    const section = ["catalog", "matching", "moderation", "system"].includes(segments[1])
+    const section = ["catalog", "editorial", "matching", "moderation", "system"].includes(segments[1])
       ? segments[1]
       : "catalog";
     return { name: "admin", params: { section }, query };
@@ -1113,6 +1214,9 @@ function setPageVisibility(page) {
   ui.statsPage.hidden = page !== "stats";
   ui.discoveryPage.hidden = page !== "discovery";
   ui.entityPage.hidden = page !== "entity";
+  ui.editorialDirectoryPage.hidden = page !== "editorial-directory";
+  ui.franchisePage.hidden = page !== "franchise";
+  ui.editorialCollectionPage.hidden = page !== "editorial-collection";
   ui.adminPage.hidden = page !== "admin";
 }
 
@@ -1129,7 +1233,9 @@ function setActiveNavigation(routeName) {
         ? "settings"
         : routeName === "entity"
           ? "discover"
-          : routeName === "admin"
+          : ["editorial-directory", "franchise", "editorial-collection"].includes(routeName)
+            ? "editorial"
+            : routeName === "admin"
             ? `admin-${state.route.params.section || "catalog"}`
             : routeName;
   $$("[data-route]").forEach((node) => {
@@ -1175,6 +1281,15 @@ function handleRoute() {
   } else if (state.route.name === "discover") {
     setPageVisibility("discovery");
     void renderDiscoveryPage();
+  } else if (state.route.name === "editorial-directory") {
+    setPageVisibility("editorial-directory");
+    void renderEditorialDirectory();
+  } else if (state.route.name === "franchise") {
+    setPageVisibility("franchise");
+    void renderFranchisePage();
+  } else if (state.route.name === "editorial-collection") {
+    setPageVisibility("editorial-collection");
+    void renderEditorialCollectionPage();
   } else if (state.route.name === "entity") {
     setPageVisibility("entity");
     void loadEntityPage({ reset: true });
@@ -2378,6 +2493,7 @@ async function renderRelatedGames(game) {
 
   if (!window.VaultCatalog?.configured() || game.source_kind !== "catalog") {
     ui.gameRelatedSection.hidden = true;
+    ui.gameEditorialMemberships.hidden = true;
     return;
   }
 
@@ -2398,6 +2514,303 @@ async function renderRelatedGames(game) {
   } catch (error) {
     console.error("Caricamento giochi correlati fallito", error);
     ui.gameRelatedStatus.textContent = "Suggerimenti temporaneamente non disponibili.";
+  }
+}
+
+
+const FRANCHISE_RELATION_LABELS = {
+  main: "Giochi principali",
+  spin_off: "Spin-off",
+  remake: "Remake",
+  remaster: "Remaster",
+  dlc: "DLC",
+  expansion: "Espansioni",
+  other: "Altri titoli",
+};
+
+function editorialCard({ title, description, imageUrl, count, href, badge }) {
+  const article = document.createElement("article");
+  article.className = "editorial-directory-card";
+  article.innerHTML = `
+    <a class="editorial-card-cover" href="${escapeAttr(href)}">
+      <img src="${escapeAttr(imageUrl || PLACEHOLDER)}" alt="" loading="lazy">
+      <span class="editorial-card-scrim"></span>
+      <span class="official-badge">${escapeHtml(badge)}</span>
+    </a>
+    <div class="editorial-card-copy">
+      <h3><a href="${escapeAttr(href)}">${escapeHtml(title)}</a></h3>
+      <p>${escapeHtml(description || "Descrizione editoriale in preparazione.")}</p>
+      <div><span>${Number(count || 0).toLocaleString("it-IT")} giochi</span><a href="${escapeAttr(href)}">Apri →</a></div>
+    </div>`;
+  const image = article.querySelector("img");
+  image.onerror = () => { image.src = PLACEHOLDER; };
+  return article;
+}
+
+async function renderEditorialDirectory() {
+  const requestId = ++state.editorialRequestId;
+  updateDocumentTitle("Franchise e collezioni");
+  ui.editorialDirectoryStatus.hidden = true;
+  ui.franchiseDirectoryGrid.innerHTML = `<div class="route-loading">Caricamento franchise…</div>`;
+  ui.collectionDirectoryGrid.innerHTML = `<div class="route-loading">Caricamento collezioni…</div>`;
+  try {
+    if (!window.VaultFranchises) throw new Error("Modulo franchise non disponibile.");
+    const directory = await window.VaultFranchises.getDirectory();
+    if (requestId !== state.editorialRequestId || state.route.name !== "editorial-directory") return;
+    state.editorialDirectory = directory || { franchises: [], collections: [] };
+    ui.franchiseDirectoryGrid.replaceChildren();
+    ui.collectionDirectoryGrid.replaceChildren();
+
+    for (const franchise of state.editorialDirectory.franchises || []) {
+      ui.franchiseDirectoryGrid.append(editorialCard({
+        title: franchise.name,
+        description: franchise.description,
+        imageUrl: franchise.hero_image_url,
+        count: franchise.game_count,
+        href: franchiseRoute(franchise.slug),
+        badge: "FRANCHISE",
+      }));
+    }
+    for (const collection of state.editorialDirectory.collections || []) {
+      ui.collectionDirectoryGrid.append(editorialCard({
+        title: collection.title,
+        description: collection.description,
+        imageUrl: collection.cover_image_url,
+        count: collection.game_count,
+        href: editorialCollectionRoute(collection.slug),
+        badge: "COLLEZIONE UFFICIALE",
+      }));
+    }
+
+    if (!(state.editorialDirectory.franchises || []).length) {
+      ui.franchiseDirectoryGrid.innerHTML = `<div class="empty-state"><strong>Nessun franchise pubblicato</strong><span>Le saghe vengono preparate dagli amministratori.</span></div>`;
+    }
+    if (!(state.editorialDirectory.collections || []).length) {
+      ui.collectionDirectoryGrid.innerHTML = `<div class="empty-state"><strong>Nessuna collezione pubblicata</strong><span>Le selezioni editoriali appariranno qui.</span></div>`;
+    }
+  } catch (error) {
+    console.error("Directory editoriale non disponibile", error);
+    if (requestId !== state.editorialRequestId) return;
+    ui.editorialDirectoryStatus.textContent = "Archivio editoriale non disponibile. Applica la migrazione v4.6 su Supabase.";
+    ui.editorialDirectoryStatus.hidden = false;
+    ui.franchiseDirectoryGrid.replaceChildren();
+    ui.collectionDirectoryGrid.replaceChildren();
+  }
+}
+
+function franchiseGameProgress(game) {
+  const progress = window.VaultJournal?.getProgress(gameKey(game));
+  const library = getLibraryEntry(game);
+  return {
+    status: progress?.status || library?.status || null,
+    percent: Number(progress?.progressPercent ?? library?.progressPercent ?? 0),
+  };
+}
+
+function renderFranchiseProgress(games) {
+  const items = games || [];
+  if (!items.length) {
+    ui.franchiseProgress.hidden = true;
+    return;
+  }
+  let completed = 0;
+  let started = 0;
+  let totalPercent = 0;
+  for (const game of items) {
+    const progress = franchiseGameProgress(game);
+    const isCompleted = progress.status === "completed";
+    if (isCompleted) completed += 1;
+    if (["playing", "paused", "completed", "abandoned", "replay"].includes(progress.status)) started += 1;
+    totalPercent += isCompleted ? 100 : Math.max(0, Math.min(100, progress.percent || 0));
+  }
+  const average = Math.round(totalPercent / items.length);
+  ui.franchiseProgressCompleted.textContent = `${completed}/${items.length}`;
+  ui.franchiseProgressStarted.textContent = String(started);
+  ui.franchiseProgressPercent.textContent = `${average}%`;
+  ui.franchiseProgressFill.style.width = `${average}%`;
+  ui.franchiseProgress.hidden = false;
+}
+
+function franchiseOrderValue(game) {
+  if (state.franchiseOrder === "narrative") {
+    return Number(game.narrative_order || 100000 + Number(game.release_order || 0));
+  }
+  return Number(game.release_order || 100000);
+}
+
+function renderFranchiseGameRow(game) {
+  const progress = franchiseGameProgress(game);
+  const row = document.createElement("article");
+  row.className = "franchise-game-row";
+  row.innerHTML = `
+    <button class="franchise-game-cover" type="button"><img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt=""></button>
+    <div class="franchise-game-copy">
+      <div class="franchise-game-heading">
+        <div><small>${escapeHtml(game.developer || game.publisher || "")}</small><h3>${escapeHtml(game.title)}</h3></div>
+        <span class="pill">${escapeHtml(game.release_year || "Anno n/d")}</span>
+      </div>
+      <div class="franchise-game-orders">
+        <span>Uscita #${Number(game.release_order || 0)}</span>
+        ${game.narrative_order ? `<span>Narrativa #${Number(game.narrative_order)}</span>` : `<span>Narrativa non definita</span>`}
+        ${progress.status ? `<span>${escapeHtml(statusLabel(progress.status))} · ${Math.max(0, Math.min(100, progress.percent || 0))}%</span>` : `<span>Non iniziato</span>`}
+      </div>
+      ${game.franchise_note ? `<p>${escapeHtml(game.franchise_note)}</p>` : ""}
+      <div class="franchise-game-actions"><a class="button button-secondary" href="${escapeAttr(gameRoute(game))}">Scheda</a><button class="button button-secondary" data-saga-library type="button">${getLibraryEntry(game) ? "Rimuovi dalla libreria" : "Aggiungi alla libreria"}</button></div>
+    </div>`;
+  row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+  row.querySelector(".franchise-game-cover").onclick = () => navigate(gameRoute(game));
+  row.querySelector("[data-saga-library]").onclick = () => {
+    toggleLibraryWithoutRerender(game);
+    renderFranchiseSections();
+    renderFranchiseProgress(state.franchiseData?.games || []);
+  };
+  return row;
+}
+
+function renderFranchiseSections() {
+  const games = [...(state.franchiseData?.games || [])].sort((a, b) => {
+    const order = franchiseOrderValue(a) - franchiseOrderValue(b);
+    return order || String(a.title || "").localeCompare(String(b.title || ""), "it");
+  });
+  ui.franchiseSections.replaceChildren();
+  if (!games.length) {
+    ui.franchiseSections.innerHTML = `<div class="empty-state"><strong>Saga in preparazione</strong><span>I giochi verranno collegati dal pannello amministrativo.</span></div>`;
+    return;
+  }
+  const relationOrder = ["main", "spin_off", "remake", "remaster", "expansion", "dlc", "other"];
+  for (const relation of relationOrder) {
+    const relationGames = games.filter((game) => (game.relation_type || "other") === relation);
+    if (!relationGames.length) continue;
+    const section = document.createElement("section");
+    section.className = "franchise-group";
+    section.innerHTML = `<header><div><p class="eyebrow">${escapeHtml(relation.replaceAll("_", " ").toUpperCase())}</p><h2>${escapeHtml(FRANCHISE_RELATION_LABELS[relation])}</h2></div><span>${relationGames.length}</span></header>`;
+    const list = document.createElement("div");
+    list.className = "franchise-game-list";
+    for (const game of relationGames) list.append(renderFranchiseGameRow(game));
+    section.append(list);
+    ui.franchiseSections.append(section);
+  }
+}
+
+async function renderFranchisePage() {
+  const requestId = ++state.editorialRequestId;
+  const slug = state.route.params.slug;
+  state.franchiseOrder = "release";
+  $$('[data-franchise-order]').forEach((button) => button.classList.toggle("is-active", button.dataset.franchiseOrder === "release"));
+  updateDocumentTitle("Caricamento franchise");
+  ui.franchiseTitle.textContent = "Caricamento…";
+  ui.franchiseDescription.textContent = "Recupero la cronologia della saga.";
+  ui.franchiseStatus.hidden = true;
+  ui.franchiseSections.innerHTML = `<div class="route-loading">Caricamento saga…</div>`;
+  ui.franchiseProgress.hidden = true;
+  try {
+    const data = await window.VaultFranchises.getFranchise(slug);
+    if (requestId !== state.editorialRequestId || state.route.name !== "franchise" || state.route.params.slug !== slug) return;
+    if (!data?.franchise) throw new Error("Franchise non trovato.");
+    state.franchiseData = data;
+    for (const game of data.games || []) registerCatalogGame(game);
+    const franchise = data.franchise;
+    updateDocumentTitle(franchise.name);
+    ui.franchiseTitle.textContent = franchise.name;
+    ui.franchiseDescription.textContent = franchise.description || "Descrizione editoriale in preparazione.";
+    ui.franchiseMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} titoli</span><span>Ordine di uscita e narrativo</span>`;
+    ui.franchiseHeroImage.hidden = !franchise.hero_image_url;
+    if (franchise.hero_image_url) {
+      ui.franchiseHeroImage.src = franchise.hero_image_url;
+      ui.franchiseHeroImage.alt = franchise.name;
+      ui.franchiseHeroImage.onerror = () => { ui.franchiseHeroImage.hidden = true; };
+    }
+    renderFranchiseProgress(data.games || []);
+    renderFranchiseSections();
+  } catch (error) {
+    console.error("Franchise non disponibile", error);
+    if (requestId !== state.editorialRequestId) return;
+    updateDocumentTitle("Franchise non trovato");
+    ui.franchiseTitle.textContent = "Franchise non disponibile";
+    ui.franchiseDescription.textContent = "La saga richiesta non è pubblicata oppure la migrazione v4.6 non è stata applicata.";
+    ui.franchiseStatus.textContent = error.message || "Franchise non disponibile.";
+    ui.franchiseStatus.hidden = false;
+    ui.franchiseSections.replaceChildren();
+  }
+}
+
+function renderCollectionGameRow(game) {
+  const row = document.createElement("article");
+  row.className = "collection-game-row";
+  row.innerHTML = `
+    <span class="collection-position">${Number(game.collection_position || 0)}</span>
+    <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+    <div><small>${escapeHtml(game.developer || game.publisher || "")}</small><h2><a href="${escapeAttr(gameRoute(game))}">${escapeHtml(game.title)}</a></h2>${game.editorial_note ? `<p>${escapeHtml(game.editorial_note)}</p>` : ""}</div>
+    <a class="button button-secondary" href="${escapeAttr(gameRoute(game))}">Apri scheda</a>`;
+  row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+  return row;
+}
+
+async function renderEditorialCollectionPage() {
+  const requestId = ++state.editorialRequestId;
+  const slug = state.route.params.slug;
+  updateDocumentTitle("Caricamento collezione");
+  ui.editorialCollectionTitle.textContent = "Caricamento…";
+  ui.editorialCollectionDescription.textContent = "Recupero la selezione editoriale.";
+  ui.editorialCollectionStatus.hidden = true;
+  ui.editorialCollectionGames.innerHTML = `<div class="route-loading">Caricamento collezione…</div>`;
+  try {
+    const data = await window.VaultFranchises.getCollection(slug);
+    if (requestId !== state.editorialRequestId || state.route.name !== "editorial-collection" || state.route.params.slug !== slug) return;
+    if (!data?.collection) throw new Error("Collezione non trovata.");
+    state.collectionData = data;
+    for (const game of data.games || []) registerCatalogGame(game);
+    const collection = data.collection;
+    updateDocumentTitle(collection.title);
+    ui.editorialCollectionTitle.textContent = collection.title;
+    ui.editorialCollectionDescription.textContent = collection.description || "Descrizione editoriale in preparazione.";
+    ui.editorialCollectionMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} giochi</span><span>Selezione ufficiale The Free Vault</span>`;
+    ui.editorialCollectionCuratorNote.hidden = !collection.curator_note;
+    ui.editorialCollectionCuratorNote.textContent = collection.curator_note || "";
+    ui.editorialCollectionImage.hidden = !collection.cover_image_url;
+    if (collection.cover_image_url) {
+      ui.editorialCollectionImage.src = collection.cover_image_url;
+      ui.editorialCollectionImage.alt = collection.title;
+      ui.editorialCollectionImage.onerror = () => { ui.editorialCollectionImage.hidden = true; };
+    }
+    ui.editorialCollectionGames.replaceChildren();
+    for (const game of data.games || []) ui.editorialCollectionGames.append(renderCollectionGameRow(game));
+    if (!(data.games || []).length) {
+      ui.editorialCollectionGames.innerHTML = `<div class="empty-state"><strong>Collezione in preparazione</strong><span>I giochi verranno aggiunti dagli amministratori.</span></div>`;
+    }
+  } catch (error) {
+    console.error("Collezione editoriale non disponibile", error);
+    if (requestId !== state.editorialRequestId) return;
+    updateDocumentTitle("Collezione non trovata");
+    ui.editorialCollectionTitle.textContent = "Collezione non disponibile";
+    ui.editorialCollectionDescription.textContent = "La selezione richiesta non è pubblicata oppure la migrazione v4.6 non è stata applicata.";
+    ui.editorialCollectionStatus.textContent = error.message || "Collezione non disponibile.";
+    ui.editorialCollectionStatus.hidden = false;
+    ui.editorialCollectionGames.replaceChildren();
+  }
+}
+
+async function renderGameEditorialMemberships(game) {
+  ui.gameEditorialMemberships.hidden = true;
+  ui.gameEditorialMembershipLinks.replaceChildren();
+  if (!window.VaultFranchises || game.source_kind !== "catalog") return;
+  const expectedKey = gameKey(game);
+  try {
+    const memberships = await window.VaultFranchises.getMemberships(expectedKey);
+    const routed = state.route.name === "game" ? resolveGameByKey(state.route.params.key) : null;
+    if (!routed || gameKey(routed) !== expectedKey) return;
+    const links = [];
+    for (const franchise of memberships?.franchises || []) {
+      links.push(`<a href="${escapeAttr(franchiseRoute(franchise.slug))}"><span>Franchise</span><strong>${escapeHtml(franchise.name)}</strong><small>${escapeHtml(FRANCHISE_RELATION_LABELS[franchise.relation_type] || franchise.relation_type)}</small></a>`);
+    }
+    for (const collection of memberships?.collections || []) {
+      links.push(`<a href="${escapeAttr(editorialCollectionRoute(collection.slug))}"><span>Collezione ufficiale</span><strong>${escapeHtml(collection.title)}</strong><small>Posizione #${Number(collection.position || 0)}</small></a>`);
+    }
+    if (!links.length) return;
+    ui.gameEditorialMembershipLinks.innerHTML = links.join("");
+    ui.gameEditorialMemberships.hidden = false;
+  } catch (error) {
+    console.warn("Appartenenze editoriali non disponibili", error);
   }
 }
 
@@ -2481,6 +2894,7 @@ async function renderGamePage() {
   renderPromotionTimeline(game);
   renderGameSessions(game);
   void renderRelatedGames(game);
+  void renderGameEditorialMemberships(game);
   void renderGameSocial(game);
 
   ui.gamePageLibrary.onclick = () => {
@@ -3436,6 +3850,7 @@ async function refreshAdminContext() {
 function setAdminPanel(section) {
   const panels = {
     catalog: ui.adminCatalogPanel,
+    editorial: ui.adminEditorialPanel,
     matching: ui.adminMatchingPanel,
     moderation: ui.adminModerationPanel,
     system: ui.adminSystemPanel,
@@ -3469,6 +3884,7 @@ async function renderAdminPage() {
     : "NESSUN RUOLO";
   if (!allowed) return;
 
+  if (section === "editorial") await loadAdminEditorial();
   if (section === "matching") await loadAdminMatches();
   if (section === "moderation") await loadAdminReports();
   if (section === "system") await loadAdminSystemStatus();
@@ -3564,6 +3980,286 @@ function adminOverridePayload() {
     if (checkbox.checked) lockedFields.push(checkbox.dataset.lockField);
   });
   return { patch, lockedFields };
+}
+
+
+function editorialSlug(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+}
+
+function setAdminEditorialMessage(element, message, success = false) {
+  element.textContent = message;
+  element.classList.toggle("auth-success", success);
+  element.hidden = !message;
+}
+
+function resetAdminFranchiseForm() {
+  state.admin.selectedFranchise = null;
+  ui.adminFranchiseForm.reset();
+  delete ui.adminFranchiseSlug.dataset.edited;
+  ui.adminFranchiseId.value = "";
+  ui.adminFranchiseStatus.value = "draft";
+  ui.adminFranchiseDelete.hidden = true;
+  ui.adminFranchiseGamesEditor.hidden = true;
+  ui.adminFranchiseGameSearchResults.replaceChildren();
+  ui.adminFranchiseGames.replaceChildren();
+  ui.adminFranchiseGameForm.reset();
+  ui.adminFranchiseGameKey.value = "";
+  ui.adminFranchiseGameSelected.textContent = "Nessun gioco selezionato";
+  setAdminEditorialMessage(ui.adminFranchiseMessage, "");
+}
+
+function resetAdminCollectionForm() {
+  state.admin.selectedCollection = null;
+  ui.adminCollectionForm.reset();
+  delete ui.adminCollectionSlug.dataset.edited;
+  ui.adminCollectionId.value = "";
+  ui.adminCollectionStatus.value = "draft";
+  ui.adminCollectionDelete.hidden = true;
+  ui.adminCollectionGamesEditor.hidden = true;
+  ui.adminCollectionGameSearchResults.replaceChildren();
+  ui.adminCollectionGames.replaceChildren();
+  ui.adminCollectionGameForm.reset();
+  ui.adminCollectionGameKey.value = "";
+  ui.adminCollectionGameSelected.textContent = "Nessun gioco selezionato";
+  setAdminEditorialMessage(ui.adminCollectionMessage, "");
+}
+
+function renderAdminEditorialLists() {
+  ui.adminFranchiseList.replaceChildren();
+  for (const franchise of state.admin.franchises || []) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "admin-entity-button";
+    button.classList.toggle("is-active", state.admin.selectedFranchise?.franchise?.id === franchise.id);
+    button.innerHTML = `<span><strong>${escapeHtml(franchise.name)}</strong><small>${escapeHtml(franchise.slug)} · ${Number(franchise.game_count || 0)} giochi</small></span><b class="pill">${franchise.status === "published" ? "PUBBLICATO" : "BOZZA"}</b>`;
+    button.onclick = () => openAdminFranchise(franchise.id);
+    ui.adminFranchiseList.append(button);
+  }
+  if (!(state.admin.franchises || []).length) {
+    ui.adminFranchiseList.innerHTML = `<div class="timeline-empty">Nessun franchise configurato.</div>`;
+  }
+
+  ui.adminCollectionList.replaceChildren();
+  for (const collection of state.admin.collections || []) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "admin-entity-button";
+    button.classList.toggle("is-active", state.admin.selectedCollection?.collection?.id === collection.id);
+    button.innerHTML = `<span><strong>${escapeHtml(collection.title)}</strong><small>${escapeHtml(collection.slug)} · ${Number(collection.game_count || 0)} giochi</small></span><b class="pill">${collection.status === "published" ? "PUBBLICATA" : "BOZZA"}</b>`;
+    button.onclick = () => openAdminCollection(collection.id);
+    ui.adminCollectionList.append(button);
+  }
+  if (!(state.admin.collections || []).length) {
+    ui.adminCollectionList.innerHTML = `<div class="timeline-empty">Nessuna collezione configurata.</div>`;
+  }
+}
+
+async function loadAdminEditorial({ preserveSelection = true } = {}) {
+  if (!window.VaultFranchises) {
+    ui.adminFranchiseList.innerHTML = `<div class="timeline-empty">Modulo franchise non disponibile.</div>`;
+    ui.adminCollectionList.innerHTML = `<div class="timeline-empty">Modulo franchise non disponibile.</div>`;
+    return;
+  }
+  ui.adminFranchiseList.innerHTML = `<div class="route-loading">Caricamento franchise…</div>`;
+  ui.adminCollectionList.innerHTML = `<div class="route-loading">Caricamento collezioni…</div>`;
+  try {
+    const [franchises, collections] = await Promise.all([
+      window.VaultFranchises.listAdminFranchises(),
+      window.VaultFranchises.listAdminCollections(),
+    ]);
+    state.admin.franchises = franchises || [];
+    state.admin.collections = collections || [];
+    renderAdminEditorialLists();
+    if (preserveSelection && state.admin.selectedFranchise?.franchise?.id) {
+      await openAdminFranchise(state.admin.selectedFranchise.franchise.id);
+    }
+    if (preserveSelection && state.admin.selectedCollection?.collection?.id) {
+      await openAdminCollection(state.admin.selectedCollection.collection.id);
+    }
+  } catch (error) {
+    console.error("Gestione editoriale non disponibile", error);
+    ui.adminFranchiseList.innerHTML = `<div class="timeline-empty">Applica la migrazione v4.6 prima di usare questa sezione.</div>`;
+    ui.adminCollectionList.innerHTML = `<div class="timeline-empty">Dati non disponibili.</div>`;
+  }
+}
+
+function renderAdminFranchiseGames() {
+  const data = state.admin.selectedFranchise;
+  const franchise = data?.franchise;
+  const games = data?.games || [];
+  ui.adminFranchiseGames.replaceChildren();
+  if (!franchise) return;
+  ui.adminFranchiseOpen.href = franchiseRoute(franchise.slug);
+  for (const game of games) {
+    const card = document.createElement("article");
+    card.className = "admin-editorial-game-card";
+    card.innerHTML = `
+      <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+      <div><strong>${escapeHtml(game.title)}</strong><span>${escapeHtml(FRANCHISE_RELATION_LABELS[game.relation_type] || game.relation_type)} · Uscita #${Number(game.release_order || 0)}${game.narrative_order ? ` · Narrativa #${Number(game.narrative_order)}` : ""}</span></div>
+      <div class="admin-card-actions"><button class="button button-secondary" data-edit type="button">Modifica</button><button class="button button-danger" data-remove type="button">Rimuovi</button></div>`;
+    card.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+    card.querySelector("[data-edit]").onclick = () => {
+      ui.adminFranchiseGameKey.value = gameKey(game);
+      ui.adminFranchiseGameSelected.textContent = game.title;
+      ui.adminFranchiseGameType.value = game.relation_type || "main";
+      ui.adminFranchiseReleaseOrder.value = String(game.release_order || games.length + 1);
+      ui.adminFranchiseNarrativeOrder.value = game.narrative_order || "";
+      ui.adminFranchiseGameNote.value = game.franchise_note || "";
+      ui.adminFranchiseGameForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    card.querySelector("[data-remove]").onclick = async () => {
+      if (!confirm(`Rimuovere ${game.title} dal franchise?`)) return;
+      try {
+        state.admin.selectedFranchise = await window.VaultFranchises.removeAdminFranchiseGame(franchise.id, gameKey(game));
+        renderAdminFranchiseGames();
+        await loadAdminEditorial({ preserveSelection: false });
+        showToast("Gioco rimosso dal franchise.");
+      } catch (error) {
+        showToast(error.message || "Rimozione fallita.");
+      }
+    };
+    ui.adminFranchiseGames.append(card);
+  }
+  if (!games.length) ui.adminFranchiseGames.innerHTML = `<div class="timeline-empty">Nessun gioco collegato.</div>`;
+}
+
+async function openAdminFranchise(id) {
+  try {
+    const data = await window.VaultFranchises.getAdminFranchise(id);
+    if (!data?.franchise) throw new Error("Franchise non trovato.");
+    state.admin.selectedFranchise = data;
+    const franchise = data.franchise;
+    ui.adminFranchiseId.value = franchise.id;
+    ui.adminFranchiseName.value = franchise.name || "";
+    ui.adminFranchiseSlug.value = franchise.slug || "";
+    ui.adminFranchiseStatus.value = franchise.status || "draft";
+    ui.adminFranchiseImage.value = franchise.hero_image_url || "";
+    ui.adminFranchiseDescription.value = franchise.description || "";
+    ui.adminFranchiseDelete.hidden = false;
+    ui.adminFranchiseGamesEditor.hidden = false;
+    setAdminEditorialMessage(ui.adminFranchiseMessage, "");
+    renderAdminFranchiseGames();
+    renderAdminEditorialLists();
+  } catch (error) {
+    showToast(error.message || "Franchise non disponibile.");
+  }
+}
+
+function renderAdminCollectionGames() {
+  const data = state.admin.selectedCollection;
+  const collection = data?.collection;
+  const games = data?.games || [];
+  ui.adminCollectionGames.replaceChildren();
+  if (!collection) return;
+  ui.adminCollectionOpen.href = editorialCollectionRoute(collection.slug);
+  for (const game of games) {
+    const card = document.createElement("article");
+    card.className = "admin-editorial-game-card";
+    card.innerHTML = `
+      <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+      <div><strong>${escapeHtml(game.title)}</strong><span>Posizione #${Number(game.collection_position || 0)}</span></div>
+      <div class="admin-card-actions"><button class="button button-secondary" data-edit type="button">Modifica</button><button class="button button-danger" data-remove type="button">Rimuovi</button></div>`;
+    card.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+    card.querySelector("[data-edit]").onclick = () => {
+      ui.adminCollectionGameKey.value = gameKey(game);
+      ui.adminCollectionGameSelected.textContent = game.title;
+      ui.adminCollectionPosition.value = String(game.collection_position || games.length + 1);
+      ui.adminCollectionGameNote.value = game.editorial_note || "";
+      ui.adminCollectionGameForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    card.querySelector("[data-remove]").onclick = async () => {
+      if (!confirm(`Rimuovere ${game.title} dalla collezione?`)) return;
+      try {
+        state.admin.selectedCollection = await window.VaultFranchises.removeAdminCollectionGame(collection.id, gameKey(game));
+        renderAdminCollectionGames();
+        await loadAdminEditorial({ preserveSelection: false });
+        showToast("Gioco rimosso dalla collezione.");
+      } catch (error) {
+        showToast(error.message || "Rimozione fallita.");
+      }
+    };
+    ui.adminCollectionGames.append(card);
+  }
+  if (!games.length) ui.adminCollectionGames.innerHTML = `<div class="timeline-empty">Nessun gioco collegato.</div>`;
+}
+
+async function openAdminCollection(id) {
+  try {
+    const data = await window.VaultFranchises.getAdminCollection(id);
+    if (!data?.collection) throw new Error("Collezione non trovata.");
+    state.admin.selectedCollection = data;
+    const collection = data.collection;
+    ui.adminCollectionId.value = collection.id;
+    ui.adminCollectionTitle.value = collection.title || "";
+    ui.adminCollectionSlug.value = collection.slug || "";
+    ui.adminCollectionStatus.value = collection.status || "draft";
+    ui.adminCollectionImage.value = collection.cover_image_url || "";
+    ui.adminCollectionDescription.value = collection.description || "";
+    ui.adminCollectionCuratorNote.value = collection.curator_note || "";
+    ui.adminCollectionDelete.hidden = false;
+    ui.adminCollectionGamesEditor.hidden = false;
+    setAdminEditorialMessage(ui.adminCollectionMessage, "");
+    renderAdminCollectionGames();
+    renderAdminEditorialLists();
+  } catch (error) {
+    showToast(error.message || "Collezione non disponibile.");
+  }
+}
+
+function renderAdminEditorialSearchResults(container, games, kind) {
+  container.replaceChildren();
+  if (!games.length) {
+    container.innerHTML = `<div class="timeline-empty">Nessun gioco trovato.</div>`;
+    return;
+  }
+  for (const game of games) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "admin-result-item";
+    button.innerHTML = `<img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt=""><span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.match_key || game.canonical_id || "")}</small></span><b>Seleziona</b>`;
+    button.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+    button.onclick = () => {
+      if (kind === "franchise") {
+        const gamesCount = state.admin.selectedFranchise?.games?.length || 0;
+        ui.adminFranchiseGameKey.value = gameKey(game);
+        ui.adminFranchiseGameSelected.textContent = game.title;
+        ui.adminFranchiseReleaseOrder.value = String(gamesCount + 1);
+        ui.adminFranchiseNarrativeOrder.value = "";
+        ui.adminFranchiseGameType.value = "main";
+        ui.adminFranchiseGameNote.value = "";
+      } else {
+        const gamesCount = state.admin.selectedCollection?.games?.length || 0;
+        ui.adminCollectionGameKey.value = gameKey(game);
+        ui.adminCollectionGameSelected.textContent = game.title;
+        ui.adminCollectionPosition.value = String(gamesCount + 1);
+        ui.adminCollectionGameNote.value = "";
+      }
+      container.replaceChildren();
+    };
+    container.append(button);
+  }
+}
+
+async function searchAdminEditorialGames(kind) {
+  const input = kind === "franchise" ? ui.adminFranchiseGameSearch : ui.adminCollectionGameSearch;
+  const container = kind === "franchise" ? ui.adminFranchiseGameSearchResults : ui.adminCollectionGameSearchResults;
+  const query = input.value.trim();
+  if (query.length < 2) return;
+  container.innerHTML = `<div class="route-loading">Ricerca…</div>`;
+  try {
+    const result = await window.VaultCatalog.search({ query, limit: 12, offset: 0, force: true });
+    renderAdminEditorialSearchResults(container, result.items || [], kind);
+  } catch (error) {
+    console.error("Ricerca gioco editoriale fallita", error);
+    container.innerHTML = `<div class="timeline-empty">Ricerca non disponibile.</div>`;
+  }
 }
 
 async function loadAdminMatches() {
@@ -4313,6 +5009,163 @@ ui.adminClearOverride?.addEventListener("click", async () => {
   }
 });
 
+
+$$('[data-franchise-order]').forEach((button) => {
+  button.addEventListener("click", () => {
+    state.franchiseOrder = button.dataset.franchiseOrder === "narrative" ? "narrative" : "release";
+    $$('[data-franchise-order]').forEach((item) => item.classList.toggle("is-active", item === button));
+    renderFranchiseSections();
+  });
+});
+
+ui.adminEditorialRefresh?.addEventListener("click", () => loadAdminEditorial());
+ui.adminFranchiseNew?.addEventListener("click", resetAdminFranchiseForm);
+ui.adminCollectionNew?.addEventListener("click", resetAdminCollectionForm);
+
+ui.adminFranchiseName?.addEventListener("input", () => {
+  if (!ui.adminFranchiseId.value && !ui.adminFranchiseSlug.dataset.edited) {
+    ui.adminFranchiseSlug.value = editorialSlug(ui.adminFranchiseName.value);
+  }
+});
+ui.adminFranchiseSlug?.addEventListener("input", () => { ui.adminFranchiseSlug.dataset.edited = "1"; });
+ui.adminCollectionTitle?.addEventListener("input", () => {
+  if (!ui.adminCollectionId.value && !ui.adminCollectionSlug.dataset.edited) {
+    ui.adminCollectionSlug.value = editorialSlug(ui.adminCollectionTitle.value);
+  }
+});
+ui.adminCollectionSlug?.addEventListener("input", () => { ui.adminCollectionSlug.dataset.edited = "1"; });
+
+ui.adminFranchiseForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setAdminEditorialMessage(ui.adminFranchiseMessage, "");
+  try {
+    const data = await window.VaultFranchises.saveAdminFranchise({
+      id: ui.adminFranchiseId.value || null,
+      name: ui.adminFranchiseName.value,
+      slug: ui.adminFranchiseSlug.value,
+      description: ui.adminFranchiseDescription.value,
+      heroImageUrl: ui.adminFranchiseImage.value,
+      status: ui.adminFranchiseStatus.value,
+    });
+    state.admin.selectedFranchise = data;
+    ui.adminFranchiseSlug.dataset.edited = "";
+    await loadAdminEditorial({ preserveSelection: false });
+    await openAdminFranchise(data.franchise.id);
+    setAdminEditorialMessage(ui.adminFranchiseMessage, "Franchise salvato.", true);
+  } catch (error) {
+    setAdminEditorialMessage(ui.adminFranchiseMessage, error.message || "Salvataggio fallito.");
+  }
+});
+
+ui.adminFranchiseDelete?.addEventListener("click", async () => {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise || !confirm(`Eliminare definitivamente il franchise ${franchise.name}?`)) return;
+  try {
+    await window.VaultFranchises.deleteAdminFranchise(franchise.id);
+    resetAdminFranchiseForm();
+    await loadAdminEditorial({ preserveSelection: false });
+    showToast("Franchise eliminato.");
+  } catch (error) {
+    showToast(error.message || "Eliminazione fallita.");
+  }
+});
+
+ui.adminFranchiseGameSearchForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await searchAdminEditorialGames("franchise");
+});
+
+ui.adminFranchiseGameForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise || !ui.adminFranchiseGameKey.value) {
+    showToast("Seleziona prima un gioco.");
+    return;
+  }
+  try {
+    state.admin.selectedFranchise = await window.VaultFranchises.saveAdminFranchiseGame(franchise.id, {
+      gameKey: ui.adminFranchiseGameKey.value,
+      relationType: ui.adminFranchiseGameType.value,
+      releaseOrder: ui.adminFranchiseReleaseOrder.value,
+      narrativeOrder: ui.adminFranchiseNarrativeOrder.value,
+      note: ui.adminFranchiseGameNote.value,
+    });
+    ui.adminFranchiseGameForm.reset();
+    ui.adminFranchiseGameKey.value = "";
+    ui.adminFranchiseGameSelected.textContent = "Nessun gioco selezionato";
+    renderAdminFranchiseGames();
+    await loadAdminEditorial({ preserveSelection: false });
+    showToast("Gioco collegato al franchise.");
+  } catch (error) {
+    showToast(error.message || "Collegamento fallito.");
+  }
+});
+
+ui.adminCollectionForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setAdminEditorialMessage(ui.adminCollectionMessage, "");
+  try {
+    const data = await window.VaultFranchises.saveAdminCollection({
+      id: ui.adminCollectionId.value || null,
+      title: ui.adminCollectionTitle.value,
+      slug: ui.adminCollectionSlug.value,
+      description: ui.adminCollectionDescription.value,
+      coverImageUrl: ui.adminCollectionImage.value,
+      curatorNote: ui.adminCollectionCuratorNote.value,
+      status: ui.adminCollectionStatus.value,
+    });
+    state.admin.selectedCollection = data;
+    ui.adminCollectionSlug.dataset.edited = "";
+    await loadAdminEditorial({ preserveSelection: false });
+    await openAdminCollection(data.collection.id);
+    setAdminEditorialMessage(ui.adminCollectionMessage, "Collezione salvata.", true);
+  } catch (error) {
+    setAdminEditorialMessage(ui.adminCollectionMessage, error.message || "Salvataggio fallito.");
+  }
+});
+
+ui.adminCollectionDelete?.addEventListener("click", async () => {
+  const collection = state.admin.selectedCollection?.collection;
+  if (!collection || !confirm(`Eliminare definitivamente la collezione ${collection.title}?`)) return;
+  try {
+    await window.VaultFranchises.deleteAdminCollection(collection.id);
+    resetAdminCollectionForm();
+    await loadAdminEditorial({ preserveSelection: false });
+    showToast("Collezione eliminata.");
+  } catch (error) {
+    showToast(error.message || "Eliminazione fallita.");
+  }
+});
+
+ui.adminCollectionGameSearchForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await searchAdminEditorialGames("collection");
+});
+
+ui.adminCollectionGameForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const collection = state.admin.selectedCollection?.collection;
+  if (!collection || !ui.adminCollectionGameKey.value) {
+    showToast("Seleziona prima un gioco.");
+    return;
+  }
+  try {
+    state.admin.selectedCollection = await window.VaultFranchises.saveAdminCollectionGame(collection.id, {
+      gameKey: ui.adminCollectionGameKey.value,
+      position: ui.adminCollectionPosition.value,
+      editorialNote: ui.adminCollectionGameNote.value,
+    });
+    ui.adminCollectionGameForm.reset();
+    ui.adminCollectionGameKey.value = "";
+    ui.adminCollectionGameSelected.textContent = "Nessun gioco selezionato";
+    renderAdminCollectionGames();
+    await loadAdminEditorial({ preserveSelection: false });
+    showToast("Gioco aggiunto alla collezione.");
+  } catch (error) {
+    showToast(error.message || "Collegamento fallito.");
+  }
+});
+
 ui.adminMatchRefresh?.addEventListener("click", loadAdminMatches);
 ui.adminMatchStatus?.addEventListener("change", loadAdminMatches);
 ui.adminReportRefresh?.addEventListener("click", loadAdminReports);
@@ -4724,6 +5577,10 @@ window.addEventListener("tfv:steam-library-import", (event) => {
   showToast(`Importati ${result.imported} giochi Steam${result.unmatched ? `, ${result.unmatched} senza match catalogo` : ""}.`);
   if (state.route.name === "library") renderDashboard();
   if (state.route.name === "profile") renderProfilePage();
+  if (state.route.name === "franchise") {
+    renderFranchiseProgress(state.franchiseData?.games || []);
+    renderFranchiseSections();
+  }
 });
 
 ui.diarySearch?.addEventListener("input", renderDiaryPage);
@@ -4740,6 +5597,10 @@ window.addEventListener("tfv:journal-changed", () => {
   if (state.route.name === "diary") renderDiaryPage();
   if (state.route.name === "stats") void renderStatsPage();
   if (state.route.name === "profile") renderProfilePage();
+  if (state.route.name === "franchise") {
+    renderFranchiseProgress(state.franchiseData?.games || []);
+    renderFranchiseSections();
+  }
 });
 window.addEventListener("tfv:journal-sync-error", () => {
   showToast("Diario salvato localmente; sincronizzazione cloud non disponibile.");
