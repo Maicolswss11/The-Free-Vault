@@ -1866,8 +1866,9 @@ function renderRating(game, entry) {
     button.textContent = rating <= selected ? "★" : "☆";
     button.setAttribute("aria-label", `${rating} stelle`);
     button.onclick = () => {
-      setLibraryEntry(game, { rating: selected === rating ? 0 : rating });
-      void renderGamePage();
+      const nextRating = selected === rating ? 0 : rating;
+      const updatedEntry = setLibraryEntry(game, { rating: nextRating });
+      renderRating(game, updatedEntry);
     };
     ui.gamePageRating.append(button);
   }

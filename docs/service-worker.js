@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "the-free-vault-v4-5-admin-tools";
+const CACHE_NAME = "the-free-vault-v4-5-1-progress-rating-hotfix";
 const APP_SHELL = [
   "./",
   "./index.html",

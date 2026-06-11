@@ -30,7 +30,7 @@ def test_admin_routes_navigation_and_assets_exist():
     assert 'first === "admin"' in app
     assert 'renderAdminPage' in app
     assert '"./admin.js"' in worker
-    assert "the-free-vault-v4-5-admin-tools" in worker
+    assert "the-free-vault-v4-5-1-progress-rating-hotfix" in worker
 
 
 def test_admin_client_exposes_catalog_matching_moderation_and_system_methods():

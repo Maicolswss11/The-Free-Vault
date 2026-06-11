@@ -677,3 +677,10 @@ on conflict (user_id) do update set
 
 La tabella del catalogo non viene duplicata e la migrazione non aggiunge indici
 GIN o altre strutture pesanti.
+
+
+## v4.5.1 — Progress rating hotfix
+
+La selezione delle stelle nella scheda gioco aggiorna soltanto il voto personale.
+Il form dei progressi non viene più ricostruito e conserva stato, percentuale,
+date, piattaforma, difficoltà e note già inserite.

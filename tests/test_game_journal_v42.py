@@ -57,5 +57,5 @@ def test_privacy_and_backup_include_journal():
 
 def test_service_worker_caches_journal_module():
     service_worker = read("docs/service-worker.js")
-    assert 'the-free-vault-v4-5-admin-tools' in service_worker
+    assert 'the-free-vault-v4-5-1-progress-rating-hotfix' in service_worker
     assert '"./journal.js"' in service_worker

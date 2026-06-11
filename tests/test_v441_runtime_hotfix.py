@@ -12,4 +12,4 @@ def test_app_has_no_standalone_async_token():
 
 def test_hotfix_cache_name_is_present():
     sw = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
-    assert "the-free-vault-v4-5-admin-tools" in sw
+    assert "the-free-vault-v4-5-1-progress-rating-hotfix" in sw
