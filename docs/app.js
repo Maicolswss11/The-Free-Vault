@@ -2102,7 +2102,6 @@ async function renderStatsPage() {
   }
 }
 
-async 
 function renderDiscoveryCards(container, games) {
   container.replaceChildren();
   for (const game of games || []) {
