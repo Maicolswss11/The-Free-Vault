@@ -29,6 +29,7 @@
 
       <p class="nav-section-label">DISCOVER</p>
       <nav class="main-nav">
+        <a class="nav-item" data-route="discover" href="#/discover"><span>✦</span> Scopri giochi</a>
         <a class="nav-item" data-route="catalog" href="#/catalog"><span>▦</span> Catalogo multi-store</a>
       </nav>
 
@@ -275,6 +276,37 @@
           </div>
         </section>
 
+        <section id="discovery-page" class="route-page discovery-page" hidden>
+          <header class="page-heading discovery-heading">
+            <div>
+              <p class="eyebrow">DISCOVER</p>
+              <h1>Scopri il prossimo gioco</h1>
+              <p>Nuove uscite, titoli apprezzati dalla community e giochi disponibili su più store.</p>
+            </div>
+            <a class="button button-secondary" href="#/catalog">Apri catalogo completo</a>
+          </header>
+          <div id="discovery-status" class="notice" hidden></div>
+          <div id="discovery-sections" class="discovery-sections"></div>
+        </section>
+
+        <section id="entity-page" class="route-page entity-page" hidden>
+          <button class="page-back" data-back type="button">← Indietro</button>
+          <header class="entity-hero">
+            <div>
+              <p id="entity-kind" class="eyebrow">SVILUPPATORE</p>
+              <h1 id="entity-title">Catalogo</h1>
+              <p id="entity-meta" class="muted">Caricamento…</p>
+            </div>
+            <a class="button button-secondary" href="#/discover">Torna a Scopri</a>
+          </header>
+          <div id="entity-status" class="notice" hidden></div>
+          <section id="entity-games" class="games-grid entity-games" aria-live="polite"></section>
+          <div id="entity-pagination" class="catalog-pagination">
+            <span id="entity-page-summary"></span>
+            <button id="entity-load-more" class="button button-secondary" type="button">Carica altri giochi</button>
+          </div>
+        </section>
+
         <section id="game-page" class="route-page detail-page" hidden>
           <button class="page-back" data-back type="button">← Indietro</button>
           <article class="game-detail-shell">
@@ -411,6 +443,18 @@
               <div id="game-page-promotions" class="promotion-timeline"></div>
             </section>
           </div>
+
+          <section id="game-related-section" class="game-related-section" hidden>
+            <header class="social-section-header">
+              <div>
+                <p class="eyebrow">POTREBBERO PIACERTI</p>
+                <h2>Giochi correlati</h2>
+              </div>
+              <a class="button button-secondary" href="#/discover">Scopri altro</a>
+            </header>
+            <p id="game-related-status" class="muted">Caricamento suggerimenti…</p>
+            <div id="game-related-grid" class="discovery-game-strip"></div>
+          </section>
 
           <section class="game-social-section">
             <header class="social-section-header">

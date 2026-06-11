@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "the-free-vault-v4-3-mobile-navigation";
+const CACHE_NAME = "the-free-vault-v4-4-discovery";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -594,3 +594,41 @@ circolare e tasto Indietro di Android. I filtri di Catalogo, Libreria e
 Cronologia sono mostrati in un pannello mobile dedicato, con conteggio dei
 filtri attivi. La topbar mobile espone hamburger, ricerca globale e account,
 mentre notifiche e tutte le pagine secondarie restano raggiungibili dal drawer.
+
+
+## v4.4 — Discovery avanzata
+
+La sezione **Scopri giochi** aggiunge:
+
+- nuove uscite;
+- titoli più apprezzati dalla community;
+- giochi più recensiti;
+- titoli disponibili sia su Epic sia su Steam;
+- spotlight indie;
+- suggerimenti personalizzati basati sulla libreria;
+- pagine dedicate a sviluppatori e publisher;
+- giochi correlati nelle schede dettaglio.
+
+Nuove route:
+
+```text
+#/discover
+#/developer/<nome>
+#/publisher/<nome>
+```
+
+Prima del deploy del frontend eseguire:
+
+```text
+supabase/migrations/20260611_v44_discovery.sql
+```
+
+La migrazione aggiunge soltanto RPC leggere e paginate:
+
+```text
+catalog_discovery
+catalog_entity
+catalog_related_games
+```
+
+Non crea tabelle aggiuntive né nuovi indici pesanti.

@@ -3,6 +3,9 @@
   const pageCache = new Map();
   const gameCache = new Map();
   let statsCache = null;
+  let discoveryCache = null;
+  const entityCache = new Map();
+  const relatedCache = new Map();
 
   function client() {
     return window.VaultAuth?.client || null;
@@ -137,10 +140,99 @@
     return value;
   }
 
+
+  async function getDiscovery({ force = false, limit = 12 } = {}) {
+    if (!configured()) throw new Error("Supabase non configurato.");
+    if (!force && discoveryCache && Date.now() - discoveryCache.cachedAt < PAGE_CACHE_TTL) {
+      return discoveryCache.value;
+    }
+    const { data, error } = await client().rpc("catalog_discovery", {
+      p_limit: Math.max(4, Math.min(Number(limit) || 12, 24)),
+    });
+    if (error) throw error;
+    const value = {
+      recent: (data?.recent || []).map(normalizeItem),
+      communityTop: (data?.community_top || []).map(normalizeItem),
+      mostReviewed: (data?.most_reviewed || []).map(normalizeItem),
+      multiStore: (data?.multi_store || []).map(normalizeItem),
+      indie: (data?.indie || []).map(normalizeItem),
+      generatedAt: data?.generated_at || null,
+    };
+    for (const group of Object.values(value)) {
+      if (!Array.isArray(group)) continue;
+      for (const item of group) {
+        gameCache.set(item.canonical_id, item);
+        if (item.match_key) gameCache.set(item.match_key, item);
+      }
+    }
+    discoveryCache = { cachedAt: Date.now(), value };
+    return value;
+  }
+
+  async function getEntity(kind, name, options = {}) {
+    if (!configured()) throw new Error("Supabase non configurato.");
+    const normalizedKind = kind === "publisher" ? "publisher" : "developer";
+    const normalizedName = String(name || "").trim();
+    const limit = Math.max(1, Math.min(Number(options.limit) || 36, 100));
+    const offset = Math.max(0, Number(options.offset) || 0);
+    const key = cacheKey({ kind: normalizedKind, name: normalizedName, limit, offset });
+    const cached = entityCache.get(key);
+    if (!options.force && cached && Date.now() - cached.cachedAt < PAGE_CACHE_TTL) {
+      return cached.value;
+    }
+    const { data, error } = await client().rpc("catalog_entity", {
+      p_kind: normalizedKind,
+      p_name: normalizedName,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw error;
+    const value = {
+      kind: data?.kind || normalizedKind,
+      name: data?.name || normalizedName,
+      total: Number(data?.total || 0),
+      items: (data?.items || []).map(normalizeItem),
+      limit: Number(data?.limit || limit),
+      offset: Number(data?.offset || offset),
+    };
+    for (const item of value.items) {
+      gameCache.set(item.canonical_id, item);
+      if (item.match_key) gameCache.set(item.match_key, item);
+    }
+    entityCache.set(key, { cachedAt: Date.now(), value });
+    return value;
+  }
+
+  async function getRelated(key, { force = false, limit = 12 } = {}) {
+    if (!configured()) throw new Error("Supabase non configurato.");
+    const normalizedKey = String(key || "").trim();
+    const cacheId = `${normalizedKey}:${Math.max(1, Math.min(Number(limit) || 12, 24))}`;
+    const cached = relatedCache.get(cacheId);
+    if (!force && cached && Date.now() - cached.cachedAt < PAGE_CACHE_TTL) {
+      return cached.value;
+    }
+    const { data, error } = await client().rpc("catalog_related_games", {
+      p_key: normalizedKey,
+      p_limit: Math.max(1, Math.min(Number(limit) || 12, 24)),
+    });
+    if (error) throw error;
+    const value = (data || []).map(normalizeItem);
+    for (const item of value) {
+      gameCache.set(item.canonical_id, item);
+      if (item.match_key) gameCache.set(item.match_key, item);
+    }
+    relatedCache.set(cacheId, { cachedAt: Date.now(), value });
+    return value;
+  }
+
+
   function clearCache() {
     pageCache.clear();
     gameCache.clear();
+    entityCache.clear();
+    relatedCache.clear();
     statsCache = null;
+    discoveryCache = null;
   }
 
   window.VaultCatalog = {
@@ -149,6 +241,9 @@
     search,
     getGame,
     getGames,
+    getDiscovery,
+    getEntity,
+    getRelated,
     clearCache,
   };
 })();

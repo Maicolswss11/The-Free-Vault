@@ -29,6 +29,13 @@ const state = {
   catalogHasMore: false,
   catalogRequestId: 0,
   globalSearchRequestId: 0,
+  discoveryData: null,
+  discoveryLoading: false,
+  discoveryPersonalized: [],
+  discoverySeedKey: null,
+  entityData: null,
+  entityLoading: false,
+  entityRequestId: 0,
   library: loadLibrary(null),
   lists: loadLists(null),
   route: { name: "home", params: {}, query: new URLSearchParams() },
@@ -83,6 +90,18 @@ const ui = {
   notificationsPage: $("#notifications-page"),
   diaryPage: $("#diary-page"),
   statsPage: $("#stats-page"),
+  discoveryPage: $("#discovery-page"),
+  entityPage: $("#entity-page"),
+  discoveryStatus: $("#discovery-status"),
+  discoverySections: $("#discovery-sections"),
+  entityKind: $("#entity-kind"),
+  entityTitle: $("#entity-title"),
+  entityMeta: $("#entity-meta"),
+  entityStatus: $("#entity-status"),
+  entityGames: $("#entity-games"),
+  entityPagination: $("#entity-pagination"),
+  entityPageSummary: $("#entity-page-summary"),
+  entityLoadMore: $("#entity-load-more"),
   grid: $("#games-grid"),
   template: $("#game-card-template"),
   search: $("#search-input"),
@@ -249,6 +268,9 @@ const ui = {
   gamePageSessions: $("#game-page-sessions"),
   gamePagePromotions: $("#game-page-promotions"),
   gamePageStoreOptions: $("#game-page-store-options"),
+  gameRelatedSection: $("#game-related-section"),
+  gameRelatedStatus: $("#game-related-status"),
+  gameRelatedGrid: $("#game-related-grid"),
   publicRatingAverage: $("#public-rating-average"),
   publicRatingCount: $("#public-rating-count"),
   publicReviewSignedOut: $("#public-review-signed-out"),
@@ -865,6 +887,11 @@ function listRoute(id) {
   return `#/list/${encodeURIComponent(id)}`;
 }
 
+function entityRoute(kind, name) {
+  const safeKind = kind === "publisher" ? "publisher" : "developer";
+  return `#/${safeKind}/${encodeURIComponent(name)}`;
+}
+
 const MOBILE_NAV_QUERY = window.matchMedia("(max-width: 820px)");
 let lastMobileMenuTrigger = null;
 let lastFilterTrigger = null;
@@ -980,6 +1007,7 @@ function parseRoute() {
     upcoming: "upcoming",
     history: "history",
     catalog: "catalog",
+    discover: "discover",
     library: "library",
     lists: "lists",
     profile: "profile",
@@ -995,6 +1023,16 @@ function parseRoute() {
   };
   if (first === "game" && segments[1]) {
     return { name: "game", params: { key: decodeURIComponent(segments.slice(1).join("/")) }, query };
+  }
+  if ((first === "developer" || first === "publisher") && segments[1]) {
+    return {
+      name: "entity",
+      params: {
+        kind: first,
+        name: decodeURIComponent(segments.slice(1).join("/")),
+      },
+      query,
+    };
   }
   if (first === "list" && segments[1]) {
     return { name: "list", params: { id: decodeURIComponent(segments[1]) }, query };
@@ -1028,6 +1066,8 @@ function setPageVisibility(page) {
   ui.notificationsPage.hidden = page !== "notifications";
   ui.diaryPage.hidden = page !== "diary";
   ui.statsPage.hidden = page !== "stats";
+  ui.discoveryPage.hidden = page !== "discovery";
+  ui.entityPage.hidden = page !== "entity";
 }
 
 function updateDocumentTitle(label) {
@@ -1041,7 +1081,9 @@ function setActiveNavigation(routeName) {
       ? "profile"
       : routeName === "settings"
         ? "settings"
-        : routeName;
+        : routeName === "entity"
+          ? "discover"
+          : routeName;
   $$("[data-route]").forEach((node) => {
     node.classList.toggle("is-active", node.dataset.route === normalized);
   });
@@ -1082,6 +1124,12 @@ function handleRoute() {
   } else if (state.route.name === "game") {
     setPageVisibility("game");
     void renderGamePage();
+  } else if (state.route.name === "discover") {
+    setPageVisibility("discovery");
+    void renderDiscoveryPage();
+  } else if (state.route.name === "entity") {
+    setPageVisibility("entity");
+    void loadEntityPage({ reset: true });
   } else if (state.route.name === "public-profile") {
     setPageVisibility("public-profile");
     void renderPublicProfilePage();
@@ -2054,6 +2102,254 @@ async function renderStatsPage() {
   }
 }
 
+async 
+function renderDiscoveryCards(container, games) {
+  container.replaceChildren();
+  for (const game of games || []) {
+    registerCatalogGame(game);
+    container.append(renderCard(game));
+  }
+}
+
+function createDiscoverySection({ title, subtitle, games, actionHref = "#/catalog", actionLabel = "Vedi tutto" }) {
+  const section = document.createElement("section");
+  section.className = "discovery-section";
+  section.innerHTML = `
+    <header class="discovery-section-header">
+      <div>
+        <p class="eyebrow">${escapeHtml(subtitle || "DISCOVER")}</p>
+        <h2>${escapeHtml(title)}</h2>
+      </div>
+      <a class="discovery-section-link" href="${escapeAttr(actionHref)}">${escapeHtml(actionLabel)} →</a>
+    </header>
+    <div class="discovery-game-strip"></div>`;
+  const grid = section.querySelector(".discovery-game-strip");
+  if (!games?.length) {
+    grid.innerHTML = `<div class="timeline-empty">Nessun gioco disponibile in questa sezione.</div>`;
+  } else {
+    renderDiscoveryCards(grid, games);
+  }
+  return section;
+}
+
+function preferredDiscoverySeed() {
+  const entries = Object.values(state.library)
+    .filter((entry) => entry?.game)
+    .sort((a, b) => {
+      const favoriteDelta = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite));
+      if (favoriteDelta) return favoriteDelta;
+      return String(b.updatedAt || b.addedAt || "").localeCompare(String(a.updatedAt || a.addedAt || ""));
+    });
+  return entries[0]?.game || null;
+}
+
+async function renderDiscoveryPage({ force = false } = {}) {
+  updateDocumentTitle("Scopri giochi");
+  ui.discoverySections.replaceChildren();
+  ui.discoveryStatus.hidden = true;
+
+  if (!window.VaultCatalog?.configured()) {
+    ui.discoveryStatus.textContent = "Configura Supabase per usare le sezioni di scoperta.";
+    ui.discoveryStatus.hidden = false;
+    return;
+  }
+
+  if (state.discoveryLoading) return;
+  state.discoveryLoading = true;
+  ui.discoverySections.innerHTML = `<div class="route-loading">Preparazione dei suggerimenti…</div>`;
+
+  try {
+    const data = await window.VaultCatalog.getDiscovery({ force, limit: 12 });
+    if (state.route.name !== "discover") return;
+    state.discoveryData = data;
+
+    const seed = preferredDiscoverySeed();
+    let personalized = [];
+    if (seed) {
+      const seedKey = gameKey(seed);
+      if (force || state.discoverySeedKey !== seedKey) {
+        state.discoveryPersonalized = await window.VaultCatalog.getRelated(seedKey, { force, limit: 12 });
+        state.discoverySeedKey = seedKey;
+      }
+      personalized = state.discoveryPersonalized
+        .filter((game) => gameKey(game) !== seedKey && !getLibraryEntry(game));
+    }
+
+    if (state.route.name !== "discover") return;
+    ui.discoverySections.replaceChildren();
+
+    if (seed && personalized.length) {
+      ui.discoverySections.append(createDiscoverySection({
+        title: `Perché ti piace ${seed.title}`,
+        subtitle: "SCELTI PER TE",
+        games: personalized,
+        actionHref: gameRoute(seed),
+        actionLabel: "Apri il gioco di partenza",
+      }));
+    }
+
+    ui.discoverySections.append(
+      createDiscoverySection({
+        title: "Nuove uscite",
+        subtitle: "APPENA ARRIVATI",
+        games: data.recent,
+        actionHref: "#/catalog",
+        actionLabel: "Catalogo",
+      }),
+      createDiscoverySection({
+        title: "Più apprezzati dalla community",
+        subtitle: "VOTI PUBBLICI",
+        games: data.communityTop,
+        actionHref: "#/feed",
+        actionLabel: "Feed",
+      }),
+      createDiscoverySection({
+        title: "I più recensiti",
+        subtitle: "COMMUNITY",
+        games: data.mostReviewed,
+        actionHref: "#/feed",
+        actionLabel: "Recensioni",
+      }),
+      createDiscoverySection({
+        title: "Disponibili su Epic e Steam",
+        subtitle: "MULTI-STORE",
+        games: data.multiStore,
+        actionHref: "#/catalog",
+        actionLabel: "Confronta store",
+      }),
+      createDiscoverySection({
+        title: "Indie da scoprire",
+        subtitle: "SPOTLIGHT",
+        games: data.indie,
+        actionHref: "#/catalog",
+        actionLabel: "Esplora indie",
+      }),
+    );
+  } catch (error) {
+    console.error("Caricamento discovery fallito", error);
+    ui.discoverySections.replaceChildren();
+    ui.discoveryStatus.textContent = "Le sezioni di scoperta non sono disponibili. Verifica la migrazione v4.4.";
+    ui.discoveryStatus.hidden = false;
+  } finally {
+    state.discoveryLoading = false;
+  }
+}
+
+function renderEntityPage() {
+  const data = state.entityData;
+  const kind = state.route.params.kind === "publisher" ? "publisher" : "developer";
+  const label = kind === "publisher" ? "PUBLISHER" : "SVILUPPATORE";
+  const name = state.route.params.name || data?.name || "Catalogo";
+
+  ui.entityKind.textContent = label;
+  ui.entityTitle.textContent = name;
+  updateDocumentTitle(name);
+  ui.entityGames.replaceChildren();
+
+  if (!data?.items?.length) {
+    if (state.entityLoading) {
+      ui.entityGames.innerHTML = `<div class="route-loading">Caricamento giochi…</div>`;
+    } else {
+      ui.entityGames.innerHTML = `<div class="empty-state"><strong>Nessun gioco trovato</strong><span>Il catalogo non contiene ancora titoli associati a questo ${kind === "publisher" ? "publisher" : "sviluppatore"}.</span></div>`;
+    }
+  } else {
+    for (const game of data.items) {
+      registerCatalogGame(game);
+      ui.entityGames.append(renderCard(game));
+    }
+  }
+
+  const shown = data?.items?.length || 0;
+  const total = Number(data?.total || 0);
+  ui.entityMeta.textContent = total
+    ? `${total.toLocaleString("it-IT")} giochi nel catalogo multi-store`
+    : state.entityLoading ? "Caricamento…" : "Nessun gioco disponibile";
+  ui.entityPageSummary.textContent = total
+    ? `${shown.toLocaleString("it-IT")} di ${total.toLocaleString("it-IT")} giochi`
+    : "";
+  ui.entityPagination.hidden = total === 0;
+  ui.entityLoadMore.hidden = shown >= total;
+  ui.entityLoadMore.disabled = state.entityLoading;
+  ui.entityLoadMore.textContent = state.entityLoading ? "Caricamento…" : "Carica altri giochi";
+}
+
+async function loadEntityPage({ reset = true, force = false } = {}) {
+  if (state.route.name !== "entity") return;
+  if (!window.VaultCatalog?.configured()) {
+    ui.entityStatus.textContent = "Configura Supabase per aprire le pagine sviluppatore e publisher.";
+    ui.entityStatus.hidden = false;
+    return;
+  }
+
+  const requestId = ++state.entityRequestId;
+  const kind = state.route.params.kind === "publisher" ? "publisher" : "developer";
+  const name = state.route.params.name || "";
+  const offset = reset ? 0 : (state.entityData?.items?.length || 0);
+
+  state.entityLoading = true;
+  if (reset) state.entityData = { kind, name, total: 0, items: [], limit: 36, offset: 0 };
+  ui.entityStatus.hidden = true;
+  renderEntityPage();
+
+  try {
+    const response = await window.VaultCatalog.getEntity(kind, name, {
+      limit: 36,
+      offset,
+      force,
+    });
+    if (requestId !== state.entityRequestId || state.route.name !== "entity") return;
+
+    if (reset) {
+      state.entityData = response;
+    } else {
+      const merged = new Map((state.entityData?.items || []).map((game) => [gameKey(game), game]));
+      for (const game of response.items) merged.set(gameKey(game), game);
+      state.entityData = { ...response, items: [...merged.values()] };
+    }
+  } catch (error) {
+    console.error("Caricamento pagina catalogo entity fallito", error);
+    if (requestId !== state.entityRequestId) return;
+    ui.entityStatus.textContent = "Pagina temporaneamente non disponibile. Verifica la migrazione v4.4.";
+    ui.entityStatus.hidden = false;
+  } finally {
+    if (requestId === state.entityRequestId) {
+      state.entityLoading = false;
+      renderEntityPage();
+    }
+  }
+}
+
+async function renderRelatedGames(game) {
+  ui.gameRelatedGrid.replaceChildren();
+  ui.gameRelatedStatus.textContent = "Caricamento suggerimenti…";
+  ui.gameRelatedStatus.hidden = false;
+  ui.gameRelatedSection.hidden = false;
+
+  if (!window.VaultCatalog?.configured() || game.source_kind !== "catalog") {
+    ui.gameRelatedSection.hidden = true;
+    return;
+  }
+
+  const expectedKey = gameKey(game);
+  try {
+    const related = await window.VaultCatalog.getRelated(expectedKey, { limit: 12 });
+    const routed = state.route.name === "game" ? resolveGameByKey(state.route.params.key) : null;
+    if (!routed || gameKey(routed) !== expectedKey) return;
+
+    const filtered = related.filter((candidate) => gameKey(candidate) !== expectedKey);
+    ui.gameRelatedGrid.replaceChildren();
+    if (!filtered.length) {
+      ui.gameRelatedStatus.textContent = "Non ci sono ancora suggerimenti sufficienti per questo titolo.";
+      return;
+    }
+    ui.gameRelatedStatus.hidden = true;
+    renderDiscoveryCards(ui.gameRelatedGrid, filtered);
+  } catch (error) {
+    console.error("Caricamento giochi correlati fallito", error);
+    ui.gameRelatedStatus.textContent = "Suggerimenti temporaneamente non disponibili.";
+  }
+}
+
 async function renderGamePage() {
   let game = resolveGameByKey(state.route.params.key);
   if (!game && window.VaultCatalog?.configured()) {
@@ -2077,6 +2373,7 @@ async function renderGamePage() {
     ui.gamePageImage.src = PLACEHOLDER;
     ui.gamePageMeta.replaceChildren();
     ui.gamePagePromotions.replaceChildren();
+    ui.gameRelatedSection.hidden = true;
     return;
   }
 
@@ -2091,8 +2388,15 @@ async function renderGamePage() {
   ui.gamePageBadge.textContent = badgeText(game);
   ui.gamePageTitle.textContent = game.title;
   const availableStores = game.stores || listingsForGame(game).map((listing) => listing.store);
-  ui.gamePageByline.textContent = [game.developer, game.publisher].filter(Boolean).join(" · ")
-    || [...new Set(availableStores)].map(storeLabel).join(" · ")
+  const bylineParts = [];
+  if (game.developer) {
+    bylineParts.push(`<a href="${escapeAttr(entityRoute("developer", game.developer))}">${escapeHtml(game.developer)}</a>`);
+  }
+  if (game.publisher) {
+    bylineParts.push(`<a href="${escapeAttr(entityRoute("publisher", game.publisher))}">${escapeHtml(game.publisher)}</a>`);
+  }
+  ui.gamePageByline.innerHTML = bylineParts.join(" · ")
+    || escapeHtml([...new Set(availableStores)].map(storeLabel).join(" · "))
     || "Store non disponibile";
   ui.gamePageDescription.textContent = game.description || "Descrizione non disponibile.";
   ui.gamePageMeta.innerHTML = [
@@ -2125,6 +2429,7 @@ async function renderGamePage() {
   renderStoreOptions(game);
   renderPromotionTimeline(game);
   renderGameSessions(game);
+  void renderRelatedGames(game);
   void renderGameSocial(game);
 
   ui.gamePageLibrary.onclick = () => {
@@ -3650,8 +3955,20 @@ ui.priceFilter.addEventListener("change", () => applyDashboardFilter(() => { sta
 ui.yearFilter.addEventListener("change", () => applyDashboardFilter(() => { state.yearFilter = ui.yearFilter.value; }));
 ui.sort.addEventListener("change", () => applyDashboardFilter(() => { state.sort = ui.sort.value; }));
 ui.catalogLoadMore.addEventListener("click", () => { void loadCatalogPage({ reset: false }); });
+ui.entityLoadMore?.addEventListener("click", () => { void loadEntityPage({ reset: false }); });
 ui.refresh.addEventListener("click", () => {
   window.VaultCatalog?.clearCache();
+  state.discoveryData = null;
+  state.discoveryPersonalized = [];
+  state.discoverySeedKey = null;
+  if (state.route.name === "discover") {
+    void renderDiscoveryPage({ force: true });
+    return;
+  }
+  if (state.route.name === "entity") {
+    void loadEntityPage({ reset: true, force: true });
+    return;
+  }
   void loadData();
 });
 ui.createListButton.addEventListener("click", () => openListEditor());
