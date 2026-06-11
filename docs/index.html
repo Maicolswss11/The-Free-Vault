@@ -12,7 +12,8 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Navigazione principale">
+    <aside id="app-sidebar" class="sidebar" aria-label="Navigazione principale" aria-hidden="false">
+      <button id="sidebar-close" class="sidebar-close" type="button" aria-label="Chiudi menu">×</button>
       <a class="brand" href="#/home" aria-label="The Free Vault">
         <span class="brand-mark">V</span>
         <span><strong>The Free Vault</strong><small>Tracker & game journal</small></span>
@@ -69,8 +70,19 @@
       </div>
     </aside>
 
+    <button id="sidebar-backdrop" class="mobile-overlay-backdrop sidebar-backdrop" type="button" aria-label="Chiudi menu"></button>
+    <button id="filter-backdrop" class="mobile-overlay-backdrop filter-backdrop" type="button" aria-label="Chiudi filtri"></button>
+
     <div class="main-column">
       <header class="topbar">
+        <button
+          id="menu-button"
+          class="icon-button menu-button"
+          type="button"
+          aria-label="Apri menu"
+          aria-controls="app-sidebar"
+          aria-expanded="false"
+        >☰</button>
         <div class="search-box">
           <span aria-hidden="true">⌕</span>
           <input
@@ -178,7 +190,15 @@
               <p id="view-eyebrow" class="eyebrow">THE FREE VAULT</p>
               <h2 id="view-title">Scopri i giochi gratuiti</h2>
             </div>
+            <button id="mobile-filter-toggle" class="mobile-filter-toggle" type="button" aria-controls="toolbar-controls" aria-expanded="false" hidden>
+              <span>Filtri e ordinamento</span>
+              <b id="mobile-filter-count" class="mobile-filter-count" hidden>0</b>
+            </button>
             <div id="toolbar-controls" class="toolbar-controls">
+              <div class="mobile-filter-panel-head">
+                <div><span class="eyebrow">CATALOGO</span><strong>Filtri e ordinamento</strong></div>
+                <button id="mobile-filter-close" class="mobile-filter-close" type="button" aria-label="Chiudi filtri">×</button>
+              </div>
               <label id="store-filter-wrap" class="filter-field">
                 <span>Store</span>
                 <select id="store-filter" aria-label="Filtra per store">
@@ -243,6 +263,7 @@
                   <option value="value">Prezzo più alto</option>
                 </select>
               </label>
+              <button id="mobile-filter-apply" class="button button-primary mobile-filter-apply" type="button">Mostra risultati</button>
             </div>
           </div>
 
@@ -944,12 +965,11 @@
     </div>
   </div>
 
-  <nav class="mobile-nav" aria-label="Navigazione mobile">
+  <nav class="mobile-nav" aria-label="Scorciatoie principali">
     <a class="mobile-nav-item is-active" data-route="home" href="#/home"><span>⌂</span>Home</a>
     <a class="mobile-nav-item" data-route="current" href="#/free"><span>◉</span>Gratis</a>
     <a class="mobile-nav-item" data-route="catalog" href="#/catalog"><span>▦</span>Catalogo</a>
     <a class="mobile-nav-item" data-route="diary" href="#/diary"><span>▤</span>Diario</a>
-    <a class="mobile-nav-item" data-route="lists" href="#/lists"><span>☷</span>Liste</a>
     <a class="mobile-nav-item" data-route="library" href="#/library"><span>◆</span>Libreria</a>
   </nav>
 

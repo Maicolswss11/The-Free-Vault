@@ -62,6 +62,15 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 const ui = {
+  sidebar: $("#app-sidebar"),
+  menuButton: $("#menu-button"),
+  sidebarClose: $("#sidebar-close"),
+  sidebarBackdrop: $("#sidebar-backdrop"),
+  filterBackdrop: $("#filter-backdrop"),
+  mobileFilterToggle: $("#mobile-filter-toggle"),
+  mobileFilterCount: $("#mobile-filter-count"),
+  mobileFilterClose: $("#mobile-filter-close"),
+  mobileFilterApply: $("#mobile-filter-apply"),
   dashboardPage: $("#dashboard-page"),
   gamePage: $("#game-page"),
   authPage: $("#auth-page"),
@@ -856,6 +865,104 @@ function listRoute(id) {
   return `#/list/${encodeURIComponent(id)}`;
 }
 
+const MOBILE_NAV_QUERY = window.matchMedia("(max-width: 820px)");
+let lastMobileMenuTrigger = null;
+let lastFilterTrigger = null;
+
+function visibleFocusable(container) {
+  if (!container) return [];
+  return [...container.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter((node) => !node.hidden && node.getClientRects().length > 0);
+}
+
+function setOverlayHistory(kind) {
+  const current = window.history.state || {};
+  if (current.tfvOverlay === kind) return;
+  window.history.pushState({ ...current, tfvOverlay: kind }, "", window.location.href);
+}
+
+function clearOverlayHistoryMarker() {
+  const current = window.history.state || {};
+  if (!current.tfvOverlay) return;
+  const next = { ...current };
+  delete next.tfvOverlay;
+  window.history.replaceState(next, "", window.location.href);
+}
+
+function openMobileMenu() {
+  if (!MOBILE_NAV_QUERY.matches || !ui.sidebar) return;
+  closeMobileFilters({ restoreFocus: false, clearHistory: true });
+  lastMobileMenuTrigger = document.activeElement;
+  document.body.classList.add("menu-open");
+  ui.menuButton?.setAttribute("aria-expanded", "true");
+  ui.sidebar.setAttribute("aria-hidden", "false");
+  setOverlayHistory("menu");
+  requestAnimationFrame(() => ui.sidebarClose?.focus());
+}
+
+function closeMobileMenu({ restoreFocus = true, clearHistory = false } = {}) {
+  if (!document.body.classList.contains("menu-open")) return;
+  document.body.classList.remove("menu-open");
+  ui.menuButton?.setAttribute("aria-expanded", "false");
+  if (MOBILE_NAV_QUERY.matches) ui.sidebar?.setAttribute("aria-hidden", "true");
+  if (clearHistory) clearOverlayHistoryMarker();
+  if (restoreFocus && lastMobileMenuTrigger instanceof HTMLElement) lastMobileMenuTrigger.focus();
+}
+
+function requestCloseMobileMenu() {
+  if (window.history.state?.tfvOverlay === "menu") window.history.back();
+  else closeMobileMenu();
+}
+
+function openMobileFilters() {
+  if (!MOBILE_NAV_QUERY.matches || ui.toolbarControls?.hidden) return;
+  closeMobileMenu({ restoreFocus: false, clearHistory: true });
+  lastFilterTrigger = document.activeElement;
+  document.body.classList.add("filters-open");
+  ui.mobileFilterToggle?.setAttribute("aria-expanded", "true");
+  setOverlayHistory("filters");
+  requestAnimationFrame(() => ui.mobileFilterClose?.focus());
+}
+
+function closeMobileFilters({ restoreFocus = true, clearHistory = false } = {}) {
+  if (!document.body.classList.contains("filters-open")) return;
+  document.body.classList.remove("filters-open");
+  ui.mobileFilterToggle?.setAttribute("aria-expanded", "false");
+  if (clearHistory) clearOverlayHistoryMarker();
+  if (restoreFocus && lastFilterTrigger instanceof HTMLElement) lastFilterTrigger.focus();
+}
+
+function requestCloseMobileFilters() {
+  if (window.history.state?.tfvOverlay === "filters") window.history.back();
+  else closeMobileFilters();
+}
+
+function closeMobileOverlaysForNavigation() {
+  closeMobileMenu({ restoreFocus: false, clearHistory: true });
+  closeMobileFilters({ restoreFocus: false, clearHistory: true });
+}
+
+function trapMobileOverlayFocus(event) {
+  if (event.key !== "Tab") return;
+  const container = document.body.classList.contains("menu-open")
+    ? ui.sidebar
+    : document.body.classList.contains("filters-open")
+      ? ui.toolbarControls
+      : null;
+  const focusable = visibleFocusable(container);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function parseRoute() {
   const rawHash = window.location.hash || "#/home";
   if (/^#(?:access_token|refresh_token|error|error_description)=/.test(rawHash)) {
@@ -949,6 +1056,7 @@ function navigate(hash) {
 }
 
 function handleRoute() {
+  closeMobileOverlaysForNavigation();
   state.route = parseRoute();
   setActiveNavigation(state.route.name);
 
@@ -1406,10 +1514,32 @@ function populateYearFilter() {
   state.yearFilter = ui.yearFilter.value;
 }
 
+function activeDashboardFilterCount() {
+  const values = [
+    state.statusFilter,
+    state.storeFilter,
+    state.categoryFilter,
+    state.segmentFilter,
+    state.priceFilter,
+    state.yearFilter,
+  ];
+  return values.filter((value) => value && value !== "all").length
+    + (state.sort !== "relevance" ? 1 : 0);
+}
+
+function updateMobileFilterSummary() {
+  if (!ui.mobileFilterCount) return;
+  const count = activeDashboardFilterCount();
+  ui.mobileFilterCount.textContent = String(count);
+  ui.mobileFilterCount.hidden = count === 0;
+}
+
 function configureContextualFilters() {
   const route = state.route.name;
   const controlsVisible = ["catalog", "library", "history"].includes(route);
   ui.toolbarControls.hidden = !controlsVisible;
+  ui.mobileFilterToggle.hidden = !controlsVisible;
+  if (!controlsVisible) closeMobileFilters({ restoreFocus: false, clearHistory: true });
 
   const visibility = {
     store: ["catalog", "library"].includes(route),
@@ -1457,6 +1587,7 @@ function configureContextualFilters() {
 
   state.statusFilter = ui.filter.value;
   populateYearFilter();
+  updateMobileFilterSummary();
 }
 
 function renderDashboardHeader() {
@@ -3442,6 +3573,32 @@ async function importData(file) {
   }
 }
 
+ui.menuButton?.addEventListener("click", openMobileMenu);
+ui.sidebarClose?.addEventListener("click", requestCloseMobileMenu);
+ui.sidebarBackdrop?.addEventListener("click", requestCloseMobileMenu);
+ui.mobileFilterToggle?.addEventListener("click", openMobileFilters);
+ui.mobileFilterClose?.addEventListener("click", requestCloseMobileFilters);
+ui.mobileFilterApply?.addEventListener("click", requestCloseMobileFilters);
+ui.filterBackdrop?.addEventListener("click", requestCloseMobileFilters);
+
+ui.sidebar?.addEventListener("click", (event) => {
+  const link = event.target.closest('a[href^="#/"]');
+  if (!link || !MOBILE_NAV_QUERY.matches) return;
+  event.preventDefault();
+  closeMobileMenu({ restoreFocus: false, clearHistory: true });
+  navigate(link.getAttribute("href"));
+});
+
+MOBILE_NAV_QUERY.addEventListener?.("change", (event) => {
+  if (!event.matches) {
+    closeMobileMenu({ restoreFocus: false, clearHistory: true });
+    closeMobileFilters({ restoreFocus: false, clearHistory: true });
+    ui.sidebar?.setAttribute("aria-hidden", "false");
+  } else if (!document.body.classList.contains("menu-open")) {
+    ui.sidebar?.setAttribute("aria-hidden", "true");
+  }
+});
+
 let globalSearchTimer = null;
 let catalogSearchTimer = null;
 ui.search.addEventListener("input", () => {
@@ -3480,6 +3637,7 @@ document.addEventListener("click", (event) => {
 
 function applyDashboardFilter(update) {
   update();
+  updateMobileFilterSummary();
   if (state.route.name === "catalog") void loadCatalogPage({ reset: true });
   else renderDashboard();
 }
@@ -3892,6 +4050,10 @@ $$('[data-back]').forEach((button) => button.addEventListener("click", () => {
   else navigate("#/home");
 }));
 
+window.addEventListener("popstate", () => {
+  closeMobileMenu({ restoreFocus: false });
+  closeMobileFilters({ restoreFocus: false });
+});
 window.addEventListener("hashchange", handleRoute);
 window.addEventListener("tfv:auth-return", handleRoute);
 window.addEventListener("tfv:password-recovery", () => navigate("#/reset-password"));
@@ -3910,12 +4072,26 @@ ui.install.addEventListener("click", async () => {
   ui.install.hidden = true;
 });
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    if (document.body.classList.contains("filters-open")) {
+      event.preventDefault();
+      requestCloseMobileFilters();
+      return;
+    }
+    if (document.body.classList.contains("menu-open")) {
+      event.preventDefault();
+      requestCloseMobileMenu();
+      return;
+    }
+  }
+  trapMobileOverlayFocus(event);
   if (event.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
     event.preventDefault();
     ui.search.focus();
   }
 });
 
+if (MOBILE_NAV_QUERY.matches) ui.sidebar?.setAttribute("aria-hidden", "true");
 if (!window.location.hash) window.history.replaceState({}, "", "#/home");
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(console.error);
 

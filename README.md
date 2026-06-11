@@ -580,3 +580,17 @@ user_settings.show_diary
 
 Le sessioni pubbliche sono leggibili soltanto se il profilo è pubblico e le
 preferenze `show_activity` e `show_diary` sono abilitate.
+
+
+## v4.3 — Mobile Navigation & UX
+
+La navigazione mobile usa ora due livelli complementari:
+
+- footer con cinque scorciatoie: Home, Gratis, Catalogo, Diario e Libreria;
+- drawer laterale richiamabile dall’hamburger con tutte le route del sito.
+
+Il drawer riutilizza la sidebar desktop, supporta backdrop, tasto Escape, focus
+circolare e tasto Indietro di Android. I filtri di Catalogo, Libreria e
+Cronologia sono mostrati in un pannello mobile dedicato, con conteggio dei
+filtri attivi. La topbar mobile espone hamburger, ricerca globale e account,
+mentre notifiche e tutte le pagine secondarie restano raggiungibili dal drawer.
