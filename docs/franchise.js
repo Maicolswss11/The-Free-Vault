@@ -67,6 +67,22 @@
     });
   }
 
+  async function saveAdminFranchiseGames(franchiseId, games = []) {
+    const payload = (games || []).map((game) => ({
+      game_key: game.gameKey || "",
+      relation_type: game.relationType || "main",
+      release_order: Number(game.releaseOrder || 0),
+      narrative_order: game.narrativeOrder === null || game.narrativeOrder === ""
+        ? null
+        : Number(game.narrativeOrder),
+      note: game.note || null,
+    }));
+    return rpc("admin_save_franchise_games_batch", {
+      p_franchise_id: franchiseId,
+      p_games: payload,
+    });
+  }
+
   async function removeAdminFranchiseGame(franchiseId, gameKey) {
     return rpc("admin_remove_franchise_game", {
       p_franchise_id: franchiseId,
@@ -124,6 +140,7 @@
     saveAdminFranchise,
     deleteAdminFranchise,
     saveAdminFranchiseGame,
+    saveAdminFranchiseGames,
     removeAdminFranchiseGame,
     listAdminCollections,
     getAdminCollection,

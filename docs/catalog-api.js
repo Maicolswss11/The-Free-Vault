@@ -4,6 +4,7 @@
   const gameCache = new Map();
   let statsCache = null;
   let discoveryCache = null;
+  let recommendationsCache = null;
   const entityCache = new Map();
   const relatedCache = new Map();
 
@@ -169,6 +170,29 @@
     return value;
   }
 
+  async function getRecommendations({ force = false, limit = 12 } = {}) {
+    if (!configured()) throw new Error("Supabase non configurato.");
+    if (!force && recommendationsCache && Date.now() - recommendationsCache.cachedAt < PAGE_CACHE_TTL) {
+      return recommendationsCache.value;
+    }
+    const { data, error } = await client().rpc("catalog_personalized_recommendations", {
+      p_limit: Math.max(4, Math.min(Number(limit) || 12, 24)),
+    });
+    if (error) throw error;
+    const value = {
+      mode: data?.mode || "cold_start",
+      generatedAt: data?.generated_at || null,
+      profile: data?.profile || { positive_signals: 0, negative_signals: 0, similar_users: 0, top_genres: [], top_developers: [] },
+      items: (data?.items || []).map(normalizeItem),
+    };
+    for (const item of value.items) {
+      gameCache.set(item.canonical_id, item);
+      if (item.match_key) gameCache.set(item.match_key, item);
+    }
+    recommendationsCache = { cachedAt: Date.now(), value };
+    return value;
+  }
+
   async function getEntity(kind, name, options = {}) {
     if (!configured()) throw new Error("Supabase non configurato.");
     const normalizedKind = kind === "publisher" ? "publisher" : "developer";
@@ -226,6 +250,10 @@
   }
 
 
+  function clearRecommendationCache() {
+    recommendationsCache = null;
+  }
+
   function clearCache() {
     pageCache.clear();
     gameCache.clear();
@@ -233,6 +261,7 @@
     relatedCache.clear();
     statsCache = null;
     discoveryCache = null;
+    recommendationsCache = null;
   }
 
   window.VaultCatalog = {
@@ -242,8 +271,10 @@
     getGame,
     getGames,
     getDiscovery,
+    getRecommendations,
     getEntity,
     getRelated,
+    clearRecommendationCache,
     clearCache,
   };
 })();
