@@ -294,7 +294,7 @@
             <div>
               <p class="eyebrow">DISCOVER</p>
               <h1>Scopri il prossimo gioco</h1>
-              <p>Nuove uscite, titoli apprezzati dalla community e giochi disponibili su più store.</p>
+              <p>Raccomandazioni ordinate sui tuoi gusti, nuove uscite e segnali della community. Il profilo evolve con libreria, voti e diario.</p>
             </div>
             <a class="button button-secondary" href="#/catalog">Apri catalogo completo</a>
           </header>
@@ -1177,16 +1177,28 @@
                   </form>
                   <div id="admin-franchise-games-editor" class="admin-item-editor" hidden>
                     <div class="admin-item-editor-head"><h4>Giochi della saga</h4><a id="admin-franchise-open" class="button button-secondary" href="#">Apri pagina</a></div>
-                    <form id="admin-franchise-game-search-form" class="admin-search-form"><input id="admin-franchise-game-search" type="search" minlength="2" placeholder="Cerca un gioco nel catalogo..." required><button class="button button-secondary" type="submit">Cerca</button></form>
-                    <div id="admin-franchise-game-search-results" class="admin-result-list compact"></div>
+                    <form id="admin-franchise-game-search-form" class="admin-search-form"><input id="admin-franchise-game-search" type="search" minlength="2" placeholder="Cerca il nome della saga o più giochi..." required><button class="button button-secondary" type="submit">Cerca</button></form>
+                    <div id="admin-franchise-search-actions" class="admin-search-batch-actions" hidden>
+                      <button id="admin-franchise-select-all" class="button button-primary" type="button">Seleziona tutti i risultati</button>
+                      <button id="admin-franchise-deselect-results" class="button button-secondary" type="button">Deseleziona questi risultati</button>
+                    </div>
+                    <div id="admin-franchise-game-search-results" class="admin-result-list compact admin-multi-result-list"></div>
+                    <div id="admin-franchise-batch-toolbar" class="admin-batch-toolbar" hidden>
+                      <strong id="admin-franchise-batch-summary">0 giochi selezionati</strong>
+                      <div class="admin-batch-toolbar-actions">
+                        <button id="admin-franchise-sort-release" class="button button-secondary" type="button">Ordina per uscita</button>
+                        <button id="admin-franchise-batch-clear" class="button button-secondary" type="button">Azzera selezione</button>
+                      </div>
+                    </div>
+                    <div id="admin-franchise-selected-list" class="admin-selected-games" hidden></div>
                     <form id="admin-franchise-game-form" class="admin-editorial-item-form">
                       <input id="admin-franchise-game-key" type="hidden">
                       <strong id="admin-franchise-game-selected">Nessun gioco selezionato</strong>
-                      <label>Tipo<select id="admin-franchise-game-type"><option value="main">Gioco principale</option><option value="spin_off">Spin-off</option><option value="remake">Remake</option><option value="remaster">Remaster</option><option value="dlc">DLC</option><option value="expansion">Espansione</option><option value="other">Altro</option></select></label>
-                      <label>Ordine di uscita<input id="admin-franchise-release-order" type="number" min="1" required></label>
-                      <label>Ordine narrativo<input id="admin-franchise-narrative-order" type="number" min="1" placeholder="Facoltativo"></label>
-                      <label class="admin-item-note">Nota<textarea id="admin-franchise-game-note" rows="2" maxlength="1000"></textarea></label>
-                      <button class="button button-primary" type="submit">Aggiungi o aggiorna</button>
+                      <label>Tipo predefinito<select id="admin-franchise-game-type"><option value="main">Gioco principale</option><option value="spin_off">Spin-off</option><option value="remake">Remake</option><option value="remaster">Remaster</option><option value="dlc">DLC</option><option value="expansion">Espansione</option><option value="other">Altro</option></select></label>
+                      <label>Primo ordine di uscita<input id="admin-franchise-release-order" type="number" min="1" required></label>
+                      <label>Primo ordine narrativo<input id="admin-franchise-narrative-order" type="number" min="1" placeholder="Facoltativo; avanza automaticamente"></label>
+                      <label class="admin-item-note">Nota comune<textarea id="admin-franchise-game-note" rows="2" maxlength="1000" placeholder="Facoltativa; potrai modificare ogni gioco dopo l'inserimento"></textarea></label>
+                      <button id="admin-franchise-game-submit" class="button button-primary" type="submit">Aggiungi selezionati</button>
                     </form>
                     <div id="admin-franchise-games" class="admin-card-list compact"></div>
                   </div>

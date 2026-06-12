@@ -735,3 +735,60 @@ I giochi sono referenziati tramite `catalog_games.match_key`. La migrazione non
 crea una seconda copia del catalogo né indici GIN. Include le bozze iniziali
 `resident-evil` e `alan-wake`: dall'area admin occorre associare i giochi reali
 e pubblicare le pagine quando complete.
+
+## v4.7 — Raccomandazioni personali
+
+La sezione **Scopri giochi** evolve la precedente personalizzazione euristica in
+un ranking per account. Il sistema combina i dati già presenti, senza nuove
+tabelle:
+
+- giochi completati, in corso, abbandonati e da rigiocare;
+- preferiti e voti privati della libreria;
+- recensioni pubbliche dell'utente;
+- tempo di gioco manuale, diario e tempo importato da Steam;
+- giochi inseriti nelle liste, incluse wishlist e backlog riconosciuti dal nome;
+- generi, sviluppatori, publisher e segmento produttivo ricorrenti;
+- segnali aggregati da recensioni e attività pubbliche di utenti con gusti simili.
+
+Ogni risultato può mostrare il motivo del consiglio, per esempio:
+
+```text
+Perché hai apprezzato Control e Alan Wake
+Apprezzato da utenti con gusti simili ai tuoi
+```
+
+I giochi abbandonati o valutati negativamente riducono il punteggio dei candidati
+con caratteristiche simili. Per utenti non autenticati, o finché il ranking
+server non è disponibile, la pagina usa un fallback locale multi-seme basato sui
+giochi più apprezzati nella libreria del dispositivo.
+
+La gestione franchise supporta inoltre la **selezione multipla** dal catalogo:
+si possono scegliere più titoli da una o più ricerche e inserirli con ordini di
+uscita e narrativi progressivi tramite una sola operazione batch. La modifica
+singola dei giochi già collegati resta disponibile.
+
+Prima del deploy del frontend eseguire:
+
+```text
+supabase/migrations/20260612_v47_personal_recommendations.sql
+```
+
+La migrazione aggiunge soltanto due RPC:
+
+```text
+admin_save_franchise_games_batch
+catalog_personalized_recommendations
+```
+
+Non crea tabelle, copie del catalogo o nuovi indici. La cache PWA della versione
+è `the-free-vault-v4-7-personal-recommendations`.
+
+
+## v4.7.1 — Selezione massiva dei giochi nelle saghe
+
+L'area `#/admin/editorial` consente ora una vera selezione multipla: una ricerca
+franchise restituisce fino a 50 risultati e l'admin può selezionarli tutti con
+un solo comando, deselezionare il gruppo corrente, conservare selezioni tra
+ricerche diverse, riordinarle per data di uscita o manualmente e inserirle con
+una sola chiamata batch. Non sono richieste nuove tabelle o migrazioni SQL oltre
+a quella già prevista dalla v4.7.

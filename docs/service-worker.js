@@ -1,6 +1,8 @@
 
-// Previous stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
-const CACHE_NAME = "the-free-vault-v4-6-franchises-editorial";
+// Previous stable cache: the-free-vault-v4-7-personal-recommendations
+// Earlier stable cache: the-free-vault-v4-6-franchises-editorial
+// Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
+const CACHE_NAME = "the-free-vault-v4-7-1-franchise-bulk-selection";
 const APP_SHELL = [
   "./",
   "./index.html",
