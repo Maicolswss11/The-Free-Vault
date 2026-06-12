@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-12T10:39:43.163982+00:00",
+  "updated_at": "2026-06-12T15:37:47.137203+00:00",
   "games": [
     {
       "epic_id": "ea365d314ecf4224a5f58d2d7430e7aa",
@@ -24,7 +24,7 @@
       "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games",
       "promotion_key": "ea365d314ecf4224a5f58d2d7430e7aa|2026-06-18T15:00:00+00:00|2026-06-25T15:00:00+00:00",
       "first_seen_at": "2026-06-10T10:31:46.885810+00:00",
-      "last_seen_at": "2026-06-12T10:39:43.163982+00:00"
+      "last_seen_at": "2026-06-12T15:37:47.137203+00:00"
     },
     {
       "epic_id": "aee7ec395d054078a48d867849e2a550",
@@ -49,7 +49,7 @@
       "publisher": "Kwalee",
       "promotion_key": "aee7ec395d054078a48d867849e2a550|2026-06-18T15:00:00+00:00|2026-06-25T15:00:00+00:00",
       "first_seen_at": "2026-06-10T10:31:46.885810+00:00",
-      "last_seen_at": "2026-06-12T10:39:43.163982+00:00"
+      "last_seen_at": "2026-06-12T15:37:47.137203+00:00"
     },
     {
       "epic_id": "7f0ab2828f9743d0abc6612a11222fdf",
@@ -74,7 +74,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "7f0ab2828f9743d0abc6612a11222fdf|2026-06-11T15:00:00+00:00|2026-06-18T15:00:00+00:00",
       "first_seen_at": "2026-06-08T18:36:59.123256+00:00",
-      "last_seen_at": "2026-06-12T10:39:43.163982+00:00"
+      "last_seen_at": "2026-06-12T15:37:47.137203+00:00"
     },
     {
       "epic_id": "eb6ae87e73d94d2c96bab3c4da4dd3de",
@@ -99,7 +99,7 @@
       "publisher": "Wired Productions",
       "promotion_key": "eb6ae87e73d94d2c96bab3c4da4dd3de|2026-06-11T15:00:00+00:00|2026-06-18T15:00:00+00:00",
       "first_seen_at": "2026-06-08T18:36:59.123256+00:00",
-      "last_seen_at": "2026-06-12T10:39:43.163982+00:00"
+      "last_seen_at": "2026-06-12T15:37:47.137203+00:00"
     },
     {
       "epic_id": "a6a2d59fa54946dbbf16f14730c2e5f0",
