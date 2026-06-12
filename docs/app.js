@@ -1473,7 +1473,7 @@ function hideGlobalSearchResults() {
 async function renderGlobalSearchResults() {
   const rawQuery = state.globalSearch.trim();
   const query = rawQuery.toLocaleLowerCase("it");
-  if (query.length < 2) {
+  if (query.length < 3) {
     hideGlobalSearchResults();
     return;
   }
@@ -5627,17 +5627,27 @@ let catalogSearchTimer = null;
 ui.search.addEventListener("input", () => {
   state.globalSearch = ui.search.value.trim();
   clearTimeout(globalSearchTimer);
-  globalSearchTimer = setTimeout(() => { void renderGlobalSearchResults(); }, 240);
+  clearTimeout(catalogSearchTimer);
 
   if (state.route.name === "catalog") {
-    clearTimeout(catalogSearchTimer);
+    // On the catalog page the same input already refreshes the catalog. Do not
+    // launch a second autocomplete RPC for every keystroke.
+    hideGlobalSearchResults();
+    if (state.globalSearch && state.globalSearch.length < 3) return;
     catalogSearchTimer = setTimeout(() => {
       const query = state.globalSearch;
       const nextHash = query ? `#/catalog?q=${encodeURIComponent(query)}` : "#/catalog";
       window.history.replaceState({}, "", nextHash);
       state.search = query;
       void loadCatalogPage({ reset: true });
-    }, 380);
+    }, 450);
+    return;
+  }
+
+  if (state.globalSearch.length >= 3) {
+    globalSearchTimer = setTimeout(() => { void renderGlobalSearchResults(); }, 320);
+  } else {
+    hideGlobalSearchResults();
   }
 });
 
