@@ -90,6 +90,17 @@
     });
   }
 
+  async function enrichCatalogGames(gameKeys = []) {
+    const keys = [...new Set((gameKeys || []).map((key) => String(key || "").trim()).filter(Boolean))].slice(0, 100);
+    if (!keys.length) throw new Error("Nessun gioco da arricchire.");
+    const { data, error } = await requireClient().functions.invoke("admin-enrich-catalog-games", {
+      body: { game_keys: keys },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data || {};
+  }
+
   async function listAdminCollections() {
     return rpc("admin_list_editorial_collections");
   }
@@ -141,6 +152,7 @@
     deleteAdminFranchise,
     saveAdminFranchiseGame,
     saveAdminFranchiseGames,
+    enrichCatalogGames,
     removeAdminFranchiseGame,
     listAdminCollections,
     getAdminCollection,

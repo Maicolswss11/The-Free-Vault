@@ -193,6 +193,7 @@ const ui = {
   adminFranchiseDelete: $("#admin-franchise-delete"),
   adminFranchiseGamesEditor: $("#admin-franchise-games-editor"),
   adminFranchiseOpen: $("#admin-franchise-open"),
+  adminFranchiseEnrich: $("#admin-franchise-enrich"),
   adminFranchiseGameSearchForm: $("#admin-franchise-game-search-form"),
   adminFranchiseGameSearch: $("#admin-franchise-game-search"),
   adminFranchiseSearchActions: $("#admin-franchise-search-actions"),
@@ -5398,6 +5399,28 @@ ui.adminFranchiseDelete?.addEventListener("click", async () => {
   }
 });
 
+ui.adminFranchiseEnrich?.addEventListener("click", async () => {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  const gameKeys = (state.admin.selectedFranchise?.games || []).map((game) => gameKey(game));
+  if (!franchise || !gameKeys.length) {
+    showToast("Il franchise non contiene giochi da aggiornare.");
+    return;
+  }
+  ui.adminFranchiseEnrich.disabled = true;
+  try {
+    const result = await window.VaultFranchises.enrichCatalogGames(gameKeys);
+    window.VaultCatalog?.clearCache();
+    state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+    renderAdminFranchiseGames();
+    const missing = Number(result.without_steam || 0) + Number(result.failed || 0);
+    showToast(`${Number(result.updated || 0)} giochi aggiornati da Steam${missing ? ` · ${missing} senza dati disponibili` : ""}.`);
+  } catch (error) {
+    showToast(error.message || "Recupero metadati Steam fallito. Verifica che la Edge Function sia distribuita.");
+  } finally {
+    ui.adminFranchiseEnrich.disabled = false;
+  }
+});
+
 ui.adminFranchiseGameSearchForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   await searchAdminEditorialGames("franchise");
@@ -5452,7 +5475,16 @@ ui.adminFranchiseGameForm?.addEventListener("submit", async (event) => {
         note: ui.adminFranchiseGameNote.value,
       }));
       state.admin.selectedFranchise = await window.VaultFranchises.saveAdminFranchiseGames(franchise.id, payload);
-      showToast(`${payload.length} ${payload.length === 1 ? "gioco collegato" : "giochi collegati"} al franchise.`);
+      let enrichment = null;
+      try {
+        enrichment = await window.VaultFranchises.enrichCatalogGames(payload.map((game) => game.gameKey));
+        window.VaultCatalog?.clearCache();
+        state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+      } catch (error) {
+        console.warn("Arricchimento automatico Steam non disponibile", error);
+      }
+      const enriched = Number(enrichment?.updated || 0);
+      showToast(`${payload.length} ${payload.length === 1 ? "gioco collegato" : "giochi collegati"} al franchise${enriched ? ` · ${enriched} metadati aggiornati` : ""}.`);
     } else {
       state.admin.selectedFranchise = await window.VaultFranchises.saveAdminFranchiseGame(franchise.id, {
         gameKey: editingKey,
