@@ -1,9 +1,10 @@
 
-// Previous stable cache: the-free-vault-v4-7-1-franchise-bulk-selection
+// Previous stable cache: the-free-vault-v4-7-2-editorial-steam-metadata
+// Earlier stable cache: the-free-vault-v4-7-1-franchise-bulk-selection
 // Earlier stable cache: the-free-vault-v4-7-personal-recommendations
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
-const CACHE_NAME = "the-free-vault-v4-7-2-editorial-steam-metadata";
+const CACHE_NAME = "the-free-vault-v4-7-3-metadata-and-admin-loading";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -169,6 +169,7 @@ const ui = {
   adminCatalogListings: $("#admin-catalog-listings"),
   adminOverrideForm: $("#admin-override-form"),
   adminOverrideMessage: $("#admin-override-message"),
+  adminOverrideSubmit: $("#admin-override-submit"),
   adminClearOverride: $("#admin-clear-override"),
   adminMatchStatus: $("#admin-match-status"),
   adminMatchRefresh: $("#admin-match-refresh"),
@@ -4121,6 +4122,23 @@ async function loadAdminCatalogRecord(key) {
   }
 }
 
+
+function setButtonLoading(button, loading, loadingLabel = "Caricamento…") {
+  if (!button) return;
+  if (loading) {
+    if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent.trim();
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.setAttribute("aria-busy", "true");
+    button.textContent = loadingLabel;
+    return;
+  }
+  button.disabled = false;
+  button.classList.remove("is-loading");
+  button.removeAttribute("aria-busy");
+  if (button.dataset.idleLabel) button.textContent = button.dataset.idleLabel;
+}
+
 function adminOverridePayload() {
   const patch = {};
   const lockedFields = [];
@@ -5308,7 +5326,11 @@ ui.adminOverrideForm?.addEventListener("submit", async (event) => {
   const matchKey = state.admin.selectedCatalog?.game?.match_key;
   if (!matchKey) return;
   const { patch, lockedFields } = adminOverridePayload();
-  ui.adminOverrideMessage.hidden = true;
+  setButtonLoading(ui.adminOverrideSubmit, true, "Salvataggio…");
+  if (ui.adminClearOverride) ui.adminClearOverride.disabled = true;
+  ui.adminOverrideMessage.classList.remove("auth-success");
+  ui.adminOverrideMessage.textContent = "Salvataggio override in corso…";
+  ui.adminOverrideMessage.hidden = false;
   try {
     const record = await window.VaultAdmin.saveCatalogOverride(matchKey, patch, lockedFields);
     state.admin.selectedCatalog = record;
@@ -5316,12 +5338,13 @@ ui.adminOverrideForm?.addEventListener("submit", async (event) => {
     ui.adminCatalogTitle.textContent = record.game.title;
     ui.adminOverrideMessage.textContent = "Override salvato e protetto dai prossimi sync.";
     ui.adminOverrideMessage.classList.add("auth-success");
-    ui.adminOverrideMessage.hidden = false;
     window.VaultCatalog?.clearCache();
   } catch (error) {
     ui.adminOverrideMessage.classList.remove("auth-success");
     ui.adminOverrideMessage.textContent = error.message || "Salvataggio override fallito.";
-    ui.adminOverrideMessage.hidden = false;
+  } finally {
+    setButtonLoading(ui.adminOverrideSubmit, false);
+    if (ui.adminClearOverride) ui.adminClearOverride.disabled = false;
   }
 });
 
@@ -5406,18 +5429,24 @@ ui.adminFranchiseEnrich?.addEventListener("click", async () => {
     showToast("Il franchise non contiene giochi da aggiornare.");
     return;
   }
-  ui.adminFranchiseEnrich.disabled = true;
+  setButtonLoading(ui.adminFranchiseEnrich, true, "Recupero…");
   try {
     const result = await window.VaultFranchises.enrichCatalogGames(gameKeys);
     window.VaultCatalog?.clearCache();
     state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
     renderAdminFranchiseGames();
-    const missing = Number(result.without_steam || 0) + Number(result.failed || 0);
-    showToast(`${Number(result.updated || 0)} giochi aggiornati da Steam${missing ? ` · ${missing} senza dati disponibili` : ""}.`);
+    const steam = Number(result.updated_from_steam || 0);
+    const inferred = Number(result.inferred_from_title || 0);
+    const unresolved = Number(result.unresolved_year || 0);
+    const parts = [`${Number(result.updated || 0)} giochi aggiornati`];
+    if (steam) parts.push(`${steam} da Steam`);
+    if (inferred) parts.push(`${inferred} dal titolo`);
+    if (unresolved) parts.push(`${unresolved} ancora senza anno`);
+    showToast(`${parts.join(" · ")}.`);
   } catch (error) {
     showToast(error.message || "Recupero metadati Steam fallito. Verifica che la Edge Function sia distribuita.");
   } finally {
-    ui.adminFranchiseEnrich.disabled = false;
+    setButtonLoading(ui.adminFranchiseEnrich, false);
   }
 });
 

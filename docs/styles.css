@@ -174,6 +174,19 @@ main { width: min(1420px, 100%); margin: 0 auto; padding: 34px clamp(22px, 4vw, 
 
 .button { display: inline-flex; min-height: 43px; align-items: center; justify-content: center; padding: 10px 15px; border-radius: 12px; text-decoration: none; font-size: .82rem; font-weight: 850; cursor: pointer; transition: transform .18s ease, filter .18s ease, background .18s ease; }
 .button:hover { transform: translateY(-1px); filter: brightness(1.07); }
+.button:disabled { cursor: not-allowed; opacity: .68; transform: none; filter: none; }
+.button.is-loading { cursor: wait; gap: 8px; }
+.button.is-loading::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-loading-spin .72s linear infinite;
+}
+@keyframes button-loading-spin { to { transform: rotate(360deg); } }
 .button-primary { background: linear-gradient(135deg, #51b0ff, #268df3); color: #03111e; box-shadow: 0 10px 28px rgba(35, 140, 245, .22); }
 .button-secondary { border: 1px solid var(--border); background: var(--surface-2); }
 .button-glass { border: 1px solid rgba(255,255,255,.2); background: rgba(12,16,23,.6); backdrop-filter: blur(12px); }
