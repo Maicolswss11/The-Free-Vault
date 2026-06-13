@@ -318,6 +318,11 @@ const ui = {
   forgotPasswordError: $("#forgot-password-error"),
   forgotPasswordSuccess: $("#forgot-password-success"),
   forgotPasswordSubmit: $("#forgot-password-submit"),
+  recoveryCodeForm: $("#recovery-code-form"),
+  recoveryCodeEmail: $("#recovery-code-email"),
+  recoveryCodeValue: $("#recovery-code-value"),
+  recoveryCodeError: $("#recovery-code-error"),
+  recoveryCodeSubmit: $("#recovery-code-submit"),
   resetPasswordForm: $("#reset-password-form"),
   resetPasswordValue: $("#reset-password-value"),
   resetPasswordConfirm: $("#reset-password-confirm"),
@@ -4774,6 +4779,7 @@ function renderAuthPage() {
   ui.loginForm.hidden = isRegister || isForgot || isReset || isCallback;
   ui.registerForm.hidden = !isRegister || isCallback;
   ui.forgotPasswordForm.hidden = !isForgot;
+  ui.recoveryCodeForm.hidden = !isForgot;
   ui.resetPasswordForm.hidden = !isReset;
   ui.authConfirmation.hidden = !isCallbackSuccess;
   ui.authCallbackError.hidden = !hasCallbackError;
@@ -4784,7 +4790,7 @@ function renderAuthPage() {
       ? "Link scaduto o già utilizzato"
       : "Impossibile completare l’operazione";
     const fallbackMessage = isExpiredCallback
-      ? "Il collegamento è monouso e non è più valido. Richiedine uno nuovo e usa soltanto l’ultima email ricevuta."
+      ? "Il collegamento è monouso e non è più valido. Richiedi un nuovo codice e usa soltanto l’ultima email ricevuta."
       : "Il collegamento di autenticazione non è valido. Riprova partendo dalla pagina di accesso.";
 
     ui.authEyebrow.textContent = "LINK NON VALIDO";
@@ -4795,7 +4801,7 @@ function renderAuthPage() {
       ? fallbackMessage
       : (callbackErrorDescription || fallbackMessage);
     ui.authCallbackErrorAction.href = recoveryLikely ? "#/forgot-password" : "#/login";
-    ui.authCallbackErrorAction.textContent = recoveryLikely ? "Richiedi un nuovo link" : "Torna all’accesso";
+    ui.authCallbackErrorAction.textContent = recoveryLikely ? "Richiedi un nuovo codice" : "Torna all’accesso";
   } else {
     ui.authEyebrow.textContent = isCallbackSuccess ? "EMAIL CONFERMATA" : "THE FREE VAULT ACCOUNT";
     ui.authTitle.textContent = isCallbackSuccess
@@ -4812,10 +4818,20 @@ function renderAuthPage() {
       : isRegister
         ? "Servono solo username, email e password. Il resto si completa dal profilo."
         : isForgot
-          ? "Riceverai un link sicuro per impostare una nuova password."
+          ? "Riceverai un codice monouso di 6 cifre, da inserire qui insieme alla tua email."
           : isReset
             ? "Inserisci una password nuova di almeno otto caratteri."
             : "Accedi con email e password per sincronizzare il tuo Vault.";
+  }
+
+  if (isForgot) {
+    const rememberedEmail = window.sessionStorage.getItem("tfv:recovery-email") || "";
+    if (!ui.forgotPasswordEmail.value && rememberedEmail) {
+      ui.forgotPasswordEmail.value = rememberedEmail;
+    }
+    if (!ui.recoveryCodeEmail.value && rememberedEmail) {
+      ui.recoveryCodeEmail.value = rememberedEmail;
+    }
   }
 
   if (isReset && !state.auth.user && !window.VaultAuth?.recoveryMode) {
@@ -5820,22 +5836,55 @@ ui.forgotPasswordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   ui.forgotPasswordError.hidden = true;
   ui.forgotPasswordSuccess.hidden = true;
-  ui.forgotPasswordSubmit.disabled = true;
+  setButtonLoading(ui.forgotPasswordSubmit, true, "Invio codice…");
   try {
-    await window.VaultAuth.requestPasswordReset(ui.forgotPasswordEmail.value.trim());
-    ui.forgotPasswordSuccess.textContent = "Email inviata. Controlla anche la cartella spam.";
+    const email = ui.forgotPasswordEmail.value.trim().toLowerCase();
+    await window.VaultAuth.requestPasswordReset(email);
+    window.sessionStorage.setItem("tfv:recovery-email", email);
+    ui.recoveryCodeEmail.value = email;
+    ui.forgotPasswordSuccess.textContent = "Codice inviato. Controlla la posta e la cartella spam, poi inserisci qui le 6 cifre ricevute.";
     ui.forgotPasswordSuccess.hidden = false;
+    ui.recoveryCodeValue.focus();
   } catch (error) {
-    ui.forgotPasswordError.textContent = error.message || "Invio fallito.";
+    ui.forgotPasswordError.textContent = error.message || "Invio del codice fallito.";
     ui.forgotPasswordError.hidden = false;
   } finally {
-    ui.forgotPasswordSubmit.disabled = false;
+    setButtonLoading(ui.forgotPasswordSubmit, false);
   }
+});
+
+ui.recoveryCodeForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  ui.recoveryCodeError.hidden = true;
+  setButtonLoading(ui.recoveryCodeSubmit, true, "Verifica…");
+  try {
+    const email = ui.recoveryCodeEmail.value.trim().toLowerCase();
+    const token = ui.recoveryCodeValue.value.replace(/\D/g, "");
+    await window.VaultAuth.verifyRecoveryOtp({ email, token });
+    window.sessionStorage.removeItem("tfv:recovery-email");
+    ui.recoveryCodeForm.reset();
+    showToast("Codice verificato. Ora scegli la nuova password.");
+    navigate("#/reset-password");
+  } catch (error) {
+    const invalidCode = /expired|invalid|token|otp/i.test(error?.message || "");
+    ui.recoveryCodeError.textContent = invalidCode
+      ? "Codice non valido o scaduto. Richiedi un nuovo codice e usa soltanto l’ultimo ricevuto."
+      : (error.message || "Verifica del codice fallita.");
+    ui.recoveryCodeError.hidden = false;
+  } finally {
+    setButtonLoading(ui.recoveryCodeSubmit, false);
+  }
+});
+
+ui.recoveryCodeValue.addEventListener("input", () => {
+  const digits = ui.recoveryCodeValue.value.replace(/\D/g, "").slice(0, 6);
+  if (ui.recoveryCodeValue.value !== digits) ui.recoveryCodeValue.value = digits;
 });
 
 ui.resetPasswordForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   ui.resetPasswordError.hidden = true;
+  setButtonLoading(ui.resetPasswordSubmit, true, "Aggiornamento…");
   try {
     if (ui.resetPasswordValue.value !== ui.resetPasswordConfirm.value) {
       throw new Error("Le password non coincidono.");
@@ -5847,6 +5896,8 @@ ui.resetPasswordForm.addEventListener("submit", async (event) => {
   } catch (error) {
     ui.resetPasswordError.textContent = error.message || "Aggiornamento fallito.";
     ui.resetPasswordError.hidden = false;
+  } finally {
+    setButtonLoading(ui.resetPasswordSubmit, false);
   }
 });
 

@@ -902,6 +902,31 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
 .page-form { margin-top: 26px; }
 .auth-switch { margin: 4px 0 0; color: var(--muted); text-align: center; font-size: .82rem; }
 .auth-switch a { color: var(--blue); }
+.auth-recovery-code-form {
+  margin-top: 28px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+.auth-step-heading {
+  display: grid;
+  gap: 6px;
+}
+.auth-step-heading strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+.auth-step-heading span {
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.auth-form .auth-otp-input {
+  text-align: center;
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: .42em;
+  font-variant-numeric: tabular-nums;
+}
 .auth-confirmation { display: grid; gap: 14px; margin-top: 24px; padding: 20px; border: 1px solid rgba(87,214,141,.3); border-radius: 15px; background: rgba(87,214,141,.07); }
 .auth-confirmation span { color: var(--muted); }
 .auth-confirmation-error { border-color: rgba(255,107,125,.35); background: rgba(255,107,125,.08); }

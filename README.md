@@ -792,3 +792,24 @@ un solo comando, deselezionare il gruppo corrente, conservare selezioni tra
 ricerche diverse, riordinarle per data di uscita o manualmente e inserirle con
 una sola chiamata batch. Non sono richieste nuove tabelle o migrazioni SQL oltre
 a quella già prevista dalla v4.7.
+
+## v4.7.7 — Recupero password tramite codice OTP
+
+Il recupero password non dipende più dal clic su un collegamento Auth monouso.
+L'email contiene un codice di 6 cifre generato da Supabase tramite
+`{{ .Token }}`. L'utente inserisce email e codice nella pagina
+`#/forgot-password`; dopo la verifica viene aperto il form per scegliere la
+nuova password.
+
+Il flusso resta compatibile con i vecchi callback tramite link, ma evita che il
+click tracking del provider SMTP o gli scanner automatici consumino il token
+prima dell'utente.
+
+Il template self-hosted si trova in:
+
+```text
+supabase/email-templates/recovery.html
+```
+
+Non sono richieste migrazioni SQL o nuove tabelle. La cache PWA è
+`the-free-vault-v4-7-7-password-recovery-otp`.

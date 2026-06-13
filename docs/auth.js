@@ -249,10 +249,42 @@
 
   async function requestPasswordReset(email) {
     if (!client) throw new Error('Supabase non configurato.');
-    const { data, error } = await client.auth.resetPasswordForEmail(email, {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) throw new Error('Inserisci l’indirizzo email del tuo account.');
+    const { data, error } = await client.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: passwordRecoveryRedirectUrl(),
     });
     if (error) throw error;
+    return data;
+  }
+
+  async function verifyRecoveryOtp({ email, token }) {
+    if (!client) throw new Error('Supabase non configurato.');
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedToken = String(token || '').replace(/\D/g, '').slice(0, 6);
+    if (!normalizedEmail) throw new Error('Inserisci l’indirizzo email del tuo account.');
+    if (!/^\d{6}$/.test(normalizedToken)) {
+      throw new Error('Il codice deve contenere esattamente 6 cifre.');
+    }
+
+    const { data, error } = await client.auth.verifyOtp({
+      email: normalizedEmail,
+      token: normalizedToken,
+      type: 'recovery',
+    });
+    if (error) throw error;
+    if (!data?.session?.user) {
+      throw new Error('Il codice non ha generato una sessione di recupero valida.');
+    }
+
+    session = data.session;
+    recoveryMode = true;
+    try {
+      await loadProfile();
+    } catch (profileError) {
+      console.error('Caricamento profilo dopo verifica OTP fallito', profileError);
+    }
+    emit();
     return data;
   }
 
@@ -433,6 +465,7 @@
     signIn,
     signOut,
     requestPasswordReset,
+    verifyRecoveryOtp,
     updatePassword,
     updateEmail,
     updateProfile,
