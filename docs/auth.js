@@ -1,4 +1,37 @@
 (() => {
+  function readAuthReturnFromLocation() {
+    const url = new URL(window.location.href);
+    const rawHash = String(url.hash || "").replace(/^#/, "");
+    const hashParams = rawHash && !rawHash.startsWith("/")
+      ? new URLSearchParams(rawHash)
+      : new URLSearchParams();
+    const value = (name) => url.searchParams.get(name) || hashParams.get(name);
+    const errorName = value("error");
+    const errorCode = value("error_code");
+    const errorDescription = value("error_description");
+    const requestedFlow = value("auth") || value("type");
+
+    let kind = null;
+    if (requestedFlow === "recovery") {
+      kind = "recovery";
+    } else if (requestedFlow === "confirmed") {
+      kind = "confirmation";
+    } else if (url.searchParams.has("code") || hashParams.has("access_token") || hashParams.has("refresh_token")) {
+      kind = "confirmation";
+    }
+
+    const error = errorName || errorCode || errorDescription
+      ? {
+          name: errorName || "access_denied",
+          code: errorCode || errorName || "auth_callback_error",
+          description: errorDescription || "Il collegamento di autenticazione non è valido.",
+        }
+      : null;
+
+    return { kind, error };
+  }
+
+  let pendingAuthReturn = readAuthReturnFromLocation();
   const config = window.TFV_CONFIG || {};
   const configured = Boolean(config.supabaseUrl && config.supabasePublishableKey);
   const client = configured && window.supabase
@@ -34,6 +67,7 @@
       profile,
       settings,
       recoveryMode,
+      authReturnError: authReturnDetails().error,
     };
   }
 
@@ -62,23 +96,27 @@
     return baseRedirectUrl('recovery');
   }
 
+  function authReturnDetails() {
+    return pendingAuthReturn || readAuthReturnFromLocation();
+  }
+
   function authReturnKind() {
-    const url = new URL(window.location.href);
-    const hash = window.location.hash;
-    if (url.searchParams.get('auth') === 'recovery' || /type=recovery/.test(hash)) {
-      return 'recovery';
-    }
-    if (
-      url.searchParams.get('auth') === 'confirmed' ||
-      url.searchParams.has('code') ||
-      /(?:access_token|refresh_token|error_description)=/.test(hash)
-    ) {
-      return 'confirmation';
-    }
-    return null;
+    const details = authReturnDetails();
+    return details.error ? null : details.kind;
+  }
+
+  function authErrorDestination(error, kind) {
+    const query = new URLSearchParams({
+      error: error?.name || "access_denied",
+      error_code: error?.code || "auth_callback_error",
+      error_description: error?.description || "Il collegamento di autenticazione non è valido.",
+    });
+    if (kind) query.set("auth_flow", kind);
+    return `#/auth/callback?${query.toString()}`;
   }
 
   function clearAuthReturnParameters(destination) {
+    pendingAuthReturn = null;
     const url = new URL(window.location.href);
     url.search = '';
     url.hash = destination;
@@ -122,7 +160,8 @@
       return { configured: false };
     }
 
-    const returnKind = authReturnKind();
+    const returnDetails = authReturnDetails();
+    const returnKind = returnDetails.error ? null : returnDetails.kind;
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
     session = data.session;
@@ -149,6 +188,17 @@
         }
       }, 0);
     });
+
+    if (returnDetails.error) {
+      recoveryMode = false;
+      clearAuthReturnParameters(authErrorDestination(returnDetails.error, returnDetails.kind));
+      return {
+        configured: true,
+        session,
+        returnKind: null,
+        authError: returnDetails.error,
+      };
+    }
 
     if (returnKind === 'recovery' && session) {
       clearAuthReturnParameters('#/reset-password');

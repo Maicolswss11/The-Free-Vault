@@ -309,6 +309,10 @@ const ui = {
   registerError: $("#register-error"),
   registerSubmit: $("#register-submit"),
   authConfirmation: $("#auth-confirmation-message"),
+  authCallbackError: $("#auth-callback-error"),
+  authCallbackErrorTitle: $("#auth-callback-error-title"),
+  authCallbackErrorMessage: $("#auth-callback-error-message"),
+  authCallbackErrorAction: $("#auth-callback-error-action"),
   forgotPasswordForm: $("#forgot-password-form"),
   forgotPasswordEmail: $("#forgot-password-email"),
   forgotPasswordError: $("#forgot-password-error"),
@@ -918,7 +922,9 @@ async function loadCatalogPage({ reset = true, force = false } = {}) {
     }
     state.catalogTotal = response.total;
     state.catalogOffset = state.catalog.length;
-    state.catalogHasMore = state.catalog.length < response.total;
+    state.catalogHasMore = typeof response.hasMore === "boolean"
+      ? response.hasMore
+      : Number.isFinite(response.total) && state.catalog.length < response.total;
     for (const game of incoming) registerCatalogGame(game);
     ui.status.hidden = true;
   } catch (error) {
@@ -940,9 +946,14 @@ function renderCatalogPagination() {
   if (!visible) return;
   const shown = state.catalog.length;
   const total = state.catalogTotal;
-  ui.catalogPageSummary.textContent = total
-    ? `${shown.toLocaleString("it-IT")} di ${total.toLocaleString("it-IT")} giochi`
-    : state.catalogLoading ? "Caricamento…" : "Nessun risultato";
+  const hasExactTotal = Number.isFinite(total);
+  ui.catalogPageSummary.textContent = state.catalogLoading && shown === 0
+    ? "Caricamento…"
+    : shown === 0
+      ? "Nessun risultato"
+      : hasExactTotal
+        ? `${shown.toLocaleString("it-IT")} di ${total.toLocaleString("it-IT")} giochi`
+        : `${shown.toLocaleString("it-IT")} risultati caricati`;
   ui.catalogLoadMore.hidden = !state.catalogHasMore;
   ui.catalogLoadMore.disabled = state.catalogLoading;
   ui.catalogLoadMore.textContent = state.catalogLoading ? "Caricamento…" : "Carica altri giochi";
@@ -1141,8 +1152,12 @@ function trapMobileOverlayFocus(event) {
 
 function parseRoute() {
   const rawHash = window.location.hash || "#/home";
-  if (/^#(?:access_token|refresh_token|error|error_description)=/.test(rawHash)) {
-    return { name: "auth-callback", params: {}, query: new URLSearchParams() };
+  if (/^#(?:access_token|refresh_token|error|error_code|error_description)=/.test(rawHash)) {
+    return {
+      name: "auth-callback",
+      params: {},
+      query: new URLSearchParams(rawHash.slice(1)),
+    };
   }
   const raw = rawHash.startsWith("#/") ? rawHash.slice(2) : rawHash.replace(/^#/, "");
   const [pathPart = "home", queryPart = ""] = raw.split("?");
@@ -4739,39 +4754,69 @@ function renderAuthPage() {
   const isRegister = mode === "register";
   const isForgot = mode === "forgot-password";
   const isReset = mode === "reset-password";
-  const isCallback = mode === "auth-callback" || state.route.query.get("confirmed") === "1";
+  const callbackErrorCode = state.route.query.get("error_code") || state.route.query.get("error") || "";
+  const callbackErrorDescription = state.route.query.get("error_description") || "";
+  const callbackFlow = state.route.query.get("auth_flow") || "";
+  const hasCallbackError = mode === "auth-callback" && Boolean(callbackErrorCode || callbackErrorDescription);
+  const isCallbackSuccess = !hasCallbackError && (
+    mode === "auth-callback" || state.route.query.get("confirmed") === "1"
+  );
+  const isCallback = hasCallbackError || isCallbackSuccess;
+  const isExpiredCallback = callbackErrorCode === "otp_expired";
+
   const titles = {
     register: "Registrati",
     "forgot-password": "Recupera password",
     "reset-password": "Nuova password",
   };
-  updateDocumentTitle(titles[mode] || "Accedi");
+  updateDocumentTitle(hasCallbackError ? "Link non valido" : (titles[mode] || "Accedi"));
   ui.authConfigWarning.hidden = Boolean(window.VaultAuth?.configured);
   ui.loginForm.hidden = isRegister || isForgot || isReset || isCallback;
   ui.registerForm.hidden = !isRegister || isCallback;
   ui.forgotPasswordForm.hidden = !isForgot;
   ui.resetPasswordForm.hidden = !isReset;
-  ui.authConfirmation.hidden = !isCallback;
+  ui.authConfirmation.hidden = !isCallbackSuccess;
+  ui.authCallbackError.hidden = !hasCallbackError;
 
-  ui.authEyebrow.textContent = isCallback ? "EMAIL CONFERMATA" : "THE FREE VAULT ACCOUNT";
-  ui.authTitle.textContent = isCallback
-    ? "Account attivato"
-    : isRegister
-      ? "Crea il tuo account"
-      : isForgot
-        ? "Recupera la password"
-        : isReset
-          ? "Scegli una nuova password"
-          : "Bentornato";
-  ui.authSubtitle.textContent = isCallback
-    ? "La conferma è andata a buon fine."
-    : isRegister
-      ? "Servono solo username, email e password. Il resto si completa dal profilo."
-      : isForgot
-        ? "Riceverai un link sicuro per impostare una nuova password."
-        : isReset
-          ? "Inserisci una password nuova di almeno otto caratteri."
-          : "Accedi con email e password per sincronizzare il tuo Vault.";
+  if (hasCallbackError) {
+    const recoveryLikely = callbackFlow === "recovery" || isExpiredCallback;
+    const title = isExpiredCallback
+      ? "Link scaduto o già utilizzato"
+      : "Impossibile completare l’operazione";
+    const fallbackMessage = isExpiredCallback
+      ? "Il collegamento è monouso e non è più valido. Richiedine uno nuovo e usa soltanto l’ultima email ricevuta."
+      : "Il collegamento di autenticazione non è valido. Riprova partendo dalla pagina di accesso.";
+
+    ui.authEyebrow.textContent = "LINK NON VALIDO";
+    ui.authTitle.textContent = title;
+    ui.authSubtitle.textContent = fallbackMessage;
+    ui.authCallbackErrorTitle.textContent = title;
+    ui.authCallbackErrorMessage.textContent = isExpiredCallback
+      ? fallbackMessage
+      : (callbackErrorDescription || fallbackMessage);
+    ui.authCallbackErrorAction.href = recoveryLikely ? "#/forgot-password" : "#/login";
+    ui.authCallbackErrorAction.textContent = recoveryLikely ? "Richiedi un nuovo link" : "Torna all’accesso";
+  } else {
+    ui.authEyebrow.textContent = isCallbackSuccess ? "EMAIL CONFERMATA" : "THE FREE VAULT ACCOUNT";
+    ui.authTitle.textContent = isCallbackSuccess
+      ? "Account attivato"
+      : isRegister
+        ? "Crea il tuo account"
+        : isForgot
+          ? "Recupera la password"
+          : isReset
+            ? "Scegli una nuova password"
+            : "Bentornato";
+    ui.authSubtitle.textContent = isCallbackSuccess
+      ? "La conferma è andata a buon fine."
+      : isRegister
+        ? "Servono solo username, email e password. Il resto si completa dal profilo."
+        : isForgot
+          ? "Riceverai un link sicuro per impostare una nuova password."
+          : isReset
+            ? "Inserisci una password nuova di almeno otto caratteri."
+            : "Accedi con email e password per sincronizzare il tuo Vault.";
+  }
 
   if (isReset && !state.auth.user && !window.VaultAuth?.recoveryMode) {
     ui.resetPasswordError.textContent = "Il link di recupero non è valido o è scaduto. Richiedine uno nuovo.";
@@ -5111,6 +5156,12 @@ async function initializeUserSystem() {
       handleRoute();
     }
     if (result?.returnKind === "recovery" && result.session) {
+      handleRoute();
+    }
+    if (result?.authError) {
+      showToast(result.authError.code === "otp_expired"
+        ? "Il link è scaduto o è già stato utilizzato."
+        : "Il collegamento di autenticazione non è valido.");
       handleRoute();
     }
   } catch (error) {
