@@ -322,3 +322,15 @@ def test_supabase_client_reports_non_retryable_404_body():
     assert "PGRST202" in message
     assert "Could not find the function" in message
     assert session.request.call_count == 1
+
+
+def test_v503_restores_catalog_safe_date_dependency():
+    migration = read("supabase/migrations/20260614_v503_restore_catalog_safe_date.sql")
+    schema = read("supabase/schema.sql")
+
+    for sql in (migration, schema):
+        assert "create or replace function public.catalog_safe_date(p_value text)" in sql
+        assert "returns date" in sql
+        assert "grant execute on function public.catalog_safe_date(text) to service_role" in sql
+
+    assert "notify pgrst, 'reload schema'" in migration.lower()

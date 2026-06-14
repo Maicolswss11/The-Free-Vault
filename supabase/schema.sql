@@ -4585,6 +4585,29 @@ comment on function public.search_catalog(text, text[], text, text, text, intege
 'Catalog search v4.7.4: indexed title matching, lightweight key pagination, full rows loaded only after LIMIT.';
 
 
+-- Helper date condiviso dal catalogo set-based e dal Database Master.
+create or replace function public.catalog_safe_date(p_value text)
+returns date
+language plpgsql
+immutable
+strict
+set search_path = ''
+as $$
+begin
+  if p_value !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then
+    return null;
+  end if;
+
+  return p_value::date;
+exception
+  when others then
+    return null;
+end;
+$$;
+
+revoke all on function public.catalog_safe_date(text) from public;
+grant execute on function public.catalog_safe_date(text) to service_role;
+
 -- v5.0 — Universal Game Database, fase 1
 -- Migrazione sorgente: supabase/migrations/20260614_v50_universal_game_database.sql
 
