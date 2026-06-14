@@ -864,3 +864,51 @@ La sincronizzazione applica inoltre una soglia di sicurezza: se il recupero live
 produce meno di 1000 listing, l'upsert viene annullato e il catalogo esistente
 rimane intatto. Non sono richieste migrazioni SQL, modifiche a `docs/config.js`,
 Legacy Rebuild o cambio della cache PWA.
+
+## v5.0 — Universal Game Database (fase 1)
+
+The Free Vault non dipende più dagli store per stabilire quali videogiochi
+esistono. `public.games` diventa il database Master enciclopedico e può contenere
+titoli retro, delistati o esclusivamente fisici anche senza alcuna listing
+commerciale.
+
+La prima sorgente Master è IGDB. L'importatore salva:
+
+- gioco canonico, descrizione, copertina e data di prima pubblicazione;
+- piattaforme storiche e moderne;
+- date di uscita regionali;
+- titoli alternativi;
+- identificatori esterni Steam, Epic, PlayStation, Xbox, GOG e altri provider;
+- una proiezione compatibile in `catalog_games`, così i titoli Master sono subito
+  ricercabili, recensibili e utilizzabili nelle saghe con il frontend esistente.
+
+La migrazione mantiene `game_key` per compatibilità e aggiunge riferimenti
+`game_id` progressivi a libreria, recensioni, diario, progresso, franchise e
+collezioni editoriali. Gli store restano feed di disponibilità; il loro matching
+completo verso le schede Master sarà consolidato nelle fasi successive.
+
+### Installazione
+
+1. Applicare `supabase/migrations/20260614_v50_universal_game_database.sql` al
+   database self-hosted.
+2. Creare un'applicazione nella Twitch Developer Console.
+3. Aggiungere nei secret GitHub:
+
+```text
+IGDB_CLIENT_ID
+IGDB_CLIENT_SECRET
+```
+
+4. Avviare `Sync IGDB Master Catalog` da GitHub Actions.
+
+Il workflow è riprendibile: salva l'ultimo ID IGDB importato in
+`master_sync_state`. Con i valori predefiniti importa fino a 10.000 schede per
+esecuzione; rilanciarlo finché lo stato passa da `paused` a `completed`.
+`reset_cursor` va usato soltanto per una nuova scansione completa.
+
+La cache PWA della fase 1 è:
+
+```text
+the-free-vault-v5-0-universal-game-database
+```
+

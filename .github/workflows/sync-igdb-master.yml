@@ -1,0 +1,73 @@
+name: Sync IGDB Master Catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      reset_cursor:
+        description: "Riparti dall'ID IGDB 0 (non cancella i giochi già importati)"
+        required: true
+        type: boolean
+        default: false
+      page_size:
+        description: "Giochi richiesti per pagina (massimo IGDB: 500)"
+        required: true
+        default: "250"
+      max_pages:
+        description: "Numero massimo di pagine in questa esecuzione"
+        required: true
+        default: "40"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: master-catalog-database-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-igdb-master:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+      IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+      IGDB_RESET_CURSOR: ${{ inputs.reset_cursor }}
+      IGDB_PAGE_SIZE: ${{ inputs.page_size }}
+      IGDB_MAX_PAGES: ${{ inputs.max_pages }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      CATALOG_MAX_DATABASE_BYTES: "42949672960"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: poller/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r poller/requirements.txt
+
+      - name: Verify secrets
+        shell: bash
+        run: |
+          test -n "$IGDB_CLIENT_ID" || (echo "Manca IGDB_CLIENT_ID" && exit 1)
+          test -n "$IGDB_CLIENT_SECRET" || (echo "Manca IGDB_CLIENT_SECRET" && exit 1)
+          test -n "$SUPABASE_URL" || (echo "Manca SUPABASE_URL" && exit 1)
+          test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY (o la legacy SUPABASE_SERVICE_ROLE_KEY)" && exit 1)
+
+      - name: Check database capacity
+        run: |
+          python - <<'PY'
+          from poller.supabase_catalog_sink import SupabaseCatalogSink
+          SupabaseCatalogSink.from_env().ensure_storage_capacity()
+          PY
+
+      - name: Import IGDB into Master catalog
+        run: python -m poller.igdb_master_main

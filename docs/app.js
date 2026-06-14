@@ -654,8 +654,8 @@ function snapshotGame(game) {
     match_key: game.match_key,
     listing_id: game.listing_id || game.internal_id,
     internal_id: game.internal_id || game.listing_id,
-    store: game.store || "epic",
-    stores: game.stores || [game.store || "epic"],
+    store: game.store || null,
+    stores: game.stores || (game.store ? [game.store] : []),
     store_listings: game.store_listings || [],
     platforms: game.platforms || ["pc"],
     external_id: game.external_id || game.epic_id,
@@ -686,6 +686,7 @@ function snapshotGame(game) {
     genres: game.genres || [],
     categories: game.categories || [],
     source_kind: game.source_kind,
+    master_game_id: game.master_game_id || null,
   };
 }
 
@@ -736,7 +737,7 @@ function priceText(game) {
 }
 
 function getMode(game) {
-  if (game.source_kind === "catalog") return "catalog";
+  if (["catalog", "store", "master", "hybrid"].includes(game.source_kind)) return "catalog";
   const now = Date.now();
   const start = new Date(game.start_date).getTime();
   const end = new Date(game.end_date).getTime();
@@ -797,7 +798,8 @@ function storeLabel(store) {
     steam: "Steam",
     playstation: "PlayStation",
     xbox: "Xbox",
-  }[store || "epic"] || String(store || "Store");
+    igdb: "IGDB",
+  }[store] || (store ? String(store) : "Archivio");
 }
 
 function normalizePromotion(game) {
@@ -821,13 +823,13 @@ function normalizePromotion(game) {
 }
 
 function normalizeCatalog(game) {
-  const store = game.store || "epic";
+  const store = game.store || null;
   return {
     ...game,
     listing_id: game.listing_id || game.internal_id,
-    source_kind: "catalog",
+    source_kind: game.source_kind || "catalog",
     store,
-    stores: game.stores || [store],
+    stores: game.stores || (store ? [store] : []),
     store_listings: game.store_listings || [],
     category_group: game.category_group || inferCategoryGroup(game),
     market_segment: game.market_segment || inferMarketSegment(game),
@@ -1592,17 +1594,25 @@ function renderHero() {
 
 function badgeText(game) {
   const mode = getMode(game);
+  if (game.source_kind === "master") return "ENCICLOPEDIA";
   if (game.is_mystery_game) return "MYSTERY GAME";
   if (mode === "current") return "GRATIS ORA";
   if (mode === "upcoming") return "IN ARRIVO";
   if (mode === "expired") return "REGALO PASSATO";
-  const stores = game.stores || [game.store || "epic"];
+  const stores = (game.stores?.length ? game.stores : (game.store ? [game.store] : [])).filter(Boolean);
+  if (!stores.length) return "ARCHIVIO";
   return stores.length > 1
     ? stores.map((store) => storeLabel(store).replace(" Games", "")).join(" + ").toUpperCase()
     : `${storeLabel(stores[0]).toUpperCase()} STORE`;
 }
 
 function applyPriceToCard(game, originalPrice, priceLabel) {
+  if (game.source_kind === "master") {
+    originalPrice.hidden = true;
+    originalPrice.textContent = "";
+    priceLabel.textContent = "SCHEDA ENCICLOPEDICA";
+    return;
+  }
   if (game.source_kind === "promotion") {
     originalPrice.hidden = !game.fmt_original_price;
     originalPrice.textContent = game.fmt_original_price || "";
@@ -1701,14 +1711,15 @@ function renderCard(game) {
   image.alt = `Copertina di ${game.title}`;
   image.onerror = () => { image.src = PLACEHOLDER; };
   badge.textContent = badgeText(game);
-  publisher.textContent = game.developer || game.publisher || storeLabel(game.store);
+  publisher.textContent = game.developer || game.publisher || (game.source_kind === "master" ? "Archivio IGDB" : storeLabel(game.store));
   title.textContent = game.title;
   description.textContent = game.description || "Descrizione non disponibile.";
   applyPriceToCard(game, originalPrice, priceLabel);
   countdown.textContent = countdownText(game);
-  progress.hidden = game.source_kind === "catalog";
-  storeLink.href = game.store_url;
-  storeLink.textContent = `Apri su ${storeLabel(game.store)}`;
+  progress.hidden = game.source_kind !== "promotion";
+  storeLink.hidden = !game.store_url;
+  storeLink.href = game.store_url || "#";
+  storeLink.textContent = game.source_kind === "master" ? "Apri su IGDB" : `Apri su ${storeLabel(game.store)}`;
   updateCardPersonalState(card, game);
 
   cover.onclick = () => navigate(gameRoute(game));
@@ -2663,7 +2674,7 @@ async function renderRelatedGames(game) {
   ui.gameRelatedStatus.hidden = false;
   ui.gameRelatedSection.hidden = false;
 
-  if (!window.VaultCatalog?.configured() || game.source_kind !== "catalog") {
+  if (!window.VaultCatalog?.configured() || getMode(game) !== "catalog") {
     ui.gameRelatedSection.hidden = true;
     ui.gameEditorialMemberships.hidden = true;
     return;
@@ -2965,7 +2976,7 @@ async function renderEditorialCollectionPage() {
 async function renderGameEditorialMemberships(game) {
   ui.gameEditorialMemberships.hidden = true;
   ui.gameEditorialMembershipLinks.replaceChildren();
-  if (!window.VaultFranchises || game.source_kind !== "catalog") return;
+  if (!window.VaultFranchises || getMode(game) !== "catalog") return;
   const expectedKey = gameKey(game);
   try {
     const memberships = await window.VaultFranchises.getMemberships(expectedKey);
@@ -3023,7 +3034,9 @@ async function renderGamePage() {
   ui.gamePageImage.onerror = () => { ui.gamePageImage.src = PLACEHOLDER; };
   ui.gamePageBadge.textContent = badgeText(game);
   ui.gamePageTitle.textContent = game.title;
-  const availableStores = game.stores || listingsForGame(game).map((listing) => listing.store);
+  const availableStores = [...new Set(
+    (game.stores?.length ? game.stores : listingsForGame(game).map((listing) => listing.store)).filter(Boolean)
+  )];
   const bylineParts = [];
   if (game.developer) {
     bylineParts.push(`<a href="${escapeAttr(entityRoute("developer", game.developer))}">${escapeHtml(game.developer)}</a>`);
@@ -3032,17 +3045,19 @@ async function renderGamePage() {
     bylineParts.push(`<a href="${escapeAttr(entityRoute("publisher", game.publisher))}">${escapeHtml(game.publisher)}</a>`);
   }
   ui.gamePageByline.innerHTML = bylineParts.join(" · ")
-    || escapeHtml([...new Set(availableStores)].map(storeLabel).join(" · "))
-    || "Store non disponibile";
+    || escapeHtml(availableStores.map(storeLabel).join(" · "))
+    || (game.source_kind === "master" ? "Scheda enciclopedica IGDB" : "Store non disponibile");
   ui.gamePageDescription.textContent = game.description || "Descrizione non disponibile.";
   ui.gamePageMeta.innerHTML = [
     game.release_date ? `<span><small>USCITA</small>${escapeHtml(formatDate(game.release_date))}</span>` : "",
     priceText(game) ? `<span><small>PREZZO</small>${escapeHtml(priceText(game))}</span>` : "",
-    game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type)}</span>` : "",
-    `<span><small>STORE</small>${escapeHtml([...new Set(availableStores)].map(storeLabel).join(" · "))}</span>`,
+    game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type === "IGDB_MASTER" ? "Gioco enciclopedico" : game.offer_type)}</span>` : "",
+    availableStores.length ? `<span><small>STORE</small>${escapeHtml(availableStores.map(storeLabel).join(" · "))}</span>` : "",
+    !availableStores.length && game.platforms?.length ? `<span><small>PIATTAFORME</small>${escapeHtml(game.platforms.join(" · "))}</span>` : "",
   ].filter(Boolean).join("");
-  ui.gamePageStoreLink.href = game.store_url;
-  ui.gamePageStoreLink.textContent = `Apri su ${storeLabel(game.store)}`;
+  ui.gamePageStoreLink.hidden = !game.store_url;
+  ui.gamePageStoreLink.href = game.store_url || "#";
+  ui.gamePageStoreLink.textContent = game.source_kind === "master" ? "Apri su IGDB" : `Apri su ${storeLabel(game.store)}`;
   ui.gamePageLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
   ui.gamePageFavorite.textContent = entry?.favorite ? "♥ Preferito" : "♡ Preferito";
   ui.gamePageStatus.value = journalProgress?.status || entry?.status || "saved";
@@ -4711,12 +4726,14 @@ async function loadAdminSystemStatus() {
   try {
     const status = await window.VaultAdmin.getSystemStatus();
     state.admin.system = status;
-    const limit = 500 * 1024 * 1024;
+    const limit = 40 * 1024 * 1024 * 1024;
     const ratio = Math.min(100, Math.round((Number(status.database_size_bytes || 0) / limit) * 100));
     const stats = [
-      ["Database", `${formatBytes(status.database_size_bytes)} · ${ratio}% del piano Free`],
+      ["Database", `${formatBytes(status.database_size_bytes)} · ${ratio}% della soglia operativa 40 GiB`],
       ["Catalogo", formatBytes(status.catalog_size_bytes)],
-      ["Giochi canonici", Number(status.catalog_games || 0).toLocaleString("it-IT")],
+      ["Database Master", formatBytes(status.master_size_bytes)],
+      ["Giochi nel catalogo", Number(status.catalog_games || 0).toLocaleString("it-IT")],
+      ["Schede Master", Number(status.master_games || 0).toLocaleString("it-IT")],
       ["Listing", Number(status.catalog_listings || 0).toLocaleString("it-IT")],
       ["Match da revisionare", Number(status.pending_matches || 0).toLocaleString("it-IT")],
       ["Segnalazioni aperte", Number(status.open_reports || 0).toLocaleString("it-IT")],
@@ -4731,6 +4748,16 @@ async function loadAdminSystemStatus() {
       const card = document.createElement("article");
       card.className = "admin-sync-card";
       card.innerHTML = `<div><strong>${escapeHtml(storeLabel(sync.store))}</strong><span>${escapeHtml(sync.status || "unknown")}</span></div><small>${Number(sync.listing_count || 0).toLocaleString("it-IT")} listing · ${sync.completed_at ? formatDate(sync.completed_at, true) : "mai completato"}</small>${sync.error_message ? `<p>${escapeHtml(sync.error_message)}</p>` : ""}`;
+      ui.adminSyncList.append(card);
+    }
+    for (const sync of status.master_sync || []) {
+      const card = document.createElement("article");
+      card.className = "admin-sync-card";
+      const provider = String(sync.provider || "Master").toUpperCase();
+      const completedLabel = sync.status === "completed"
+        ? (sync.completed_at ? formatDate(sync.completed_at, true) : "completato")
+        : `cursor ${Number(sync.cursor_id || 0).toLocaleString("it-IT")}`;
+      card.innerHTML = `<div><strong>${escapeHtml(provider)} · ENCICLOPEDIA</strong><span>${escapeHtml(sync.status || "unknown")}</span></div><small>${Number(sync.imported_count || 0).toLocaleString("it-IT")} schede elaborate · ${escapeHtml(completedLabel)}</small>${sync.error_message ? `<p>${escapeHtml(sync.error_message)}</p>` : ""}`;
       ui.adminSyncList.append(card);
     }
   } catch (error) {

@@ -8,7 +8,8 @@
 // Earlier stable cache: the-free-vault-v4-7-personal-recommendations
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
-const CACHE_NAME = "the-free-vault-v4-7-9-self-hosted-cutover";
+// Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
+const CACHE_NAME = "the-free-vault-v5-0-universal-game-database";
 const APP_SHELL = [
   "./",
   "./index.html",

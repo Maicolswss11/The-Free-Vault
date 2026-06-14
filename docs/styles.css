@@ -3560,3 +3560,17 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   }
   .admin-selected-game-actions .button { flex: 1; }
 }
+
+.data-attribution {
+  margin: 28px 0 96px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.data-attribution a {
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
