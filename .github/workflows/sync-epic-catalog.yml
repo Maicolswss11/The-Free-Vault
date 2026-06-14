@@ -21,7 +21,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
       CATALOG_INCREMENTAL_BATCH_SIZE: "100"
-      CATALOG_MAX_DATABASE_BYTES: "492830720"
+      CATALOG_MAX_DATABASE_BYTES: "42949672960"
 
     steps:
       - name: Checkout repository
