@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import Mock
 
-from poller.igdb_client import API_BASE_URL, IGDBClient, TOKEN_URL
+from poller.igdb_client import API_BASE_URL, IGDBClient, IGDBClientError, TOKEN_URL
 from poller.igdb_master_main import run
 from poller.igdb_models import normalize_igdb_page
 
@@ -128,6 +128,32 @@ def test_igdb_client_authenticates_and_uses_cursor_query():
     assert "where id > 19999 & version_parent = null" in query
     assert "sort id asc" in query
     assert "limit 25" in query
+    assert "game_status.status" in query
+    assert "game_status.name" not in query
+
+
+def test_igdb_client_reports_400_body_without_retrying():
+    auth_response = Mock()
+    auth_response.raise_for_status.return_value = None
+    auth_response.json.return_value = {"access_token": "token", "expires_in": 3600}
+
+    games_response = Mock()
+    games_response.status_code = 400
+    games_response.text = 'Invalid field name "name" in game_status'
+
+    session = Mock()
+    session.post.side_effect = [auth_response, games_response]
+    client = IGDBClient("client", "secret", session=session, request_interval=0)
+
+    try:
+        client.fetch_games_after(0, limit=25)
+    except IGDBClientError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Il client avrebbe dovuto rifiutare la query non valida")
+
+    assert 'Invalid field name "name" in game_status' in message
+    assert session.post.call_count == 2
 
 
 class FakeSource:

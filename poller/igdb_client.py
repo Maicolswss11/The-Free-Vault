@@ -36,7 +36,7 @@ GAME_FIELDS = ",".join((
     "game_type",
     "game_type.type",
     "game_status",
-    "game_status.name",
+    "game_status.status",
     "cover.image_id",
     "genres.name",
     "alternative_names.id",
@@ -80,6 +80,10 @@ GAME_FIELDS = ",".join((
 
 class IGDBClientError(RuntimeError):
     """Errore di autenticazione o lettura da IGDB."""
+
+
+class IGDBRequestRejected(IGDBClientError):
+    """Richiesta rifiutata definitivamente per sintassi o parametri non validi."""
 
 
 @dataclass(slots=True)
@@ -164,8 +168,14 @@ class IGDBClient:
                     continue
                 if response.status_code == 429 or response.status_code >= 500:
                     raise requests.HTTPError(
-                        f"HTTP {response.status_code}: {response.text[:500]}",
+                        f"HTTP {response.status_code}: {response.text[:1000]}",
                         response=response,
+                    )
+                if 400 <= response.status_code < 500:
+                    detail = (response.text or "").strip()[:1000]
+                    raise IGDBRequestRejected(
+                        f"IGDB HTTP {response.status_code} su {endpoint}: "
+                        f"{detail or 'richiesta rifiutata senza dettagli'}"
                     )
                 response.raise_for_status()
                 payload = response.json()
@@ -174,7 +184,7 @@ class IGDBClient:
                 return [item for item in payload if isinstance(item, dict)]
             except (requests.RequestException, ValueError, IGDBClientError) as exc:
                 last_error = exc
-                if attempt >= attempts:
+                if isinstance(exc, IGDBRequestRejected) or attempt >= attempts:
                     break
                 delay = min(20, 2 ** (attempt - 1))
                 logger.warning(
