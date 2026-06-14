@@ -62,6 +62,17 @@ jobs:
           test -n "$SUPABASE_URL" || (echo "Manca SUPABASE_URL" && exit 1)
           test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY (o la legacy SUPABASE_SERVICE_ROLE_KEY)" && exit 1)
 
+      - name: Verify Supabase target
+        shell: bash
+        run: |
+          if [[ "$SUPABASE_URL" == "https://desktop-chun4r5.tail43c3e4.ts.net" ]] || \
+             [[ "$SUPABASE_URL" == "https://desktop-chun4r5.tail43c3e4.ts.net/" ]]; then
+            echo "Supabase target: SELF-HOSTED"
+          else
+            echo "::error::SUPABASE_URL non punta al backend self-hosted"
+            exit 1
+          fi
+
       - name: Check database capacity
         run: |
           python - <<'PY'
