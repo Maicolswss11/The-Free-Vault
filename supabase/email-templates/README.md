@@ -1,32 +1,40 @@
 # Template email Auth self-hosted
 
-Il template `recovery.html` usa `{{ .Token }}` invece di
-`{{ .ConfirmationURL }}`. Il recupero password non dipende quindi da link Auth
-monouso che un provider SMTP o uno scanner potrebbe aprire anticipatamente.
+Questa cartella contiene i template HTML usati da Supabase Auth self-hosted.
+I file devono essere serviti tramite HTTP da un servizio raggiungibile dal
+container `auth`; Supabase Auth non legge direttamente i template da un volume.
 
-Supabase Auth self-hosted carica i template da un URL HTTP raggiungibile dal
-container `auth`; non legge direttamente file montati nel container.
+## Mappatura dei flussi
 
-Configurazione minima:
+| Flusso Supabase | File | Variabile template |
+| --- | --- | --- |
+| Conferma registrazione | `confirmation.html` | `GOTRUE_MAILER_TEMPLATES_CONFIRMATION` |
+| Invito | `invite.html` | `GOTRUE_MAILER_TEMPLATES_INVITE` |
+| Magic link | `magic-link.html` | `GOTRUE_MAILER_TEMPLATES_MAGIC_LINK` |
+| Cambio email | `email-change.html` | `GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE` |
+| Recupero password OTP | `recovery.html` | `GOTRUE_MAILER_TEMPLATES_RECOVERY` |
+| Riautenticazione | `reauthentication.html` | `GOTRUE_MAILER_TEMPLATES_REAUTHENTICATION` |
+
+Il template recovery usa `{{ .Token }}` e non contiene
+`{{ .ConfirmationURL }}`: il pulsante apre soltanto la pagina generica di
+recupero, quindi il click tracking SMTP non può consumare il token monouso.
+
+## Configurazione self-hosted
+
+Esempio di variabili da aggiungere al servizio `auth`:
 
 ```yaml
-services:
-  email-templates:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    command: ["caddy", "file-server", "--root", "/srv", "--listen", ":8080"]
-    volumes:
-      - ./volumes/email-templates:/srv:ro
+GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://email-templates:8080/confirmation.html
+GOTRUE_MAILER_TEMPLATES_INVITE: http://email-templates:8080/invite.html
+GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: http://email-templates:8080/magic-link.html
+GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: http://email-templates:8080/email-change.html
+GOTRUE_MAILER_TEMPLATES_RECOVERY: http://email-templates:8080/recovery.html
+GOTRUE_MAILER_TEMPLATES_REAUTHENTICATION: http://email-templates:8080/reauthentication.html
+
+GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "Conferma il tuo account · The Free Vault"
+GOTRUE_MAILER_SUBJECTS_INVITE: "Sei stato invitato su The Free Vault"
+GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "Il tuo link di accesso · The Free Vault"
+GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "Conferma il nuovo indirizzo email · The Free Vault"
+GOTRUE_MAILER_SUBJECTS_RECOVERY: "Codice di recupero · The Free Vault"
+GOTRUE_MAILER_SUBJECTS_REAUTHENTICATION: "Codice di verifica · The Free Vault"
 ```
-
-Nel servizio `auth`:
-
-```yaml
-environment:
-  GOTRUE_MAILER_TEMPLATES_RECOVERY: http://email-templates:8080/recovery.html
-  GOTRUE_MAILER_SUBJECTS_RECOVERY: "Codice di recupero · The Free Vault"
-```
-
-Copia `recovery.html` in `volumes/email-templates/`, verifica che
-`http://email-templates:8080/recovery.html` sia raggiungibile dal container
-`auth`, quindi ricrea i servizi `email-templates` e `auth`.

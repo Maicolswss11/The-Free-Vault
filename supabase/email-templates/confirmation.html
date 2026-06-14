@@ -1,4 +1,3 @@
-
 <!doctype html>
 
 <html lang="it">
@@ -7,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="supported-color-schemes" content="dark">
-  <title>Reimposta la password | The Free Vault</title>
+  <title>Conferma il tuo account | The Free Vault</title>
 </head>
 
 <body style="
@@ -29,7 +28,7 @@
     font-size: 1px;
     line-height: 1px;
   ">
-    Usa il codice monouso per scegliere una nuova password per il tuo account The Free Vault.
+    Conferma il tuo indirizzo email per accedere a The Free Vault.
   </div>
 
   <table
@@ -132,7 +131,7 @@
                   letter-spacing: 0.7px;
                   text-transform: uppercase;
                 ">
-                  Sicurezza
+                  Account
                 </span>
               </td>
 
@@ -146,19 +145,16 @@
       <tr>
         <td style="padding: 44px 36px 38px 36px;">
 
-          <!-- Icona -->
-
-
           <div style="
             margin-bottom: 12px;
-            color: #7b83ff;
+            color: #3ca7ff;
             font-size: 11px;
             line-height: 15px;
             font-weight: 800;
             letter-spacing: 1px;
             text-transform: uppercase;
           ">
-            Recupero dell'account
+            Verifica dell'indirizzo email
           </div>
 
           <h1 style="
@@ -169,7 +165,7 @@
             font-weight: 800;
             letter-spacing: -0.7px;
           ">
-            Reimposta la password
+            Conferma il tuo account
           </h1>
 
           <p style="
@@ -178,8 +174,7 @@
             font-size: 16px;
             line-height: 26px;
           ">
-            Abbiamo ricevuto una richiesta di reimpostazione della password
-            per il tuo account
+            Benvenuto su
             <strong style="color: #ffffff;">The Free Vault</strong>.
           </p>
 
@@ -189,52 +184,12 @@
             font-size: 15px;
             line-height: 25px;
           ">
-            Inserisci il codice monouso di 6 cifre nella pagina di recupero.
-            Dopo la verifica potrai scegliere una nuova password.
+            Conferma il tuo indirizzo email per completare la registrazione
+            e iniziare a tenere traccia dei giochi gratuiti, della tua
+            libreria e delle tue attività.
           </p>
 
-          <!-- Codice OTP -->
-          <table
-            role="presentation"
-            width="100%"
-            cellspacing="0"
-            cellpadding="0"
-            border="0"
-            style="
-              margin-bottom: 22px;
-              background-color: #101722;
-              border: 1px solid #334155;
-              border-radius: 12px;
-            "
-          >
-            <tr>
-              <td align="center" style="padding: 22px 18px;">
-                <div style="
-                  margin-bottom: 8px;
-                  color: #7f8ca3;
-                  font-size: 10px;
-                  line-height: 14px;
-                  font-weight: 800;
-                  letter-spacing: 1px;
-                  text-transform: uppercase;
-                ">
-                  Codice di recupero
-                </div>
-                <div style="
-                  color: #ffffff;
-                  font-family: Consolas, 'Courier New', monospace;
-                  font-size: 34px;
-                  line-height: 42px;
-                  font-weight: 800;
-                  letter-spacing: 10px;
-                ">
-                  {{ .Token }}
-                </div>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Pulsante generico: non contiene il token -->
+          <!-- Pulsante -->
           <table
             role="presentation"
             cellspacing="0"
@@ -253,7 +208,7 @@
                 "
               >
                 <a
-                  href="{{ .SiteURL }}#/forgot-password?step=code"
+                  href="{{ .ConfirmationURL }}"
                   style="
                     display: block;
                     padding: 15px 24px;
@@ -266,13 +221,13 @@
                     text-decoration: none;
                   "
                 >
-                  Inserisci il codice
+                  Conferma il mio account
                 </a>
               </td>
             </tr>
           </table>
 
-          <!-- Informazione di sicurezza -->
+          <!-- Nota sicurezza -->
           <table
             role="presentation"
             width="100%"
@@ -282,89 +237,20 @@
             style="
               margin-top: 28px;
               background-color: #101722;
-              border: 1px solid #293548;
+              border: 1px solid #222e3f;
               border-radius: 10px;
             "
           >
             <tr>
-              <td width="38" valign="top" style="
-                padding: 16px 0 16px 17px;
-                color: #3ca7ff;
-                font-size: 17px;
-                line-height: 20px;
-                font-weight: 800;
-              ">
-                i
-              </td>
-
-              <td style="padding: 15px 17px 15px 0;">
-                <p style="
-                  margin: 0 0 4px 0;
-                  color: #c5cedb;
-                  font-size: 12px;
-                  line-height: 19px;
-                  font-weight: 700;
-                ">
-                  Codice temporaneo e monouso
-                </p>
-
+              <td style="padding: 15px 17px;">
                 <p style="
                   margin: 0;
                   color: #8390a3;
                   font-size: 12px;
                   line-height: 19px;
                 ">
-                  Il codice scade a breve e può essere utilizzato una sola volta.
-                  La password cambia soltanto dopo la verifica e il salvataggio.
-                </p>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Avviso -->
-          <table
-            role="presentation"
-            width="100%"
-            cellspacing="0"
-            cellpadding="0"
-            border="0"
-            style="
-              margin-top: 14px;
-              background-color: #211817;
-              border: 1px solid #5c3a32;
-              border-radius: 10px;
-            "
-          >
-            <tr>
-              <td width="38" valign="top" style="
-                padding: 16px 0 16px 17px;
-                color: #ff987d;
-                font-size: 18px;
-                line-height: 20px;
-                font-weight: 800;
-              ">
-                !
-              </td>
-
-              <td style="padding: 15px 17px 15px 0;">
-                <p style="
-                  margin: 0 0 4px 0;
-                  color: #f3c2b5;
-                  font-size: 12px;
-                  line-height: 19px;
-                  font-weight: 700;
-                ">
-                  Non hai richiesto tu il recupero?
-                </p>
-
-                <p style="
-                  margin: 0;
-                  color: #b9978f;
-                  font-size: 12px;
-                  line-height: 19px;
-                ">
-                  Ignora questa email. La password attuale resterà invariata.
-                  Non condividere il codice con altre persone.
+                  Non hai richiesto questa registrazione? Puoi ignorare
+                  questa email. L'account non verrà confermato.
                 </p>
               </td>
             </tr>
@@ -383,7 +269,7 @@
             font-size: 12px;
             line-height: 19px;
           ">
-            Puoi aprire direttamente la pagina di recupero da questo indirizzo:
+            Il pulsante non funziona? Copia questo indirizzo nel browser:
           </p>
 
           <p style="
@@ -393,13 +279,13 @@
             word-break: break-all;
           ">
             <a
-              href="{{ .SiteURL }}#/forgot-password?step=code"
+              href="{{ .ConfirmationURL }}"
               style="
                 color: #3ca7ff;
                 text-decoration: underline;
               "
             >
-              {{ .SiteURL }}#/forgot-password?step=code
+              {{ .ConfirmationURL }}
             </a>
           </p>
 
@@ -453,10 +339,17 @@
   </td>
 </tr>
 
-
   </table>
 
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 

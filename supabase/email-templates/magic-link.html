@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="supported-color-schemes" content="dark">
-  <title>Reimposta la password | The Free Vault</title>
+  <title>Il tuo link di accesso | The Free Vault</title>
 </head>
 
 <body style="
@@ -29,7 +29,7 @@
     font-size: 1px;
     line-height: 1px;
   ">
-    Usa il codice monouso per scegliere una nuova password per il tuo account The Free Vault.
+    Usa questo collegamento personale per accedere al tuo account The Free Vault.
   </div>
 
   <table
@@ -132,7 +132,7 @@
                   letter-spacing: 0.7px;
                   text-transform: uppercase;
                 ">
-                  Sicurezza
+                  Accesso
                 </span>
               </td>
 
@@ -146,19 +146,19 @@
       <tr>
         <td style="padding: 44px 36px 38px 36px;">
 
-          <!-- Icona -->
+
 
 
           <div style="
             margin-bottom: 12px;
-            color: #7b83ff;
+            color: #3ca7ff;
             font-size: 11px;
             line-height: 15px;
             font-weight: 800;
             letter-spacing: 1px;
             text-transform: uppercase;
           ">
-            Recupero dell'account
+            Link di accesso personale
           </div>
 
           <h1 style="
@@ -169,7 +169,7 @@
             font-weight: 800;
             letter-spacing: -0.7px;
           ">
-            Reimposta la password
+            Accedi al tuo Vault
           </h1>
 
           <p style="
@@ -178,8 +178,7 @@
             font-size: 16px;
             line-height: 26px;
           ">
-            Abbiamo ricevuto una richiesta di reimpostazione della password
-            per il tuo account
+            Abbiamo ricevuto una richiesta di accesso a
             <strong style="color: #ffffff;">The Free Vault</strong>.
           </p>
 
@@ -189,52 +188,11 @@
             font-size: 15px;
             line-height: 25px;
           ">
-            Inserisci il codice monouso di 6 cifre nella pagina di recupero.
-            Dopo la verifica potrai scegliere una nuova password.
+            Usa il pulsante seguente per entrare nel tuo account senza
+            inserire la password.
           </p>
 
-          <!-- Codice OTP -->
-          <table
-            role="presentation"
-            width="100%"
-            cellspacing="0"
-            cellpadding="0"
-            border="0"
-            style="
-              margin-bottom: 22px;
-              background-color: #101722;
-              border: 1px solid #334155;
-              border-radius: 12px;
-            "
-          >
-            <tr>
-              <td align="center" style="padding: 22px 18px;">
-                <div style="
-                  margin-bottom: 8px;
-                  color: #7f8ca3;
-                  font-size: 10px;
-                  line-height: 14px;
-                  font-weight: 800;
-                  letter-spacing: 1px;
-                  text-transform: uppercase;
-                ">
-                  Codice di recupero
-                </div>
-                <div style="
-                  color: #ffffff;
-                  font-family: Consolas, 'Courier New', monospace;
-                  font-size: 34px;
-                  line-height: 42px;
-                  font-weight: 800;
-                  letter-spacing: 10px;
-                ">
-                  {{ .Token }}
-                </div>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Pulsante generico: non contiene il token -->
+          <!-- Pulsante -->
           <table
             role="presentation"
             cellspacing="0"
@@ -253,7 +211,7 @@
                 "
               >
                 <a
-                  href="{{ .SiteURL }}#/forgot-password?step=code"
+                  href="{{ .ConfirmationURL }}"
                   style="
                     display: block;
                     padding: 15px 24px;
@@ -266,13 +224,13 @@
                     text-decoration: none;
                   "
                 >
-                  Inserisci il codice
+                  Accedi a The Free Vault
                 </a>
               </td>
             </tr>
           </table>
 
-          <!-- Informazione di sicurezza -->
+          <!-- Informazioni sul link -->
           <table
             role="presentation"
             width="100%"
@@ -305,7 +263,7 @@
                   line-height: 19px;
                   font-weight: 700;
                 ">
-                  Codice temporaneo e monouso
+                  Collegamento temporaneo
                 </p>
 
                 <p style="
@@ -314,14 +272,14 @@
                   font-size: 12px;
                   line-height: 19px;
                 ">
-                  Il codice scade a breve e può essere utilizzato una sola volta.
-                  La password cambia soltanto dopo la verifica e il salvataggio.
+                  Questo link scade a breve e può essere utilizzato una sola
+                  volta. Non inoltrarlo e non condividerlo con altre persone.
                 </p>
               </td>
             </tr>
           </table>
 
-          <!-- Avviso -->
+          <!-- Avviso di sicurezza -->
           <table
             role="presentation"
             width="100%"
@@ -354,7 +312,7 @@
                   line-height: 19px;
                   font-weight: 700;
                 ">
-                  Non hai richiesto tu il recupero?
+                  Non hai richiesto tu questo accesso?
                 </p>
 
                 <p style="
@@ -363,8 +321,8 @@
                   font-size: 12px;
                   line-height: 19px;
                 ">
-                  Ignora questa email. La password attuale resterà invariata.
-                  Non condividere il codice con altre persone.
+                  Ignora questa email. Nessuno potrà accedere al tuo account
+                  senza utilizzare il collegamento personale.
                 </p>
               </td>
             </tr>
@@ -383,7 +341,7 @@
             font-size: 12px;
             line-height: 19px;
           ">
-            Puoi aprire direttamente la pagina di recupero da questo indirizzo:
+            Il pulsante non funziona? Copia questo indirizzo nel browser:
           </p>
 
           <p style="
@@ -393,13 +351,13 @@
             word-break: break-all;
           ">
             <a
-              href="{{ .SiteURL }}#/forgot-password?step=code"
+              href="{{ .ConfirmationURL }}"
               style="
                 color: #3ca7ff;
                 text-decoration: underline;
               "
             >
-              {{ .SiteURL }}#/forgot-password?step=code
+              {{ .ConfirmationURL }}
             </a>
           </p>
 
@@ -458,5 +416,6 @@
 
 </body>
 </html>
+
 
 

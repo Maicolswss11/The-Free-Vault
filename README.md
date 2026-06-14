@@ -813,3 +813,14 @@ supabase/email-templates/recovery.html
 
 Non sono richieste migrazioni SQL o nuove tabelle. La cache PWA è
 `the-free-vault-v4-7-7-password-recovery-otp`.
+
+## v4.7.8 — Template Auth self-hosted completi
+
+I template email usati nel progetto Cloud sono ora versionati in
+`supabase/email-templates/` e possono essere serviti al container Auth del
+Supabase self-hosted. Sono inclusi conferma registrazione, invito, magic link,
+cambio email, recupero password e riautenticazione.
+
+Il recupero password mantiene il flusso OTP introdotto nella v4.7.7, ma usa ora
+la grafica completa di The Free Vault. Il link presente nell'email apre soltanto
+la pagina generica di recupero e non contiene il token monouso.
