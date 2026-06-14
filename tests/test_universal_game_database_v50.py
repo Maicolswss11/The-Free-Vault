@@ -255,3 +255,70 @@ def test_igdb_workflow_is_manual_resumable_and_uses_secrets():
     assert "IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}" in workflow
     assert "python -m poller.igdb_master_main" in workflow
     assert "CATALOG_MAX_DATABASE_BYTES: \"42949672960\"" in workflow
+
+
+def test_igdb_master_sink_uses_single_jsonb_wrapper_rpc():
+    from poller.igdb_master_sink import SupabaseMasterSink
+    from poller.igdb_models import MasterBatch
+
+    class RpcRecorder:
+        def __init__(self):
+            self.calls = []
+
+        def rpc(self, function, payload):
+            self.calls.append((function, payload))
+            return {"games": 1}
+
+    recorder = RpcRecorder()
+    sink = SupabaseMasterSink(recorder)
+    batch = MasterBatch(games=[{"id": "igdb:1", "title": "Test"}])
+
+    result = sink.upsert(
+        batch,
+        run_id="00000000-0000-0000-0000-000000000001",
+        cursor_id=1,
+    )
+
+    assert result == {"games": 1}
+    function, payload = recorder.calls[0]
+    assert function == "upsert_igdb_master_payload"
+    assert list(payload) == ["p_payload"]
+    assert payload["p_payload"]["p_cursor_id"] == 1
+    assert payload["p_payload"]["p_games"][0]["id"] == "igdb:1"
+
+
+def test_v502_migration_adds_single_jsonb_rpc_wrapper():
+    migration = read("supabase/migrations/20260614_v502_igdb_rpc_payload_wrapper.sql")
+
+    assert "create or replace function public.upsert_igdb_master_payload" in migration
+    assert "p_payload jsonb" in migration
+    assert "return public.upsert_igdb_master_batch(" in migration
+    assert "grant execute on function public.upsert_igdb_master_payload(jsonb) to service_role" in migration
+    assert "notify pgrst, 'reload schema'" in migration.lower()
+
+
+def test_supabase_client_reports_non_retryable_404_body():
+    from poller.supabase_catalog_sink import SupabaseCatalogError, SupabaseCatalogSink
+
+    response = Mock()
+    response.status_code = 404
+    response.text = '{"code":"PGRST202","message":"Could not find the function"}'
+
+    session = Mock()
+    session.request.return_value = response
+    sink = SupabaseCatalogSink(
+        "https://example.invalid",
+        "service-role-key",
+        session=session,
+    )
+
+    try:
+        sink.rpc("missing_rpc", {"p_value": 1})
+    except SupabaseCatalogError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("La risposta 404 doveva interrompere subito la richiesta")
+
+    assert "PGRST202" in message
+    assert "Could not find the function" in message
+    assert session.request.call_count == 1

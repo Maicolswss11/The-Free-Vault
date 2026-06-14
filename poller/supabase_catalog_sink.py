@@ -220,11 +220,17 @@ class SupabaseCatalogSink:
                 )
                 if response.status_code == 429 or response.status_code >= 500:
                     raise requests.HTTPError(
-                        f"HTTP {response.status_code}: {response.text[:500]}",
+                        f"HTTP {response.status_code}: {response.text[:1000]}",
                         response=response,
+                    )
+                if 400 <= response.status_code < 500:
+                    raise SupabaseCatalogError(
+                        f"HTTP {response.status_code}: {response.text[:1000]}"
                     )
                 response.raise_for_status()
                 return response
+            except SupabaseCatalogError:
+                raise
             except requests.RequestException as exc:
                 last_error = exc
                 if attempt >= attempts:

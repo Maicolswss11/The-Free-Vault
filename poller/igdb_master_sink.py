@@ -29,8 +29,13 @@ class SupabaseMasterSink:
 
     def upsert(self, batch: MasterBatch, *, run_id: str, cursor_id: int) -> dict[str, object]:
         result = self.catalog_sink.rpc(
-            "upsert_igdb_master_batch",
-            batch.as_rpc_payload(run_id=run_id, cursor_id=cursor_id),
+            "upsert_igdb_master_payload",
+            {
+                "p_payload": batch.as_rpc_payload(
+                    run_id=run_id,
+                    cursor_id=cursor_id,
+                )
+            },
         )
         return result if isinstance(result, dict) else {}
 
