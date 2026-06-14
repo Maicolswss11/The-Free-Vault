@@ -53,7 +53,7 @@ def test_recovery_email_template_contains_otp_but_no_auth_link():
     assert "GOTRUE_MAILER_SUBJECTS_RECOVERY" in instructions
 
 
-def test_v477_cache_name_is_updated():
+def test_current_cache_name_is_self_hosted_cutover():
     worker = read("docs/service-worker.js")
-    assert 'the-free-vault-v4-7-7-password-recovery-otp' in worker
+    assert 'const CACHE_NAME = "the-free-vault-v4-7-9-self-hosted-cutover"' in worker
     assert 'the-free-vault-v4-7-6-auth-callback-recovery' in worker

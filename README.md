@@ -824,3 +824,43 @@ cambio email, recupero password e riautenticazione.
 Il recupero password mantiene il flusso OTP introdotto nella v4.7.7, ma usa ora
 la grafica completa di The Free Vault. Il link presente nell'email apre soltanto
 la pagina generica di recupero e non contiene il token monouso.
+
+## v4.8 — Catalogo PlayStation PS4 e PS5
+
+Il catalogo canonico supporta ora una terza sorgente: PlayStation Store Italia.
+Il workflow `Sync PlayStation Catalog` legge le categorie pubbliche complete PS4
+e PS5, normalizza prodotti, edizioni, prezzi, immagini e piattaforme, quindi usa
+lo stesso upsert incrementale già adottato da Epic e Steam.
+
+Non vengono create nuove tabelle e non viene duplicato `catalog_games`: ogni SKU
+PlayStation viene salvato come listing `playstation:<product-id>` e collegato al
+gioco canonico tramite `match_key`. Gli SKU presenti sia nella categoria PS4 sia
+in quella PS5 vengono deduplicati; le diverse edizioni dello stesso gioco restano
+listing distinte sotto lo stesso record canonico.
+
+File principali:
+
+```text
+poller/playstation_client.py
+poller/playstation_catalog_store.py
+poller/playstation_catalog_main.py
+.github/workflows/sync-playstation-catalog.yml
+```
+
+Il workflow può essere avviato manualmente ed è pianificato il sabato alle
+`05:47 UTC`. Non richiede credenziali PSN: usa la griglia pubblica dello store e
+i secret Supabase già presenti. Per impostazione predefinita importa giochi ed
+edizioni, escludendo DLC, valuta virtuale, livelli e altri componenti aggiuntivi.
+
+La query PlayStation Store è persistita e il relativo hash può cambiare quando
+viene aggiornato il frontend Sony. Il client contiene più hash di fallback. In
+caso di modifica futura si può creare una variabile GitHub Actions, non segreta:
+
+```text
+PLAYSTATION_CATEGORY_QUERY_HASH
+```
+
+La sincronizzazione applica inoltre una soglia di sicurezza: se il recupero live
+produce meno di 1000 listing, l'upsert viene annullato e il catalogo esistente
+rimane intatto. Non sono richieste migrazioni SQL, modifiche a `docs/config.js`,
+Legacy Rebuild o cambio della cache PWA.

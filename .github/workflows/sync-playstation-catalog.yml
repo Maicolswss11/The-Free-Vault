@@ -1,0 +1,53 @@
+name: Sync PlayStation Catalog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "47 5 * * 6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-database-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-playstation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CATALOG_SINK: supabase
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PLAYSTATION_LOCALE: it-IT
+      PLAYSTATION_PAGE_SIZE: "1000"
+      PLAYSTATION_MIN_LISTINGS: "1000"
+      PLAYSTATION_CATEGORY_QUERY_HASH: ${{ vars.PLAYSTATION_CATEGORY_QUERY_HASH }}
+      CATALOG_INCREMENTAL_BATCH_SIZE: "100"
+      CATALOG_MAX_DATABASE_BYTES: "42949672960"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: poller/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r poller/requirements.txt
+
+      - name: Verify Supabase secrets
+        shell: bash
+        run: |
+          test -n "$SUPABASE_URL" || (echo "Manca SUPABASE_URL" && exit 1)
+          test -n "$SUPABASE_SECRET_KEY" || (echo "Manca SUPABASE_SECRET_KEY (o la legacy SUPABASE_SERVICE_ROLE_KEY)" && exit 1)
+
+      - name: Sync PlayStation catalog to Supabase
+        run: python -m poller.playstation_catalog_main
