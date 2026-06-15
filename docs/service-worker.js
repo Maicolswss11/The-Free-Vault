@@ -9,7 +9,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "the-free-vault-v5-1-1-franchise-header-fix";
+const CACHE_NAME = "the-free-vault-v5-1-1-editorial-ui-fixes";
 const APP_SHELL = [
   "./",
   "./index.html",

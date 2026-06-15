@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Epic Games">
-  <path fill="#111" d="M10 4h44v43.5L32 60 10 47.5V4Z"/>
-  <path fill="none" stroke="#fff" stroke-width="2" d="M12 6h40v40.3L32 57.7 12 46.3V6Z"/>
-  <text x="32" y="27" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" text-anchor="middle">EPIC</text>
-  <text x="32" y="40" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="800" text-anchor="middle">GAMES</text>
+  <path fill="#fff" d="M10 4h44v43.5L32 60 10 47.5V4Z"/>
+  <path fill="none" stroke="#0b0f16" stroke-width="1.8" d="M12 6h40v40.3L32 57.7 12 46.3V6Z"/>
+  <text x="32" y="27" fill="#0b0f16" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" text-anchor="middle">EPIC</text>
+  <text x="32" y="40" fill="#0b0f16" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="800" text-anchor="middle">GAMES</text>
 </svg>
