@@ -9,7 +9,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "the-free-vault-v5-0-universal-game-database";
+const CACHE_NAME = "the-free-vault-v5-1-frontend-editorial-overhaul";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -29,6 +29,12 @@ const APP_SHELL = [
   "./placeholders/game-placeholder.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/stores/steam.svg",
+  "./icons/stores/epic.svg",
+  "./icons/stores/playstation.svg",
+  "./icons/stores/xbox.svg",
+  "./icons/stores/gog.svg",
+  "./icons/stores/nintendo.svg",
 ];
 
 self.addEventListener("install", (event) => {

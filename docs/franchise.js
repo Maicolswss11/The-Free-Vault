@@ -77,9 +77,24 @@
         : Number(game.narrativeOrder),
       note: game.note || null,
     }));
-    return rpc("admin_save_franchise_games_batch", {
+    if (!payload.length) throw new Error("Seleziona almeno un gioco da salvare.");
+
+    let result = null;
+    for (let offset = 0; offset < payload.length; offset += 100) {
+      result = await rpc("admin_save_franchise_games_batch", {
+        p_franchise_id: franchiseId,
+        p_games: payload.slice(offset, offset + 100),
+      });
+    }
+    return result;
+  }
+
+  async function removeAdminFranchiseGames(franchiseId, gameKeys = []) {
+    const keys = [...new Set((gameKeys || []).map((key) => String(key || "").trim()).filter(Boolean))];
+    if (!keys.length) throw new Error("Seleziona almeno un gioco da rimuovere.");
+    return rpc("admin_remove_franchise_games_batch", {
       p_franchise_id: franchiseId,
-      p_games: payload,
+      p_game_keys: keys,
     });
   }
 
@@ -154,6 +169,7 @@
     saveAdminFranchiseGames,
     enrichCatalogGames,
     removeAdminFranchiseGame,
+    removeAdminFranchiseGames,
     listAdminCollections,
     getAdminCollection,
     saveAdminCollection,

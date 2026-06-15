@@ -912,3 +912,46 @@ La cache PWA della fase 1 è:
 the-free-vault-v5-0-universal-game-database
 ```
 
+
+## v5.1 — Frontend & Editorial Overhaul
+
+La v5.1 aggiorna l'interfaccia dopo l'introduzione del Database Master IGDB.
+
+### Editor massivo delle saghe
+
+La sezione `#/admin/editorial` include ora un editor tabellare per tutti i giochi di un franchise:
+
+- selezione singola o totale;
+- applicazione massiva del tipo di relazione;
+- numerazione automatica dell'ordine di uscita e narrativo;
+- cancellazione massiva dell'ordine narrativo;
+- ordinamento per data di uscita;
+- riordinamento tramite trascinamento o pulsanti su/giù;
+- modifica diretta di tipo, ordini e nota per ogni riga;
+- salvataggio dei soli selezionati oppure dell'intera saga;
+- rimozione batch fino a 250 titoli;
+- salvataggio automatico in blocchi da 100, compatibile con la RPC v4.7.
+
+Applicare prima la migrazione:
+
+```text
+supabase/migrations/20260615_v51_franchise_mass_editor.sql
+```
+
+Non è necessario riavviare Supabase; la migrazione ricarica la schema cache PostgREST.
+
+### Disponibilità multi-store
+
+- una sola disponibilità mostra `Apri su <store>`;
+- più store mostrano `Confronta N store` e portano alla sezione disponibilità;
+- le singole listing restano separate nella scheda del gioco;
+- le schede enciclopediche senza listing non mostrano un collegamento commerciale inventato;
+- Steam, Epic Games, PlayStation, Xbox, GOG e Nintendo usano asset locali riconoscibili e disponibili offline.
+
+### Interfaccia
+
+- icone di navigazione SVG coerenti;
+- campanella reale per le notifiche;
+- avatar account circolare con fallback alle iniziali;
+- correzione responsive delle card degli store;
+- cache PWA: `the-free-vault-v5-1-frontend-editorial-overhaul`.
