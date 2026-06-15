@@ -1,4 +1,4 @@
-# The Free Vault
+# Ludograph
 
 Web app/PWA per seguire i giochi gratuiti su Epic Games Store, ricevere notifiche e costruire una libreria personale.
 
@@ -822,7 +822,7 @@ Supabase self-hosted. Sono inclusi conferma registrazione, invito, magic link,
 cambio email, recupero password e riautenticazione.
 
 Il recupero password mantiene il flusso OTP introdotto nella v4.7.7, ma usa ora
-la grafica completa di The Free Vault. Il link presente nell'email apre soltanto
+la grafica completa di Ludograph. Il link presente nell'email apre soltanto
 la pagina generica di recupero e non contiene il token monouso.
 
 ## v4.8 — Catalogo PlayStation PS4 e PS5
@@ -867,7 +867,7 @@ Legacy Rebuild o cambio della cache PWA.
 
 ## v5.0 — Universal Game Database (fase 1)
 
-The Free Vault non dipende più dagli store per stabilire quali videogiochi
+Ludograph non dipende più dagli store per stabilire quali videogiochi
 esistono. `public.games` diventa il database Master enciclopedico e può contenere
 titoli retro, delistati o esclusivamente fisici anche senza alcuna listing
 commerciale.
@@ -955,3 +955,38 @@ Non è necessario riavviare Supabase; la migrazione ricarica la schema cache Pos
 - avatar account circolare con fallback alle iniziali;
 - correzione responsive delle card degli store;
 - cache PWA: `the-free-vault-v5-1-frontend-editorial-overhaul`.
+
+## v5.2 — Franchise Graph & Editorial Import
+
+I franchise supportano percorsi editoriali multipli, continuità alternative,
+sottosaghe, archi narrativi, canonicità e relazioni tra giochi. Il pannello
+amministrativo può esportare e importare pacchetti
+`tfv-franchise-editorial-v2`, validarli e applicarli in transazione.
+
+## v5.3 — Ludograph, Brand & Platform Identity
+
+Il progetto adotta il nome pubblico **Ludograph**. Le chiavi tecniche e i nomi
+storici (`tfv:*`, URL GitHub Pages e schema database) restano invariati per non
+perdere dati o rompere collegamenti esistenti.
+
+La nuova identità comprende:
+
+- marchio originale a forma di `L` e grafo;
+- favicon e icone PWA 192/512;
+- loghi PNG locali e riconoscibili per Steam, Epic Games, PlayStation, Xbox,
+  GOG e Nintendo;
+- badge piattaforma con logo famiglia e nome console nelle card, nelle schede e
+  nelle pagine franchise;
+- panoramica visuale dei franchise con titoli, percorsi, relazioni e arco di
+  pubblicazione;
+- hero di fallback ricavata dalle copertine della saga;
+- relazioni editoriali con copertine sorgente/destinazione;
+- template Auth rinominati e aggiornati con il marchio Ludograph.
+
+La cache PWA corrente è:
+
+```text
+ludograph-v5-3-rebrand-platform-identity
+```
+
+Non sono richieste migrazioni SQL né sincronizzazioni del catalogo.

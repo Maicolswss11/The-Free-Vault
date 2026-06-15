@@ -31,10 +31,10 @@ GOTRUE_MAILER_TEMPLATES_EMAIL_CHANGE: http://email-templates:8080/email-change.h
 GOTRUE_MAILER_TEMPLATES_RECOVERY: http://email-templates:8080/recovery.html
 GOTRUE_MAILER_TEMPLATES_REAUTHENTICATION: http://email-templates:8080/reauthentication.html
 
-GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "Conferma il tuo account · The Free Vault"
-GOTRUE_MAILER_SUBJECTS_INVITE: "Sei stato invitato su The Free Vault"
-GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "Il tuo link di accesso · The Free Vault"
-GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "Conferma il nuovo indirizzo email · The Free Vault"
-GOTRUE_MAILER_SUBJECTS_RECOVERY: "Codice di recupero · The Free Vault"
-GOTRUE_MAILER_SUBJECTS_REAUTHENTICATION: "Codice di verifica · The Free Vault"
+GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "Conferma il tuo account · Ludograph"
+GOTRUE_MAILER_SUBJECTS_INVITE: "Sei stato invitato su Ludograph"
+GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "Il tuo link di accesso · Ludograph"
+GOTRUE_MAILER_SUBJECTS_EMAIL_CHANGE: "Conferma il nuovo indirizzo email · Ludograph"
+GOTRUE_MAILER_SUBJECTS_RECOVERY: "Codice di recupero · Ludograph"
+GOTRUE_MAILER_SUBJECTS_REAUTHENTICATION: "Codice di verifica · Ludograph"
 ```

@@ -9,7 +9,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "the-free-vault-v5-2-franchise-graph-editorial-import";
+const CACHE_NAME = "ludograph-v5-3-rebrand-platform-identity";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -29,12 +29,25 @@ const APP_SHELL = [
   "./placeholders/game-placeholder.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/stores/steam.svg",
-  "./icons/stores/epic.svg",
-  "./icons/stores/playstation.svg",
-  "./icons/stores/xbox.svg",
-  "./icons/stores/gog.svg",
-  "./icons/stores/nintendo.svg",
+  "./icons/brand/ludograph-mark-64.png",
+  "./icons/brand/ludograph-mark-128.png",
+  "./icons/stores/steam.png",
+  "./icons/stores/epic.png",
+  "./icons/stores/playstation.png",
+  "./icons/stores/xbox.png",
+  "./icons/stores/gog.png",
+  "./icons/stores/nintendo.png",
+  "./icons/platforms/playstation.png",
+  "./icons/platforms/xbox.png",
+  "./icons/platforms/nintendo.png",
+  "./icons/platforms/windows.png",
+  "./icons/platforms/apple.png",
+  "./icons/platforms/linux.png",
+  "./icons/platforms/sega.png",
+  "./icons/platforms/pc.png",
+  "./icons/platforms/mobile.png",
+  "./icons/platforms/arcade.png",
+  "./icons/platforms/retro.png",
 ];
 
 self.addEventListener("install", (event) => {

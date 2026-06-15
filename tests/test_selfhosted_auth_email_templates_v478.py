@@ -35,7 +35,7 @@ def test_recovery_template_is_styled_and_tracking_safe():
     assert "{{ .ConfirmationURL }}" not in recovery
     assert "{{ .SiteURL }}#/forgot-password?step=code" in recovery
     assert "Codice di recupero" in recovery
-    assert "The Free Vault" in recovery
+    assert "Ludograph" in recovery
 
 
 def test_reauthentication_template_uses_otp():

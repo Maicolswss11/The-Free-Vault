@@ -1,15 +1,25 @@
 {
-  "name": "The Free Vault",
-  "short_name": "Free Vault",
+  "name": "Ludograph",
+  "short_name": "Ludograph",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#07090d",
   "theme_color": "#07090d",
-  "description": "Giochi gratuiti Epic, cronologia e libreria personale.",
+  "description": "Archivio universale dei videogiochi, diario, recensioni, franchise e collezioni personali.",
   "icons": [
-    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

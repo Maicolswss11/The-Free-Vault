@@ -136,6 +136,7 @@ const ui = {
   franchiseDescription: $("#franchise-description"),
   franchiseMeta: $("#franchise-meta"),
   franchiseStatus: $("#franchise-status"),
+  franchiseOverview: $("#franchise-overview"),
   franchiseProgress: $("#franchise-progress"),
   franchiseProgressCompleted: $("#franchise-progress-completed"),
   franchiseProgressStarted: $("#franchise-progress-started"),
@@ -816,27 +817,51 @@ function priceBucket(game) {
   return "paid";
 }
 
+const STORE_BRANDS = Object.freeze({
+  epic: { label: "Epic Games", icon: "./icons/stores/epic.png" },
+  steam: { label: "Steam", icon: "./icons/stores/steam.png" },
+  playstation: { label: "PlayStation", icon: "./icons/stores/playstation.png" },
+  xbox: { label: "Xbox", icon: "./icons/stores/xbox.png" },
+  gog: { label: "GOG", icon: "./icons/stores/gog.png" },
+  nintendo: { label: "Nintendo", icon: "./icons/stores/nintendo.png" },
+  igdb: { label: "IGDB", icon: null },
+});
+
+const PLATFORM_FAMILY_LABELS = Object.freeze({
+  playstation: "PlayStation",
+  xbox: "Xbox",
+  nintendo: "Nintendo",
+  windows: "Windows",
+  apple: "Apple",
+  linux: "Linux",
+  sega: "SEGA",
+  pc: "PC",
+  mobile: "Mobile",
+  arcade: "Arcade",
+  retro: "Retro",
+});
+
+const PLATFORM_FAMILY_ICONS = Object.freeze({
+  playstation: "./icons/platforms/playstation.png",
+  xbox: "./icons/platforms/xbox.png",
+  nintendo: "./icons/platforms/nintendo.png",
+  windows: "./icons/platforms/windows.png",
+  apple: "./icons/platforms/apple.png",
+  linux: "./icons/platforms/linux.png",
+  sega: "./icons/platforms/sega.png",
+  pc: "./icons/platforms/pc.png",
+  mobile: "./icons/platforms/mobile.png",
+  arcade: "./icons/platforms/arcade.png",
+  retro: "./icons/platforms/retro.png",
+});
+
 function storeLabel(store) {
-  return {
-    epic: "Epic Games",
-    steam: "Steam",
-    playstation: "PlayStation",
-    xbox: "Xbox",
-    gog: "GOG",
-    nintendo: "Nintendo",
-    igdb: "IGDB",
-  }[store] || (store ? String(store) : "Archivio");
+  const key = String(store || "").toLowerCase();
+  return STORE_BRANDS[key]?.label || (store ? String(store) : "Archivio");
 }
 
 function storeLogoPath(store) {
-  return {
-    epic: "./icons/stores/epic.svg",
-    steam: "./icons/stores/steam.svg",
-    playstation: "./icons/stores/playstation.svg",
-    xbox: "./icons/stores/xbox.svg",
-    gog: "./icons/stores/gog.svg",
-    nintendo: "./icons/stores/nintendo.svg",
-  }[store] || null;
+  return STORE_BRANDS[String(store || "").toLowerCase()]?.icon || null;
 }
 
 function storeLogoMarkup(store, className = "store-brand-logo") {
@@ -845,6 +870,90 @@ function storeLogoMarkup(store, className = "store-brand-logo") {
     return `<img class="${escapeAttr(className)}" src="${escapeAttr(src)}" alt="${escapeAttr(storeLabel(store))}">`;
   }
   return `<span class="${escapeAttr(className)} store-brand-fallback" aria-hidden="true">${escapeHtml(storeLabel(store).slice(0, 1))}</span>`;
+}
+
+function normalizedPlatformToken(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[™®]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-");
+}
+
+function platformBrand(value) {
+  const raw = String(value || "").trim();
+  const token = normalizedPlatformToken(raw);
+  const has = (...parts) => parts.some((part) => token === part || token.includes(part));
+
+  if (/^(ps|playstation)-?1$/.test(token) || token === "ps1") return { family: "playstation", label: "PS1" };
+  if (/^(ps|playstation)-?2$/.test(token) || token.startsWith("ps2")) return { family: "playstation", label: "PS2" };
+  if (/^(ps|playstation)-?3$/.test(token) || token.startsWith("ps3")) return { family: "playstation", label: "PS3" };
+  if (/^(ps|playstation)-?4$/.test(token) || token.startsWith("ps4")) return { family: "playstation", label: "PS4" };
+  if (/^(ps|playstation)-?5$/.test(token) || token.startsWith("ps5")) return { family: "playstation", label: "PS5" };
+  if (has("ps-vita", "psvita", "playstation-vita")) return { family: "playstation", label: "PS Vita" };
+  if (has("psp", "playstation-portable")) return { family: "playstation", label: "PSP" };
+  if (has("playstation")) return { family: "playstation", label: raw || "PlayStation" };
+
+  if (has("xbox-360", "xbox360", "x360")) return { family: "xbox", label: "Xbox 360" };
+  if (has("xbox-one", "xone")) return { family: "xbox", label: "Xbox One" };
+  if (has("xbox-series", "series-x", "series-s", "xsx", "xbsx")) return { family: "xbox", label: "Xbox Series X|S" };
+  if (token === "xbox" || token.startsWith("xbox-")) return { family: "xbox", label: raw || "Xbox" };
+
+  if (has("switch")) return { family: "nintendo", label: "Switch" };
+  if (has("wii-u", "wiiu")) return { family: "nintendo", label: "Wii U" };
+  if (token === "wii" || token.startsWith("wii-")) return { family: "nintendo", label: "Wii" };
+  if (has("gamecube", "game-cube", "ngc")) return { family: "nintendo", label: "GameCube" };
+  if (has("nintendo-64", "n64")) return { family: "nintendo", label: "Nintendo 64" };
+  if (has("super-nintendo", "snes")) return { family: "nintendo", label: "SNES" };
+  if (token === "nes" || has("nintendo-entertainment-system")) return { family: "nintendo", label: "NES" };
+  if (has("game-boy-advance", "gameboy-advance", "gba")) return { family: "nintendo", label: "Game Boy Advance" };
+  if (has("game-boy-color", "gameboy-color", "gbc")) return { family: "nintendo", label: "Game Boy Color" };
+  if (has("game-boy", "gameboy")) return { family: "nintendo", label: "Game Boy" };
+  if (has("3ds")) return { family: "nintendo", label: "Nintendo 3DS" };
+  if (token === "ds" || has("nintendo-ds", "nds")) return { family: "nintendo", label: "Nintendo DS" };
+  if (has("nintendo")) return { family: "nintendo", label: raw || "Nintendo" };
+
+  if (has("dreamcast")) return { family: "sega", label: "Dreamcast" };
+  if (has("saturn")) return { family: "sega", label: "Saturn" };
+  if (has("mega-drive", "megadrive", "genesis")) return { family: "sega", label: token.includes("genesis") ? "Genesis" : "Mega Drive" };
+  if (has("master-system")) return { family: "sega", label: "Master System" };
+  if (has("game-gear")) return { family: "sega", label: "Game Gear" };
+  if (has("sega")) return { family: "sega", label: raw || "SEGA" };
+
+  if (has("windows", "win32", "win64") || token === "win") return { family: "windows", label: "PC" };
+  if (has("macos", "mac-os", "macintosh") || token === "mac") return { family: "apple", label: "macOS" };
+  if (has("ios", "iphone", "ipad")) return { family: "apple", label: "iOS" };
+  if (has("linux", "steamos")) return { family: "linux", label: token.includes("steamos") ? "SteamOS" : "Linux" };
+  if (has("android")) return { family: "mobile", label: "Android" };
+  if (has("mobile", "java-me", "j2me", "phone")) return { family: "mobile", label: "Mobile" };
+  if (has("arcade")) return { family: "arcade", label: "Arcade" };
+  if (has("dos", "ms-dos")) return { family: "pc", label: "DOS" };
+  if (token === "pc" || has("computer")) return { family: "pc", label: "PC" };
+
+  return { family: "retro", label: raw || "Piattaforma" };
+}
+
+function platformBadgesMarkup(platforms, { limit = 6, compact = false } = {}) {
+  const source = Array.isArray(platforms) ? platforms : [];
+  const unique = [];
+  const seen = new Set();
+  for (const value of source) {
+    const info = platformBrand(value);
+    const key = `${info.family}:${info.label.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(info);
+  }
+  const visible = unique.slice(0, Math.max(0, limit));
+  const chips = visible.map((info) => {
+    const icon = PLATFORM_FAMILY_ICONS[info.family] || PLATFORM_FAMILY_ICONS.retro;
+    return `<span class="platform-chip platform-${escapeAttr(info.family)}${compact ? " is-compact" : ""}" title="${escapeAttr(PLATFORM_FAMILY_LABELS[info.family] || info.label)}"><img src="${escapeAttr(icon)}" alt=""><b>${escapeHtml(info.label)}</b></span>`;
+  });
+  if (unique.length > visible.length) chips.push(`<span class="platform-chip platform-more${compact ? " is-compact" : ""}"><b>+${unique.length - visible.length}</b></span>`);
+  return chips.join("");
 }
 
 function commercialListingsForGame(game) {
@@ -1366,7 +1475,7 @@ function setPageVisibility(page) {
 }
 
 function updateDocumentTitle(label) {
-  document.title = label ? `${label} · The Free Vault` : "The Free Vault";
+  document.title = label ? `${label} · Ludograph` : "Ludograph";
 }
 
 function setActiveNavigation(routeName) {
@@ -1810,6 +1919,7 @@ function renderCard(game) {
   const publisher = fragment.querySelector(".publisher");
   const title = fragment.querySelector(".game-title");
   const description = fragment.querySelector(".game-description");
+  const platforms = fragment.querySelector(".card-platforms");
   const originalPrice = fragment.querySelector(".original-price");
   const priceLabel = fragment.querySelector(".free-label");
   const countdown = fragment.querySelector(".countdown");
@@ -1829,6 +1939,8 @@ function renderCard(game) {
     || (game.source_kind === "master" ? "Archivio IGDB" : cardStores.map(storeLabel).join(" · ") || "Catalogo");
   title.textContent = game.title;
   description.textContent = game.description || "Descrizione non disponibile.";
+  platforms.innerHTML = platformBadgesMarkup(game.platforms, { limit: 3, compact: true });
+  platforms.hidden = !platforms.innerHTML;
   applyPriceToCard(game, originalPrice, priceLabel);
   countdown.textContent = countdownText(game);
   progress.hidden = game.source_kind !== "promotion";
@@ -1966,7 +2078,7 @@ function configureContextualFilters() {
 
 function renderDashboardHeader() {
   const labels = {
-    home: ["THE FREE VAULT", "Scopri i giochi gratuiti"],
+    home: ["LUDOGRAPH", "Scopri i giochi gratuiti"],
     current: ["FREE TRACKER", "Gratis adesso"],
     upcoming: ["FREE TRACKER", "In arrivo"],
     history: ["FREE TRACKER", "Cronologia dei regali"],
@@ -2979,6 +3091,7 @@ function renderFranchiseGameRow(game) {
         <div><small>${escapeHtml(game.developer || game.publisher || "")}</small><h3>${escapeHtml(game.title)}</h3></div>
         <span class="pill">${escapeHtml(game.release_year || "Anno n/d")}</span>
       </div>
+      <div class="platform-chip-list franchise-platforms">${platformBadgesMarkup(game.platforms, { limit: 5, compact: true })}</div>
       <div class="franchise-game-orders">
         <span>Uscita #${Number(game.release_order || 0)}</span>
         ${game.narrative_order ? `<span>Narrativa #${Number(game.narrative_order)}</span>` : `<span>Narrativa non definita</span>`}
@@ -3019,7 +3132,7 @@ function renderFranchiseTrackSection(track, gameMap) {
   section.innerHTML = `
     <header>
       <div>
-        <p class="eyebrow">${escapeHtml(FRANCHISE_TRACK_TYPE_LABELS[track.track_type] || "PERCORSO")}${parent ? ` · ${escapeHtml(parent.name)}` : ""}</p>
+        <div class="franchise-track-kicker"><span class="track-type-badge track-${escapeAttr(track.track_type || "other")}">${escapeHtml(FRANCHISE_TRACK_TYPE_LABELS[track.track_type] || "PERCORSO")}</span>${parent ? `<span class="track-parent">Dentro ${escapeHtml(parent.name)}</span>` : ""}</div>
         <h2>${escapeHtml(track.name || track.track_key)}</h2>
         ${track.description ? `<p>${escapeHtml(track.description)}</p>` : ""}
       </div>
@@ -3064,10 +3177,11 @@ function renderFranchiseRelations(gameMap) {
     const item = document.createElement("article");
     item.className = "franchise-relation-card";
     item.innerHTML = `
-      <strong>${escapeHtml(source?.title || relation.source_game_key)}</strong>
-      <span>${escapeHtml(FRANCHISE_RELATION_TYPE_LABELS[relation.relation_type] || relation.relation_type)}</span>
-      <strong>${escapeHtml(target?.title || relation.target_game_key)}</strong>
+      <a class="relation-game" href="${escapeAttr(source ? gameRoute(source) : "#")}"><img src="${escapeAttr(source?.image_url || PLACEHOLDER)}" alt=""><strong>${escapeHtml(source?.title || relation.source_game_key)}</strong></a>
+      <span class="relation-kind"><b>${escapeHtml(FRANCHISE_RELATION_TYPE_LABELS[relation.relation_type] || relation.relation_type)}</b><i aria-hidden="true">→</i></span>
+      <a class="relation-game relation-game-target" href="${escapeAttr(target ? gameRoute(target) : "#")}"><img src="${escapeAttr(target?.image_url || PLACEHOLDER)}" alt=""><strong>${escapeHtml(target?.title || relation.target_game_key)}</strong></a>
       ${relation.note ? `<p>${escapeHtml(relation.note)}</p>` : ""}`;
+    item.querySelectorAll("img").forEach((image) => { image.onerror = () => { image.src = PLACEHOLDER; }; });
     list.append(item);
   }
   section.append(list);
@@ -3114,6 +3228,28 @@ function renderFranchiseSections() {
   }
 }
 
+function franchiseYearRange(games) {
+  const years = (games || []).map(releaseYearOf).filter((year) => Number.isInteger(year) && year > 1900);
+  if (!years.length) return "N/D";
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  return first === last ? String(first) : `${first}–${last}`;
+}
+
+function renderFranchiseOverview(data) {
+  if (!ui.franchiseOverview) return;
+  const games = data?.games || [];
+  const tracks = data?.tracks || [];
+  const relations = data?.relations || [];
+  const continuities = tracks.filter((track) => ["continuity", "timeline"].includes(track.track_type)).length;
+  ui.franchiseOverview.innerHTML = `
+    <article><span class="franchise-overview-icon">◆</span><div><strong>${games.length.toLocaleString("it-IT")}</strong><small>Titoli collegati</small></div></article>
+    <article><span class="franchise-overview-icon">⑂</span><div><strong>${tracks.length.toLocaleString("it-IT")}</strong><small>Percorsi editoriali</small></div></article>
+    <article><span class="franchise-overview-icon">↗</span><div><strong>${relations.length.toLocaleString("it-IT")}</strong><small>Relazioni mappate</small></div></article>
+    <article><span class="franchise-overview-icon">◷</span><div><strong>${escapeHtml(franchiseYearRange(games))}</strong><small>${continuities ? `${continuities} continuità/timeline` : "Arco di pubblicazione"}</small></div></article>`;
+  ui.franchiseOverview.hidden = false;
+}
+
 async function renderFranchisePage() {
   const requestId = ++state.editorialRequestId;
   const slug = state.route.params.slug;
@@ -3124,6 +3260,7 @@ async function renderFranchisePage() {
   ui.franchiseDescription.textContent = "Recupero la cronologia della saga.";
   ui.franchiseStatus.hidden = true;
   ui.franchiseSections.innerHTML = `<div class="route-loading">Caricamento saga…</div>`;
+  ui.franchiseOverview.hidden = true;
   ui.franchiseProgress.hidden = true;
   try {
     const data = await window.VaultFranchises.getFranchise(slug);
@@ -3135,13 +3272,21 @@ async function renderFranchisePage() {
     updateDocumentTitle(franchise.name);
     ui.franchiseTitle.textContent = franchise.name;
     ui.franchiseDescription.textContent = franchise.description || "Descrizione editoriale in preparazione.";
-    ui.franchiseMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} titoli</span><span>Ordine di uscita e narrativo</span>`;
-    ui.franchiseHeroImage.hidden = !franchise.hero_image_url;
-    if (franchise.hero_image_url) {
-      ui.franchiseHeroImage.src = franchise.hero_image_url;
+    const trackCount = Number((data.tracks || []).length);
+    const relationCount = Number((data.relations || []).length);
+    ui.franchiseMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} titoli</span><span>${trackCount ? `${trackCount} percorsi` : "Cronologia editoriale"}</span>${relationCount ? `<span>${relationCount} relazioni</span>` : ""}`;
+    const fallbackHero = [...(data.games || [])]
+      .sort((a, b) => Number(a.release_order || 100000) - Number(b.release_order || 100000))
+      .find((game) => game.image_url)?.image_url || "";
+    const heroImage = franchise.hero_image_url || fallbackHero;
+    ui.franchiseHero.classList.toggle("uses-game-art", !franchise.hero_image_url && Boolean(heroImage));
+    ui.franchiseHeroImage.hidden = !heroImage;
+    if (heroImage) {
+      ui.franchiseHeroImage.src = heroImage;
       ui.franchiseHeroImage.alt = franchise.name;
       ui.franchiseHeroImage.onerror = () => { ui.franchiseHeroImage.hidden = true; };
     }
+    renderFranchiseOverview(data);
     renderFranchiseProgress(data.games || []);
     renderFranchiseSections();
   } catch (error) {
@@ -3152,6 +3297,7 @@ async function renderFranchisePage() {
     ui.franchiseDescription.textContent = "La saga richiesta non è pubblicata oppure la migrazione v4.6 non è stata applicata.";
     ui.franchiseStatus.textContent = error.message || "Franchise non disponibile.";
     ui.franchiseStatus.hidden = false;
+    ui.franchiseOverview.hidden = true;
     ui.franchiseSections.replaceChildren();
   }
 }
@@ -3186,7 +3332,7 @@ async function renderEditorialCollectionPage() {
     updateDocumentTitle(collection.title);
     ui.editorialCollectionTitle.textContent = collection.title;
     ui.editorialCollectionDescription.textContent = collection.description || "Descrizione editoriale in preparazione.";
-    ui.editorialCollectionMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} giochi</span><span>Selezione ufficiale The Free Vault</span>`;
+    ui.editorialCollectionMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} giochi</span><span>Selezione ufficiale Ludograph</span>`;
     ui.editorialCollectionCuratorNote.hidden = !collection.curator_note;
     ui.editorialCollectionCuratorNote.textContent = collection.curator_note || "";
     ui.editorialCollectionImage.hidden = !collection.cover_image_url;
@@ -3290,7 +3436,7 @@ async function renderGamePage() {
     priceText(game) ? `<span><small>PREZZO</small>${escapeHtml(priceText(game))}</span>` : "",
     game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type === "IGDB_MASTER" ? "Gioco enciclopedico" : game.offer_type)}</span>` : "",
     availableStores.length ? `<span><small>STORE</small>${escapeHtml(availableStores.map(storeLabel).join(" · "))}</span>` : "",
-    !availableStores.length && game.platforms?.length ? `<span><small>PIATTAFORME</small>${escapeHtml(game.platforms.join(" · "))}</span>` : "",
+    game.platforms?.length ? `<span class="game-platform-meta"><small>PIATTAFORME</small><span class="platform-chip-list">${platformBadgesMarkup(game.platforms, { limit: 12 })}</span></span>` : "",
   ].filter(Boolean).join("");
   configureStoreAction(ui.gamePageStoreLink, game, { detail: true });
   ui.gamePageLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
@@ -3873,7 +4019,7 @@ function reviewCard(review, { showGame = false } = {}) {
   const article = document.createElement("article");
   article.className = "public-review-card";
   const author = review.author || {};
-  const authorName = author.display_name || author.username || "Utente The Free Vault";
+  const authorName = author.display_name || author.username || "Utente Ludograph";
   const authorLink = author.username ? profileRoute(author.username) : "#/home";
   const own = Boolean(state.auth.user && state.auth.user.id === review.user_id);
   const avatarStyle = author.avatar_url
@@ -4020,7 +4166,7 @@ async function renderPublicProfilePage() {
     ui.publicProfileName.textContent = profile.display_name || profile.username;
     ui.publicProfileHandle.textContent = `@${profile.username}`;
     ui.publicProfileBio.textContent = profile.bio || "Nessuna bio pubblica.";
-    ui.publicProfileMemberSince.textContent = `Nel Vault dal ${formatDate(profile.created_at)}`;
+    ui.publicProfileMemberSince.textContent = `Su Ludograph dal ${formatDate(profile.created_at)}`;
 
     const summary = window.VaultSocial.summarizeRatings(content.reviews);
     ui.publicProfileStatReviews.textContent = content.reviews.length;
@@ -5368,7 +5514,7 @@ function renderAuthPage() {
     ui.authCallbackErrorAction.href = recoveryLikely ? "#/forgot-password" : "#/login";
     ui.authCallbackErrorAction.textContent = recoveryLikely ? "Richiedi un nuovo codice" : "Torna all’accesso";
   } else {
-    ui.authEyebrow.textContent = isCallbackSuccess ? "EMAIL CONFERMATA" : "THE FREE VAULT ACCOUNT";
+    ui.authEyebrow.textContent = isCallbackSuccess ? "EMAIL CONFERMATA" : "ACCOUNT LUDOGRAPH";
     ui.authTitle.textContent = isCallbackSuccess
       ? "Account attivato"
       : isRegister
@@ -5386,7 +5532,7 @@ function renderAuthPage() {
           ? "Riceverai un codice monouso di 6 cifre, da inserire qui insieme alla tua email."
           : isReset
             ? "Inserisci una password nuova di almeno otto caratteri."
-            : "Accedi con email e password per sincronizzare il tuo Vault.";
+            : "Accedi con email e password per sincronizzare il tuo archivio.";
   }
 
   if (isForgot) {
@@ -5494,7 +5640,7 @@ async function renderSteamConnectionPanel() {
 
   if (!user || !window.VaultSteam) {
     ui.steamConnectionName.textContent = "Steam non collegato";
-    ui.steamConnectionId.textContent = "Accedi a The Free Vault per collegare Steam.";
+    ui.steamConnectionId.textContent = "Accedi a Ludograph per collegare Steam.";
     ui.steamConnectionStatus.textContent = "";
     ui.steamConnectButton.hidden = !user;
     ui.steamSyncButton.hidden = true;
@@ -5892,7 +6038,7 @@ function updateCountdowns() {
 
 function exportData() {
   const payload = {
-    app: "The Free Vault",
+    app: "Ludograph",
     schemaVersion: 5,
     exportedAt: new Date().toISOString(),
     library: state.library,
@@ -5903,7 +6049,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `the-free-vault-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `ludograph-backup-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -6892,7 +7038,7 @@ ui.deleteAccountButton.addEventListener("click", async () => {
     ui.deleteAccountMessage.hidden = false;
     return;
   }
-  if (!window.confirm("Eliminare definitivamente il tuo account The Free Vault?")) return;
+  if (!window.confirm("Eliminare definitivamente il tuo account Ludograph?")) return;
   ui.deleteAccountButton.disabled = true;
   try {
     const deletedUserId = state.auth.user?.id || activeStorageUserId;

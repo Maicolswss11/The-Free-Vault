@@ -241,7 +241,7 @@ def test_frontend_exposes_master_cards_and_attribution():
     assert 'priceLabel.textContent = "SCHEDA ENCICLOPEDICA"' in app
     assert "master_game_id: item?.master_game_id || null" in api
     assert 'href="https://www.igdb.com/"' in html
-    assert 'const CACHE_NAME = "the-free-vault-v5-2-franchise-graph-editorial-import"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-3-rebrand-platform-identity"' in worker
     assert "soglia operativa 40 GiB" in app
     assert "status.master_sync" in app
 

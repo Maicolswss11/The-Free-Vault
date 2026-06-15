@@ -50,8 +50,8 @@ def test_store_logos_and_multistore_actions_are_local():
     assert 'id="game-page-availability"' in html
 
     for name in ("steam", "epic", "playstation", "xbox", "gog", "nintendo"):
-        assert (ROOT / f"docs/icons/stores/{name}.svg").is_file()
-        assert f'"./icons/stores/{name}.svg"' in worker
+        assert (ROOT / f"docs/icons/stores/{name}.png").is_file()
+        assert f'"./icons/stores/{name}.png"' in worker
 
 
 def test_navigation_uses_svg_icons_and_account_is_improved():
@@ -68,7 +68,7 @@ def test_navigation_uses_svg_icons_and_account_is_improved():
 
 def test_v51_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "the-free-vault-v5-2-franchise-graph-editorial-import"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-3-rebrand-platform-identity"' in worker
 
 
 def test_v511_franchise_header_does_not_overlap_desktop_rows():
@@ -79,15 +79,14 @@ def test_v511_franchise_header_does_not_overlap_desktop_rows():
     assert "position: sticky" not in block
 
 
-def test_v511_store_marks_are_monochrome_and_contained():
+def test_v511_store_marks_are_png_and_contained():
     styles = read("docs/styles.css")
     assert "object-fit: contain" in styles
     assert ".store-option-epic .store-option-logo { padding: 7px; }" in styles
     for name in ["steam", "epic", "playstation", "xbox", "gog", "nintendo"]:
-        svg = read(f"docs/icons/stores/{name}.svg")
-        assert "#fff" in svg
-    assert '<circle cx="32" cy="32" r="32" fill="#171a21"' not in read("docs/icons/stores/steam.svg")
-    assert '<rect width="64" height="64" rx="14" fill="#006FCD"' not in read("docs/icons/stores/playstation.svg")
+        asset = ROOT / f"docs/icons/stores/{name}.png"
+        assert asset.is_file()
+        assert asset.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_v511_topbar_icon_buttons_are_centered():
