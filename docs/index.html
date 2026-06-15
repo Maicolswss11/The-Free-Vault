@@ -374,6 +374,7 @@
             <span>Ordina per</span>
             <button class="button button-secondary is-active" data-franchise-order="release" type="button">Uscita</button>
             <button class="button button-secondary" data-franchise-order="narrative" type="button">Narrativa</button>
+            <button class="button button-secondary" data-franchise-order="paths" type="button">Percorsi</button>
           </div>
           <div id="franchise-sections" class="franchise-sections"></div>
         </section>
@@ -1225,7 +1226,7 @@
                     <div class="admin-form-actions"><button class="button button-primary" type="submit">Salva franchise</button><button id="admin-franchise-delete" class="button button-danger" type="button" hidden>Elimina</button></div>
                   </form>
                   <div id="admin-franchise-games-editor" class="admin-item-editor" hidden>
-                    <div class="admin-item-editor-head"><h4>Giochi della saga</h4><div class="admin-form-actions"><button id="admin-franchise-enrich" class="button button-secondary" type="button">Recupera anni da Steam</button><a id="admin-franchise-open" class="button button-secondary" href="#">Apri pagina</a></div></div>
+                    <div class="admin-item-editor-head"><h4>Giochi della saga</h4><div class="admin-form-actions"><button id="admin-franchise-export-json" class="button button-secondary" type="button">Esporta JSON</button><button id="admin-franchise-copy-prompt" class="button button-secondary" type="button">Copia prompt</button><button id="admin-franchise-enrich" class="button button-secondary" type="button">Recupera anni da Steam</button><a id="admin-franchise-open" class="button button-secondary" href="#">Apri pagina</a></div></div>
                     <form id="admin-franchise-game-search-form" class="admin-search-form"><input id="admin-franchise-game-search" type="search" minlength="2" placeholder="Cerca il nome della saga o più giochi..." required><button class="button button-secondary" type="submit">Cerca</button></form>
                     <div id="admin-franchise-search-actions" class="admin-search-batch-actions" hidden>
                       <button id="admin-franchise-select-all" class="button button-primary" type="button">Seleziona tutti i risultati</button>
@@ -1285,6 +1286,16 @@
                       </div>
                       <div id="admin-franchise-games" class="franchise-editor-table" role="table" aria-label="Editor giochi della saga"></div>
                     </section>
+                    <details class="franchise-json-panel">
+                      <summary>Import/export editoriale JSON</summary>
+                      <p class="muted">Esporta il pacchetto del franchise, fallo organizzare a ChatGPT e incolla qui il JSON restituito. Il sito valida tutto prima di scrivere nel database.</p>
+                      <textarea id="admin-franchise-json-import" rows="8" spellcheck="false" placeholder="Incolla qui il JSON tfv-franchise-editorial-v2..."></textarea>
+                      <p id="admin-franchise-json-message" class="auth-error" hidden></p>
+                      <div class="admin-form-actions">
+                        <button id="admin-franchise-validate-json" class="button button-secondary" type="button">Valida JSON</button>
+                        <button id="admin-franchise-apply-json" class="button button-primary" type="button">Applica JSON</button>
+                      </div>
+                    </details>
                   </div>
                 </section>
 

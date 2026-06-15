@@ -105,6 +105,19 @@
     });
   }
 
+
+  async function exportAdminFranchiseEditorial(franchiseId) {
+    return rpc("admin_export_franchise_editorial", { p_franchise_id: franchiseId });
+  }
+
+  async function importAdminFranchiseEditorial(franchiseId, payload, dryRun = true) {
+    return rpc("admin_import_franchise_editorial", {
+      p_franchise_id: franchiseId,
+      p_payload: payload,
+      p_dry_run: Boolean(dryRun),
+    });
+  }
+
   async function enrichCatalogGames(gameKeys = []) {
     const keys = [...new Set((gameKeys || []).map((key) => String(key || "").trim()).filter(Boolean))].slice(0, 100);
     if (!keys.length) throw new Error("Nessun gioco da arricchire.");
@@ -170,6 +183,8 @@
     enrichCatalogGames,
     removeAdminFranchiseGame,
     removeAdminFranchiseGames,
+    exportAdminFranchiseEditorial,
+    importAdminFranchiseEditorial,
     listAdminCollections,
     getAdminCollection,
     saveAdminCollection,

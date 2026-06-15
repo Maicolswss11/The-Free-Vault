@@ -68,7 +68,7 @@ def test_navigation_uses_svg_icons_and_account_is_improved():
 
 def test_v51_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "the-free-vault-v5-1-1-editorial-ui-fixes"' in worker
+    assert 'const CACHE_NAME = "the-free-vault-v5-2-franchise-graph-editorial-import"' in worker
 
 
 def test_v511_franchise_header_does_not_overlap_desktop_rows():

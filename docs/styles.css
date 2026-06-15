@@ -3889,3 +3889,87 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   height: 100%;
   object-fit: contain;
 }
+
+/* v5.2 — Franchise graph and editorial JSON import */
+.franchise-json-panel {
+  margin-top: 18px;
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.2));
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.42);
+  padding: 14px;
+}
+
+.franchise-json-panel summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--text-primary, #f8fafc);
+}
+
+.franchise-json-panel textarea {
+  width: 100%;
+  min-height: 180px;
+  margin-top: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  resize: vertical;
+}
+
+.franchise-track-group > header p:not(.eyebrow) {
+  margin-top: 4px;
+  color: var(--text-muted, #94a3b8);
+  max-width: 68ch;
+}
+
+.franchise-track-meta,
+.franchise-relation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.franchise-track-meta span {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.78rem;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.franchise-relation-list {
+  flex-direction: column;
+}
+
+.franchise-relation-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 12px;
+}
+
+.franchise-relation-card span {
+  color: var(--accent, #4aa8ff);
+  font-weight: 800;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.franchise-relation-card p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted, #94a3b8);
+}
+
+@media (max-width: 760px) {
+  .franchise-relation-card {
+    grid-template-columns: 1fr;
+  }
+}

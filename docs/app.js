@@ -199,6 +199,12 @@ const ui = {
   adminFranchiseGamesEditor: $("#admin-franchise-games-editor"),
   adminFranchiseOpen: $("#admin-franchise-open"),
   adminFranchiseEnrich: $("#admin-franchise-enrich"),
+  adminFranchiseExportJson: $("#admin-franchise-export-json"),
+  adminFranchiseCopyPrompt: $("#admin-franchise-copy-prompt"),
+  adminFranchiseJsonImport: $("#admin-franchise-json-import"),
+  adminFranchiseJsonMessage: $("#admin-franchise-json-message"),
+  adminFranchiseValidateJson: $("#admin-franchise-validate-json"),
+  adminFranchiseApplyJson: $("#admin-franchise-apply-json"),
   adminFranchiseGameSearchForm: $("#admin-franchise-game-search-form"),
   adminFranchiseGameSearch: $("#admin-franchise-game-search"),
   adminFranchiseSearchActions: $("#admin-franchise-search-actions"),
@@ -2817,6 +2823,41 @@ const FRANCHISE_RELATION_LABELS = {
   other: "Altri titoli",
 };
 
+const FRANCHISE_TRACK_TYPE_LABELS = {
+  continuity: "Continuità",
+  timeline: "Linea temporale",
+  subseries: "Sottosaga",
+  story_arc: "Arco narrativo",
+  anthology: "Antologia",
+  remake_line: "Linea remake",
+  collection: "Raccolte",
+  other: "Percorso editoriale",
+};
+
+const FRANCHISE_CANON_LABELS = {
+  canon: "Canonico",
+  alternate_canon: "Continuità alternativa",
+  reimagining: "Reinterpretazione",
+  non_canon: "Non canonico",
+  unknown: "Canonicità non definita",
+  editorial_only: "Elemento editoriale",
+};
+
+const FRANCHISE_RELATION_TYPE_LABELS = {
+  sequel_to: "Sequel di",
+  prequel_to: "Prequel di",
+  remake_of: "Remake di",
+  remaster_of: "Remaster di",
+  reimagines: "Reinterpreta",
+  alternate_version_of: "Versione alternativa di",
+  parallel_to: "Parallelo a",
+  expansion_of: "Espansione di",
+  collection_of: "Raccolta di",
+  contains: "Contiene",
+  spiritual_successor_to: "Successore spirituale di",
+  related_to: "Collegato a",
+};
+
 function editorialCard({ title, description, imageUrl, count, href, badge }) {
   const article = document.createElement("article");
   article.className = "editorial-directory-card";
@@ -2956,7 +2997,85 @@ function renderFranchiseGameRow(game) {
   return row;
 }
 
+function franchiseGameByKeyMap() {
+  const map = new Map();
+  for (const game of state.franchiseData?.games || []) map.set(gameKey(game), game);
+  return map;
+}
+
+function renderFranchiseTrackSection(track, gameMap) {
+  const memberships = [];
+  for (const game of state.franchiseData?.games || []) {
+    const membership = (game.track_memberships || []).find((item) => item.track_key === track.track_key);
+    if (membership) memberships.push({ game, membership });
+  }
+  memberships.sort((a, b) => Number(a.membership.narrative_order || 100000) - Number(b.membership.narrative_order || 100000)
+    || Number(a.game.release_order || 100000) - Number(b.game.release_order || 100000)
+    || String(a.game.title || "").localeCompare(String(b.game.title || ""), "it"));
+
+  const section = document.createElement("section");
+  section.className = "franchise-group franchise-track-group";
+  const parent = track.parent_track_key ? (state.franchiseData?.tracks || []).find((item) => item.track_key === track.parent_track_key) : null;
+  section.innerHTML = `
+    <header>
+      <div>
+        <p class="eyebrow">${escapeHtml(FRANCHISE_TRACK_TYPE_LABELS[track.track_type] || "PERCORSO")}${parent ? ` · ${escapeHtml(parent.name)}` : ""}</p>
+        <h2>${escapeHtml(track.name || track.track_key)}</h2>
+        ${track.description ? `<p>${escapeHtml(track.description)}</p>` : ""}
+      </div>
+      <span>${memberships.length}</span>
+    </header>`;
+
+  const list = document.createElement("div");
+  list.className = "franchise-game-list";
+  if (!memberships.length) {
+    list.innerHTML = `<div class="timeline-empty">Nessun gioco assegnato a questo percorso.</div>`;
+  } else {
+    for (const { game, membership } of memberships) {
+      const row = renderFranchiseGameRow({
+        ...game,
+        narrative_order: membership.narrative_order ?? game.narrative_order,
+        franchise_note: membership.note || game.franchise_note,
+      });
+      const meta = document.createElement("div");
+      meta.className = "franchise-track-meta";
+      meta.innerHTML = `
+        <span>${escapeHtml(FRANCHISE_CANON_LABELS[membership.canon_status] || FRANCHISE_CANON_LABELS.unknown)}</span>
+        ${membership.narrative_order ? `<span>Percorso #${Number(membership.narrative_order)}</span>` : ""}`;
+      row.querySelector(".franchise-game-copy")?.append(meta);
+      list.append(row);
+    }
+  }
+  section.append(list);
+  return section;
+}
+
+function renderFranchiseRelations(gameMap) {
+  const relations = state.franchiseData?.relations || [];
+  if (!relations.length) return null;
+  const section = document.createElement("section");
+  section.className = "franchise-group franchise-relations-group";
+  section.innerHTML = `<header><div><p class="eyebrow">GRAFO EDITORIALE</p><h2>Relazioni tra giochi</h2></div><span>${relations.length}</span></header>`;
+  const list = document.createElement("div");
+  list.className = "franchise-relation-list";
+  for (const relation of relations) {
+    const source = gameMap.get(relation.source_game_key);
+    const target = gameMap.get(relation.target_game_key);
+    const item = document.createElement("article");
+    item.className = "franchise-relation-card";
+    item.innerHTML = `
+      <strong>${escapeHtml(source?.title || relation.source_game_key)}</strong>
+      <span>${escapeHtml(FRANCHISE_RELATION_TYPE_LABELS[relation.relation_type] || relation.relation_type)}</span>
+      <strong>${escapeHtml(target?.title || relation.target_game_key)}</strong>
+      ${relation.note ? `<p>${escapeHtml(relation.note)}</p>` : ""}`;
+    list.append(item);
+  }
+  section.append(list);
+  return section;
+}
+
 function renderFranchiseSections() {
+  const gameMap = franchiseGameByKeyMap();
   const games = [...(state.franchiseData?.games || [])].sort((a, b) => {
     const order = franchiseOrderValue(a) - franchiseOrderValue(b);
     return order || String(a.title || "").localeCompare(String(b.title || ""), "it");
@@ -2966,6 +3085,20 @@ function renderFranchiseSections() {
     ui.franchiseSections.innerHTML = `<div class="empty-state"><strong>Saga in preparazione</strong><span>I giochi verranno collegati dal pannello amministrativo.</span></div>`;
     return;
   }
+
+  if (state.franchiseOrder === "paths") {
+    const tracks = [...(state.franchiseData?.tracks || [])].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+      || String(a.name || "").localeCompare(String(b.name || ""), "it"));
+    if (!tracks.length) {
+      ui.franchiseSections.innerHTML = `<div class="empty-state"><strong>Percorsi non configurati</strong><span>Questa saga non ha ancora continuità, sottosaghe o archi narrativi.</span></div>`;
+    } else {
+      for (const track of tracks) ui.franchiseSections.append(renderFranchiseTrackSection(track, gameMap));
+      const relationSection = renderFranchiseRelations(gameMap);
+      if (relationSection) ui.franchiseSections.append(relationSection);
+    }
+    return;
+  }
+
   const relationOrder = ["main", "spin_off", "remake", "remaster", "expansion", "dlc", "other"];
   for (const relation of relationOrder) {
     const relationGames = games.filter((game) => (game.relation_type || "other") === relation);
@@ -4310,6 +4443,74 @@ function setAdminEditorialMessage(element, message, success = false) {
   element.hidden = !message;
 }
 
+function setAdminFranchiseJsonMessage(message, success = false) {
+  if (!ui.adminFranchiseJsonMessage) return;
+  ui.adminFranchiseJsonMessage.textContent = message || "";
+  ui.adminFranchiseJsonMessage.classList.toggle("auth-success", Boolean(success));
+  ui.adminFranchiseJsonMessage.hidden = !message;
+}
+
+function franchiseEditorialFilename(franchise, suffix = "editorial") {
+  return `${editorialSlug(franchise?.slug || franchise?.name || "franchise")}-${suffix}.json`;
+}
+
+function downloadJson(filename, payload) {
+  const blob = new Blob([`${JSON.stringify(payload, null, 2)}
+`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildFranchiseEditorialPrompt(payload) {
+  return `Analizza il franchise contenuto nel JSON allegato.
+
+Compila esclusivamente i campi editoriali senza modificare franchise.id, games.game_key, games.game_id e games.title.
+
+Organizza:
+- ordine di uscita;
+- continuità e linee temporali alternative;
+- sottosaghe e archi narrativi;
+- canonicità;
+- remake, remaster, reinterpretazioni, raccolte e relazioni tra giochi.
+
+Restituisci esclusivamente un JSON valido conforme a tfv-franchise-editorial-v2.
+
+JSON:
+${JSON.stringify(payload, null, 2)}`;
+}
+
+function parseAdminFranchiseEditorialJson() {
+  const raw = ui.adminFranchiseJsonImport?.value?.trim() || "";
+  if (!raw) throw new Error("Incolla prima un JSON editoriale.");
+  const payload = JSON.parse(raw);
+  if (payload?.schema_version !== "tfv-franchise-editorial-v2") {
+    throw new Error("schema_version non valida. Serve tfv-franchise-editorial-v2.");
+  }
+  return payload;
+}
+
+async function fetchAdminFranchiseEditorialExport(button) {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise) throw new Error("Apri prima un franchise.");
+  if (button) setButtonLoading(button, true, "Preparazione…");
+  try {
+    return await window.VaultFranchises.exportAdminFranchiseEditorial(franchise.id);
+  } finally {
+    if (button) setButtonLoading(button, false);
+  }
+}
+
+function describeFranchiseImportResult(result) {
+  const counts = result?.counts || {};
+  return `${result?.status === "applied" ? "Import applicato" : "JSON valido"}: ${Number(counts.games || 0)} giochi, ${Number(counts.tracks || 0)} percorsi, ${Number(counts.track_memberships || 0)} assegnazioni, ${Number(counts.relations || 0)} relazioni.`;
+}
+
 function nextFranchiseOrder(field = "release_order") {
   const games = state.admin.selectedFranchise?.games || [];
   return games.reduce((max, game) => Math.max(max, Number(game?.[field] || 0)), 0) + 1;
@@ -4475,6 +4676,8 @@ function resetAdminFranchiseForm() {
   state.admin.franchiseEditorSelected = new Set();
   state.admin.franchiseEditorDirty = new Set();
   if (ui.adminFranchiseMassEditor) ui.adminFranchiseMassEditor.hidden = true;
+  if (ui.adminFranchiseJsonImport) ui.adminFranchiseJsonImport.value = "";
+  setAdminFranchiseJsonMessage("");
   clearAdminFranchiseSelection({ clearSearch: true });
   setAdminEditorialMessage(ui.adminFranchiseMessage, "");
 }
@@ -4832,6 +5035,8 @@ async function openAdminFranchise(id) {
     ui.adminFranchiseDelete.hidden = false;
     ui.adminFranchiseGamesEditor.hidden = false;
     clearAdminFranchiseSelection({ clearSearch: true });
+    if (ui.adminFranchiseJsonImport) ui.adminFranchiseJsonImport.value = "";
+    setAdminFranchiseJsonMessage("");
     setAdminEditorialMessage(ui.adminFranchiseMessage, "");
     syncFranchiseEditorRows(data);
     renderAdminFranchiseGames();
@@ -5791,7 +5996,8 @@ ui.adminClearOverride?.addEventListener("click", async () => {
 
 $$('[data-franchise-order]').forEach((button) => {
   button.addEventListener("click", () => {
-    state.franchiseOrder = button.dataset.franchiseOrder === "narrative" ? "narrative" : "release";
+    const order = button.dataset.franchiseOrder;
+    state.franchiseOrder = ["release", "narrative", "paths"].includes(order) ? order : "release";
     $$('[data-franchise-order]').forEach((item) => item.classList.toggle("is-active", item === button));
     renderFranchiseSections();
   });
@@ -5875,6 +6081,71 @@ ui.adminFranchiseEnrich?.addEventListener("click", async () => {
     showToast(error.message || "Recupero metadati Steam fallito. Verifica che la Edge Function sia distribuita.");
   } finally {
     setButtonLoading(ui.adminFranchiseEnrich, false);
+  }
+});
+
+
+ui.adminFranchiseExportJson?.addEventListener("click", async () => {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise) return;
+  try {
+    const payload = await fetchAdminFranchiseEditorialExport(ui.adminFranchiseExportJson);
+    downloadJson(franchiseEditorialFilename(franchise), payload);
+    setAdminFranchiseJsonMessage("Pacchetto editoriale esportato.", true);
+  } catch (error) {
+    setAdminFranchiseJsonMessage(error.message || "Esportazione JSON fallita.");
+  }
+});
+
+ui.adminFranchiseCopyPrompt?.addEventListener("click", async () => {
+  try {
+    const payload = await fetchAdminFranchiseEditorialExport(ui.adminFranchiseCopyPrompt);
+    const prompt = buildFranchiseEditorialPrompt(payload);
+    await navigator.clipboard.writeText(prompt);
+    setAdminFranchiseJsonMessage("Prompt con JSON copiato negli appunti.", true);
+  } catch (error) {
+    setAdminFranchiseJsonMessage(error.message || "Copia prompt fallita. Esporta il JSON e allegalo manualmente.");
+  }
+});
+
+ui.adminFranchiseValidateJson?.addEventListener("click", async () => {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise) return;
+  setButtonLoading(ui.adminFranchiseValidateJson, true, "Validazione…");
+  try {
+    const payload = parseAdminFranchiseEditorialJson();
+    const result = await window.VaultFranchises.importAdminFranchiseEditorial(franchise.id, payload, true);
+    setAdminFranchiseJsonMessage(describeFranchiseImportResult(result), true);
+  } catch (error) {
+    setAdminFranchiseJsonMessage(error.message || "JSON editoriale non valido.");
+  } finally {
+    setButtonLoading(ui.adminFranchiseValidateJson, false);
+  }
+});
+
+ui.adminFranchiseApplyJson?.addEventListener("click", async () => {
+  const franchise = state.admin.selectedFranchise?.franchise;
+  if (!franchise) return;
+  let payload;
+  try {
+    payload = parseAdminFranchiseEditorialJson();
+  } catch (error) {
+    setAdminFranchiseJsonMessage(error.message || "JSON editoriale non valido.");
+    return;
+  }
+  if (!confirm("Applicare questa configurazione editoriale? Percorsi e relazioni esistenti del franchise verranno sostituiti.")) return;
+  setButtonLoading(ui.adminFranchiseApplyJson, true, "Applicazione…");
+  try {
+    const result = await window.VaultFranchises.importAdminFranchiseEditorial(franchise.id, payload, false);
+    state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+    syncFranchiseEditorRows(state.admin.selectedFranchise);
+    renderAdminFranchiseGames();
+    setAdminFranchiseJsonMessage(describeFranchiseImportResult(result), true);
+    showToast("Configurazione editoriale importata.");
+  } catch (error) {
+    setAdminFranchiseJsonMessage(error.message || "Importazione JSON fallita.");
+  } finally {
+    setButtonLoading(ui.adminFranchiseApplyJson, false);
   }
 });
 
