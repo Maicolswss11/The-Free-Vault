@@ -3754,9 +3754,9 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
 }
 
 .franchise-editor-header {
-  position: sticky;
-  top: 143px;
-  z-index: 4;
+  position: static;
+  top: auto;
+  z-index: auto;
   padding-block: 8px;
   border-color: transparent;
   background: #0d121b;
