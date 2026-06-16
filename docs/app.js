@@ -6677,10 +6677,12 @@ ui.adminFranchiseApplyJson?.addEventListener("click", async () => {
   setButtonLoading(ui.adminFranchiseApplyJson, true, "Applicazione…");
   try {
     const result = await window.VaultFranchises.importAdminFranchiseEditorial(franchise.id, payload, false);
-    const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(franchise.id);
-    state.admin.selectedFranchise = consolidation?.franchise?.franchise
-      ? consolidation.franchise
-      : await window.VaultFranchises.getAdminFranchise(franchise.id);
+    // The v5.3.8 importer is already transactional and set-based. The JSON
+    // workflow edits games already present in the franchise, so a second full
+    // canonical consolidation would only duplicate expensive database work.
+    // consolidateAdminFranchiseVariants remains available for explicit repair
+    // operations, but is intentionally not invoked by the normal JSON flow.
+    state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
     syncFranchiseEditorRows(state.admin.selectedFranchise);
     renderAdminFranchiseGames();
     setAdminFranchiseJsonMessage(describeFranchiseImportResult(result), true);
