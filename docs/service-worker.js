@@ -1,3 +1,4 @@
+// Previous stable cache: ludograph-v5-4-complete-visual-overhaul
 // Previous stable cache: ludograph-v5-3-9-franchise-page-stability
 
 // Previous stable cache: ludograph-v5-3-rebrand-platform-identity
@@ -11,12 +12,13 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-4-complete-visual-overhaul";
+const CACHE_NAME = "ludograph-v5-5-full-interface-rebuild";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./visual-overhaul.css",
+  "./interface-rebuild.css",
   "./app.js",
   "./cloud-sync.js",
   "./social.js",

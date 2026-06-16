@@ -101,10 +101,31 @@ const ui = {
   mobileFilterCount: $("#mobile-filter-count"),
   mobileFilterClose: $("#mobile-filter-close"),
   mobileFilterApply: $("#mobile-filter-apply"),
+  homeStage: $("#home-stage"),
+  homeWelcomeName: $("#home-welcome-name"),
+  homePersonalGrid: $("#home-personal-grid"),
+  homeResumeList: $("#home-resume-list"),
+  homeActivityList: $("#home-activity-list"),
+  homeEditorialList: $("#home-editorial-list"),
+  libraryShowcase: $("#library-showcase"),
+  libraryLanes: $("#library-lanes"),
+  librarySummaryVisual: $("#library-summary-visual"),
+  librarySummaryTotal: $("#library-summary-total"),
+  librarySummaryPlaying: $("#library-summary-playing"),
+  librarySummaryCompleted: $("#library-summary-completed"),
+  librarySummaryHours: $("#library-summary-hours"),
+  librarySummaryFavorites: $("#library-summary-favorites"),
   dashboardPage: $("#dashboard-page"),
   gamePage: $("#game-page"),
+  gamePageBackdrop: $("#game-page-backdrop"),
+  gameSummaryProgress: $("#game-summary-progress"),
+  gameSummaryHours: $("#game-summary-hours"),
+  gameSummaryStatus: $("#game-summary-status"),
+  gameSummaryRating: $("#game-summary-rating"),
   authPage: $("#auth-page"),
   profilePage: $("#profile-page"),
+  profileHeroBackdrop: $("#profile-hero-backdrop"),
+  profileFavoriteGenres: $("#profile-favorite-genres"),
   publicProfilePage: $("#public-profile-page"),
   sharedListPage: $("#shared-list-page"),
   settingsPage: $("#settings-page"),
@@ -2430,9 +2451,129 @@ function renderListsOverview() {
   }
 }
 
+function libraryEntryRecords() {
+  return Object.values(state.library)
+    .filter((entry) => entry?.game)
+    .sort((a, b) => new Date(b.updatedAt || b.addedAt || 0) - new Date(a.updatedAt || a.addedAt || 0));
+}
+
+function entryProgress(entry) {
+  const key = gameKey(entry?.game);
+  const journal = key ? window.VaultJournal?.getProgress(key) : null;
+  return Math.max(0, Math.min(100, Number(journal?.progressPercent ?? entry?.progressPercent ?? (entry?.status === "completed" ? 100 : 0)) || 0));
+}
+
+function routeGameArtwork(entries = libraryEntryRecords()) {
+  return entries.find((entry) => entry?.favorite && entry.game?.image_url)?.game?.image_url
+    || entries.find((entry) => ["playing", "paused", "completed"].includes(entry?.status) && entry.game?.image_url)?.game?.image_url
+    || entries.find((entry) => entry.game?.image_url)?.game?.image_url
+    || "";
+}
+
+function renderHomeExperience() {
+  const isHome = state.route.name === "home";
+  ui.homeStage.hidden = !isHome;
+  ui.homePersonalGrid.hidden = !isHome;
+  document.querySelector("#dashboard-page > .stats-grid").hidden = !isHome;
+  if (!isHome) return;
+
+  const displayName = state.auth.profile?.display_name || state.auth.profile?.username || "GIOCATORE";
+  ui.homeWelcomeName.textContent = String(displayName).toLocaleUpperCase("it");
+  const entries = libraryEntryRecords();
+  const resume = entries.filter((entry) => ["playing", "paused", "replay"].includes(entry.status)).slice(0, 4);
+  ui.homeResumeList.replaceChildren();
+  if (!resume.length) {
+    ui.homeResumeList.innerHTML = `<div class="v55-empty"><strong>La prossima avventura ti aspetta.</strong><span>Imposta un gioco come “In corso” per ritrovarlo qui.</span><a href="#/library">Apri la libreria</a></div>`;
+  } else {
+    for (const entry of resume) {
+      const game = entry.game;
+      const progress = entryProgress(entry);
+      const item = document.createElement("a");
+      item.className = "home-resume-item";
+      item.href = gameRoute(game);
+      item.innerHTML = `<img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt=""><span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(statusLabel(entry.status))} · ${relativeTime(entry.updatedAt || entry.addedAt)}</small><i><b style="width:${progress}%"></b></i></span><em>${progress}%</em>`;
+      ui.homeResumeList.append(item);
+    }
+  }
+
+  const diaryEntries = window.VaultJournal?.listEntries({ limit: 4 }) || [];
+  const activity = diaryEntries.length ? diaryEntries : entries.slice(0, 4).map((entry) => ({
+    gameKey: gameKey(entry.game), gameTitle: entry.game.title, gameImageUrl: entry.game.image_url,
+    playedAt: entry.updatedAt || entry.addedAt, minutesPlayed: 0, note: "Aggiunto alla libreria",
+  }));
+  ui.homeActivityList.replaceChildren();
+  if (!activity.length) {
+    ui.homeActivityList.innerHTML = `<div class="v55-empty"><strong>La tua storia comincia qui.</strong><span>Aggiungi giochi o registra una sessione.</span></div>`;
+  } else {
+    for (const itemData of activity) {
+      const game = journalGame(itemData);
+      const item = document.createElement("a");
+      item.className = "home-activity-item";
+      item.href = gameRoute(game);
+      const detail = itemData.minutesPlayed ? `${formatMinutes(itemData.minutesPlayed)} registrati` : (itemData.note || "Attività libreria");
+      item.innerHTML = `<span class="activity-symbol">${itemData.minutesPlayed ? "◷" : "+"}</span><span><small>${escapeHtml(detail)}</small><strong>${escapeHtml(itemData.gameTitle || game.title)}</strong></span><time>${relativeTime(itemData.playedAt || itemData.createdAt)}</time>`;
+      ui.homeActivityList.append(item);
+    }
+  }
+
+  const editorialGames = entries.slice(0, 3);
+  ui.homeEditorialList.replaceChildren();
+  for (const entry of editorialGames) {
+    const link = document.createElement("a");
+    link.href = gameRoute(entry.game);
+    link.innerHTML = `<img src="${escapeAttr(entry.game.image_url || PLACEHOLDER)}" alt=""><span>${escapeHtml(entry.game.title)}</span>`;
+    ui.homeEditorialList.append(link);
+  }
+}
+
+function libraryLaneMarkup(title, entries, variant = "compact") {
+  if (!entries.length) return "";
+  const cards = entries.slice(0, variant === "feature" ? 4 : 5).map((entry) => {
+    const game = entry.game;
+    const progress = entryProgress(entry);
+    return `<a class="library-lane-card ${variant}" href="${escapeAttr(gameRoute(game))}">
+      <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
+      <span class="library-lane-copy"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(statusLabel(entry.status))}${entry.favorite ? " · Preferito" : ""}</small>${variant === "feature" ? `<i><b style="width:${progress}%"></b></i><em>${progress}%</em>` : ""}</span>
+    </a>`;
+  }).join("");
+  return `<section class="library-lane"><header><h2>${escapeHtml(title)}</h2><span>${entries.length}</span></header><div class="library-lane-track">${cards}</div></section>`;
+}
+
+function renderLibraryExperience() {
+  const isLibrary = state.route.name === "library";
+  ui.libraryShowcase.hidden = !isLibrary;
+  ui.libraryLanes.hidden = !isLibrary;
+  if (!isLibrary) return;
+  const entries = libraryEntryRecords();
+  const summary = window.VaultJournal?.summarize() || { totalMinutes: 0 };
+  const playing = entries.filter((entry) => ["playing", "paused", "replay"].includes(entry.status));
+  const completed = entries.filter((entry) => entry.status === "completed");
+  const backlog = entries.filter((entry) => ["backlog", "saved"].includes(entry.status));
+  const favorites = entries.filter((entry) => entry.favorite);
+  ui.librarySummaryTotal.textContent = entries.length.toLocaleString("it-IT");
+  ui.librarySummaryPlaying.textContent = playing.length.toLocaleString("it-IT");
+  ui.librarySummaryCompleted.textContent = completed.length.toLocaleString("it-IT");
+  ui.librarySummaryHours.textContent = formatMinutes(summary.totalMinutes || summary.sessionMinutes || 0);
+  ui.librarySummaryFavorites.textContent = favorites.length.toLocaleString("it-IT");
+  const artwork = routeGameArtwork(entries);
+  ui.librarySummaryVisual.style.setProperty("--library-art", artwork ? `url("${artwork.replaceAll('"', '%22')}")` : "none");
+  ui.libraryLanes.innerHTML = [
+    libraryLaneMarkup("In corso", playing, "feature"),
+    libraryLaneMarkup("Completati", completed),
+    libraryLaneMarkup("Backlog", backlog),
+    libraryLaneMarkup("Aggiunti di recente", entries),
+  ].filter(Boolean).join("") || `<div class="v55-empty"><strong>La tua libreria è ancora vuota.</strong><span>Esplora il catalogo universale e aggiungi la prima opera.</span><a href="#/catalog">Apri il catalogo</a></div>`;
+}
+
+function renderRouteExperience() {
+  renderHomeExperience();
+  renderLibraryExperience();
+}
+
 function renderDashboard() {
   renderHero();
   renderDashboardHeader();
+  renderRouteExperience();
   ui.grid.hidden = state.route.name === "lists";
   if (state.route.name === "lists") renderListsOverview();
   else renderGames();
@@ -3341,6 +3482,7 @@ function renderFranchiseProgress(games) {
   ui.franchiseProgressStarted.textContent = String(started);
   ui.franchiseProgressPercent.textContent = `${average}%`;
   ui.franchiseProgressFill.style.width = `${average}%`;
+  ui.franchiseProgress.style.setProperty("--progress", `${average}%`);
   ui.franchiseProgress.hidden = false;
 }
 
@@ -3801,6 +3943,10 @@ async function renderGamePage() {
   updateDocumentTitle(game.title);
   ui.gamePageImage.src = game.image_url || PLACEHOLDER;
   ui.gamePageImage.alt = `Immagine di ${game.title}`;
+  if (ui.gamePageBackdrop) {
+    const backdrop = game.image_url || PLACEHOLDER;
+    ui.gamePageBackdrop.style.backgroundImage = `linear-gradient(90deg, rgba(4,7,12,.96) 0%, rgba(4,7,12,.73) 46%, rgba(4,7,12,.18) 100%), linear-gradient(0deg, #06090f 0%, transparent 58%), url("${String(backdrop).replaceAll('"', '%22')}")`;
+  }
   ui.gamePageImage.onerror = () => { ui.gamePageImage.src = PLACEHOLDER; };
   ui.gamePageBadge.textContent = badgeText(game);
   ui.gamePageTitle.textContent = game.title;
@@ -3835,7 +3981,12 @@ async function renderGamePage() {
   ui.gamePageCompletionCount.value = String(journalProgress?.completionCount || 0);
   ui.gamePagePrimaryPlatform.value = journalProgress?.primaryPlatform || "";
   ui.gamePageDifficulty.value = journalProgress?.difficulty || "";
-  ui.gamePageManualPlaytime.textContent = formatMinutes(sessionMinutes || journalProgress?.manualPlaytimeMinutes || 0);
+  const recordedMinutes = sessionMinutes || journalProgress?.manualPlaytimeMinutes || 0;
+  ui.gamePageManualPlaytime.textContent = formatMinutes(recordedMinutes);
+  if (ui.gameSummaryProgress) ui.gameSummaryProgress.textContent = `${journalProgress?.progressPercent ?? entry?.progressPercent ?? (entry?.status === "completed" ? 100 : 0)}%`;
+  if (ui.gameSummaryHours) ui.gameSummaryHours.textContent = formatMinutes(recordedMinutes);
+  if (ui.gameSummaryStatus) ui.gameSummaryStatus.textContent = entry ? statusLabel(journalProgress?.status || entry.status) : "Non iniziato";
+  if (ui.gameSummaryRating) ui.gameSummaryRating.textContent = entry?.rating ? `${entry.rating}/5` : "—";
   ui.gamePageNotes.value = entry?.notes || "";
   ui.gameSessionDate.value = new Date().toISOString().slice(0, 10);
   ui.gameSessionProgress.value = journalProgress?.progressPercent ?? "";
@@ -6053,6 +6204,21 @@ function renderProfileRecentGames() {
   }
 }
 
+function renderProfileGenres() {
+  if (!ui.profileFavoriteGenres) return;
+  const counts = new Map();
+  for (const entry of Object.values(state.library)) {
+    for (const genre of entry?.game?.genres || []) {
+      const label = String(genre || "").trim();
+      if (label) counts.set(label, (counts.get(label) || 0) + 1);
+    }
+  }
+  let values = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (!values.length) values = [["Azione / Avventura", 0], ["GDR", 0], ["Open World", 0], ["Strategia", 0]];
+  const max = Math.max(1, ...values.map(([, count]) => count));
+  ui.profileFavoriteGenres.innerHTML = values.map(([genre, count], index) => `<article><span class="genre-rank">${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(genre)}</strong><i><b style="width:${Math.round((count / max) * 100)}%"></b></i><em>${count || "—"}</em></article>`).join("");
+}
+
 function renderProfilePage() {
   const { user, profile, configured } = state.auth;
   updateDocumentTitle("Profilo");
@@ -6084,6 +6250,12 @@ function renderProfilePage() {
   $("#profile-stat-hours").textContent = stats.hours;
   $("#profile-stat-sessions").textContent = stats.sessions;
   renderProfileRecentGames();
+  renderProfileGenres();
+  const profileArtwork = routeGameArtwork();
+  if (ui.profileHeroBackdrop) {
+    ui.profileHeroBackdrop.style.backgroundImage = profileArtwork ? `url("${profileArtwork.replaceAll('"', '%22')}")` : "";
+    ui.profileHeroBackdrop.classList.toggle("has-art", Boolean(profileArtwork));
+  }
 }
 
 

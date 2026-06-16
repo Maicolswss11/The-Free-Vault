@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./visual-overhaul.css">
+  <link rel="stylesheet" href="./interface-rebuild.css">
   <title>Ludograph</title>
 </head>
 <body>
@@ -138,6 +139,7 @@
           <div id="global-search-results" class="global-search-results" role="listbox" hidden></div>
         </div>
         <div class="topbar-actions">
+          <a id="quick-add-button" class="quick-add-button" href="#/catalog" aria-label="Aggiungi un gioco"><span>＋</span><b>Aggiungi</b></a>
           <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati" aria-label="Aggiorna dati"><svg class="topbar-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg></button>
           <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
           <button id="notification-button" class="icon-button notification-button" type="button" title="Notifiche" aria-label="Apri notifiche">
@@ -154,6 +156,16 @@
 
       <main id="main-content">
         <section id="dashboard-page" class="route-page">
+          <div id="home-stage" class="home-stage" hidden>
+            <section class="home-welcome">
+              <p class="eyebrow">BENTORNATO, <span id="home-welcome-name">GIOCATORE</span></p>
+              <h1>Continua la tua<br><em>storia di gioco.</em></h1>
+              <p>Raccogli, ricorda, scopri. Ogni gioco è parte della tua leggenda.</p>
+              <div class="home-welcome-actions">
+                <a class="button button-primary" href="#/library">Vai alla mia libreria</a>
+                <a class="button button-secondary" href="#/diary">Scrivi nel diario</a>
+              </div>
+            </section>
           <section id="hero" class="hero" aria-labelledby="hero-title" hidden>
             <img id="hero-image" class="hero-image" alt="">
             <div class="hero-scrim"></div>
@@ -172,6 +184,7 @@
               </div>
             </div>
           </section>
+          </div>
 
           <section class="stats-grid" aria-label="Riepilogo">
             <article class="stat-card">
@@ -216,6 +229,26 @@
             </article>
           </section>
 
+          <section id="home-personal-grid" class="home-personal-grid" hidden>
+            <article class="home-panel home-resume-panel">
+              <header><div><p class="eyebrow">RIPRENDI DA DOVE HAI LASCIATO</p><h2>Le tue avventure</h2></div><a href="#/library">Apri libreria →</a></header>
+              <div id="home-resume-list" class="home-resume-list"></div>
+            </article>
+            <article class="home-panel home-activity-panel">
+              <header><div><p class="eyebrow">ATTIVITÀ RECENTI</p><h2>La tua storia</h2></div><a href="#/diary">Apri diario →</a></header>
+              <div id="home-activity-list" class="home-activity-list"></div>
+            </article>
+            <aside class="home-panel home-editorial-panel">
+              <div class="home-editorial-feature">
+                <p class="eyebrow">IN EVIDENZA NELL'ARCHIVIO</p>
+                <h2>Esplora oltre la libreria.</h2>
+                <p>Franchise, continuità e collezioni curate per riscoprire la storia del medium.</p>
+                <a class="button button-secondary" href="#/franchises">Esplora i franchise</a>
+              </div>
+              <div id="home-editorial-list" class="home-editorial-list"></div>
+            </aside>
+          </section>
+
           <section id="lists-dashboard" class="lists-dashboard" hidden>
             <div class="lists-header">
               <div><p class="eyebrow">COLLEZIONI PERSONALI</p><h2>Le mie liste</h2></div>
@@ -223,6 +256,25 @@
             </div>
             <div id="lists-grid" class="lists-grid"></div>
           </section>
+
+          <section id="library-showcase" class="library-showcase" hidden>
+            <div class="library-intro">
+              <p class="eyebrow">LA MIA LIBRERIA</p>
+              <h1>I tuoi giochi.<br><em>La tua storia.</em></h1>
+              <p>Organizza, traccia e rivivi ogni avventura. La tua collezione, sempre con te.</p>
+            </div>
+            <div id="library-summary-visual" class="library-summary-visual">
+              <span class="library-summary-label">RIEPILOGO LIBRERIA</span>
+              <div class="library-summary-metrics">
+                <article><small>Totale giochi</small><strong id="library-summary-total">0</strong></article>
+                <article><small>In corso</small><strong id="library-summary-playing">0</strong></article>
+                <article><small>Completati</small><strong id="library-summary-completed">0</strong></article>
+                <article><small>Tempo di gioco</small><strong id="library-summary-hours">0 h</strong></article>
+                <article><small>Preferiti</small><strong id="library-summary-favorites">0</strong></article>
+              </div>
+            </div>
+          </section>
+          <section id="library-lanes" class="library-lanes" hidden></section>
 
           <div id="catalog-meta" class="catalog-meta" hidden></div>
 
@@ -352,27 +404,32 @@
 
         <section id="franchise-page" class="route-page franchise-page" hidden>
           <button class="page-back" data-back type="button">← Indietro</button>
-          <header id="franchise-hero" class="editorial-detail-hero">
-            <img id="franchise-hero-image" alt="" hidden>
-            <div class="editorial-detail-scrim"></div>
-            <div class="editorial-detail-copy">
-              <p class="eyebrow">FRANCHISE UFFICIALE</p>
-              <h1 id="franchise-title">Franchise</h1>
-              <p id="franchise-description"></p>
-              <div id="franchise-meta" class="editorial-detail-meta"></div>
-            </div>
-          </header>
+          <div class="franchise-cinematic-layout">
+            <header id="franchise-hero" class="editorial-detail-hero">
+              <img id="franchise-hero-image" alt="" hidden>
+              <div class="editorial-detail-scrim"></div>
+              <div class="editorial-detail-copy">
+                <p class="eyebrow">FRANCHISE UFFICIALE</p>
+                <h1 id="franchise-title">Franchise</h1>
+                <p id="franchise-description"></p>
+                <div id="franchise-meta" class="editorial-detail-meta"></div>
+              </div>
+            </header>
+            <aside class="franchise-side-rail">
+              <section id="franchise-progress" class="saga-progress-panel" hidden>
+                <div><p class="eyebrow">PROGRESSO PERSONALE</p><h2>Il tuo percorso</h2></div>
+                <div class="saga-progress-ring"><strong id="franchise-progress-percent">0%</strong><span>Completamento franchise</span></div>
+                <div class="saga-progress-stats">
+                  <article><strong id="franchise-progress-completed">0</strong><span>Completati</span></article>
+                  <article><strong id="franchise-progress-started">0</strong><span>Iniziati</span></article>
+                </div>
+                <div class="saga-progress-track"><span id="franchise-progress-fill"></span></div>
+                <a class="button button-primary" href="#/library">Vai alla mia libreria</a>
+              </section>
+            </aside>
+          </div>
           <div id="franchise-status" class="notice" hidden></div>
           <section id="franchise-overview" class="franchise-overview-strip" aria-label="Panoramica del franchise" hidden></section>
-          <section id="franchise-progress" class="saga-progress-panel" hidden>
-            <div><p class="eyebrow">IL TUO PERCORSO</p><h2>Progresso sulla saga</h2></div>
-            <div class="saga-progress-stats">
-              <article><strong id="franchise-progress-completed">0</strong><span>Completati</span></article>
-              <article><strong id="franchise-progress-started">0</strong><span>Iniziati</span></article>
-              <article><strong id="franchise-progress-percent">0%</strong><span>Completamento</span></article>
-            </div>
-            <div class="saga-progress-track"><span id="franchise-progress-fill"></span></div>
-          </section>
           <div class="franchise-order-toolbar" role="group" aria-label="Ordinamento saga">
             <span>Ordina per</span>
             <button class="button button-secondary is-active" data-franchise-order="release" type="button">Uscita</button>
@@ -420,6 +477,7 @@
         <section id="game-page" class="route-page detail-page" hidden>
           <button class="page-back" data-back type="button">← Indietro</button>
           <article class="game-detail-shell">
+            <div id="game-page-backdrop" class="game-detail-backdrop" aria-hidden="true"></div>
             <div class="game-detail-visual">
               <img id="game-page-image" alt="">
               <div class="game-detail-visual-overlay"></div>
@@ -444,8 +502,22 @@
             <div id="game-editorial-membership-links" class="game-editorial-membership-links"></div>
           </section>
 
-          <div class="game-detail-grid">
-            <section class="detail-panel">
+          <section class="game-insight-strip" aria-label="Riepilogo personale">
+            <article><span>PROGRESSO</span><strong id="game-summary-progress">0%</strong><small>del gioco completato</small></article>
+            <article><span>TEMPO REGISTRATO</span><strong id="game-summary-hours">0 min</strong><small>tra diario e sessioni</small></article>
+            <article><span>STATO</span><strong id="game-summary-status">Non iniziato</strong><small>nel tuo archivio</small></article>
+            <article><span>VALUTAZIONE</span><strong id="game-summary-rating">—</strong><small>voto personale</small></article>
+          </section>
+          <nav class="game-subnav" aria-label="Sezioni della scheda">
+            <a href="#game-overview">Panoramica</a>
+            <a href="#game-progress-panel">Progressi</a>
+            <a href="#game-session-panel">Diario</a>
+            <a href="#game-page-availability">Versioni e store</a>
+            <a href="#game-social-panel">Recensioni</a>
+          </nav>
+
+          <div id="game-overview" class="game-detail-grid">
+            <section id="game-progress-panel" class="detail-panel">
               <p class="eyebrow">PROGRESSI PERSONALI</p>
               <h2>Il tuo percorso</h2>
               <div class="personal-fields progress-form-grid">
@@ -505,7 +577,7 @@
               </div>
             </section>
 
-            <section class="detail-panel">
+            <section id="game-session-panel" class="detail-panel">
               <p class="eyebrow">SESSIONE DI GIOCO</p>
               <h2>Aggiungi al diario</h2>
               <form id="game-session-form" class="session-form">
@@ -571,7 +643,7 @@
             <div id="game-related-grid" class="discovery-game-strip"></div>
           </section>
 
-          <section class="game-social-section">
+          <section id="game-social-panel" class="game-social-section">
             <header class="social-section-header">
               <div>
                 <p class="eyebrow">COMMUNITY</p>
@@ -804,56 +876,65 @@
 
           <div id="profile-signed-in" hidden>
             <section class="profile-hero">
+              <div id="profile-hero-backdrop" class="profile-hero-backdrop" aria-hidden="true"></div>
               <span id="profile-page-avatar" class="account-avatar account-avatar-xl">?</span>
-              <div>
-                <p class="eyebrow">IL TUO PROFILO</p>
+              <div class="profile-identity">
+                <p class="eyebrow">MEMBRO DELLA COMMUNITY</p>
                 <h1 id="profile-page-name">Profilo</h1>
                 <p id="profile-page-handle" class="profile-handle"></p>
                 <p id="profile-page-bio" class="profile-bio"></p>
+                <div class="profile-badges">
+                  <span class="profile-badge profile-badge-blue">Archivista</span>
+                  <span class="profile-badge profile-badge-purple">Collezionista</span>
+                  <span id="profile-visibility-badge" class="profile-badge">Profilo pubblico</span>
+                  <span id="cloud-status" class="profile-badge profile-badge-green">Sincronizzazione pronta</span>
+                </div>
                 <p id="profile-page-email" class="muted"></p>
               </div>
               <div class="profile-hero-actions">
-                <span id="profile-visibility-badge" class="cloud-status">Profilo pubblico</span>
-                <span id="cloud-status" class="cloud-status">Sincronizzazione pronta</span>
-                <a id="view-public-profile" class="button button-secondary" href="#/profile">Vedi profilo pubblico</a>
-                <a class="button button-secondary" href="#/feed">Feed</a>
-                <a class="button button-secondary" href="#/explore">Esplora</a>
-                <a class="button button-secondary" href="#/notifications">Notifiche</a>
-                <a class="button button-secondary" href="#/diary">Diario</a>
-                <a class="button button-secondary" href="#/stats">Statistiche</a>
-                <a class="button button-primary" href="#/settings/profile">Impostazioni</a>
-                <button id="logout-button" class="button button-secondary" type="button">Esci</button>
+                <a id="view-public-profile" class="button button-primary" href="#/profile">Vedi profilo pubblico</a>
+                <a class="button button-secondary" href="#/settings/profile">Modifica profilo</a>
+                <button id="logout-button" class="button button-ghost" type="button">Esci</button>
               </div>
             </section>
 
             <section class="profile-stats" aria-label="Statistiche profilo">
-              <article><strong id="profile-stat-library">0</strong><span>Giochi in libreria</span></article>
-              <article><strong id="profile-stat-completed">0</strong><span>Completati</span></article>
-              <article><strong id="profile-stat-favorites">0</strong><span>Preferiti</span></article>
-              <article><strong id="profile-stat-lists">0</strong><span>Liste</span></article>
-              <article><strong id="profile-stat-hours">0 h</strong><span>Ore nel diario</span></article>
-              <article><strong id="profile-stat-sessions">0</strong><span>Sessioni</span></article>
+              <article><i>🎮</i><strong id="profile-stat-library">0</strong><span>Giochi posseduti</span></article>
+              <article><i>🏆</i><strong id="profile-stat-completed">0</strong><span>Giochi completati</span></article>
+              <article><i>♥</i><strong id="profile-stat-favorites">0</strong><span>Preferiti</span></article>
+              <article><i>◷</i><strong id="profile-stat-hours">0 h</strong><span>Tempo di gioco</span></article>
+              <article><i>☄</i><strong id="profile-stat-sessions">0</strong><span>Sessioni diario</span></article>
+              <article><i>▤</i><strong id="profile-stat-lists">0</strong><span>Liste create</span></article>
             </section>
 
-            <div class="profile-layout">
-              <section class="detail-panel">
-                <p class="eyebrow">ACCOUNT</p>
-                <h2>Gestisci il tuo archivio</h2>
-                <p class="muted">Modifica avatar, profilo, email, password, privacy e backup da una pagina dedicata.</p>
-                <div class="settings-shortcuts">
-                  <a class="button button-primary" href="#/settings/profile">Modifica profilo</a>
-                  <a class="button button-secondary" href="#/settings/account">Sicurezza account</a>
-                  <a class="button button-secondary" href="#/settings/privacy">Privacy</a>
-                </div>
+            <div class="profile-dashboard-grid">
+              <section class="detail-panel profile-activity-panel">
+                <div class="panel-heading"><div><p class="eyebrow">ATTIVITÀ RECENTI</p><h2>La tua cronologia</h2></div><a href="#/feed">Vedi tutto →</a></div>
+                <div id="profile-recent-games" class="profile-recent-games"></div>
               </section>
 
-              <section class="detail-panel">
-                <p class="eyebrow">ATTIVITÀ</p>
-                <h2>Ultimi giochi aggiunti</h2>
-                <div id="profile-recent-games" class="profile-recent-games"></div>
-                <a class="button button-secondary" href="#/library">Apri la libreria</a>
+              <section class="detail-panel profile-genres-panel">
+                <div class="panel-heading"><div><p class="eyebrow">IDENTITÀ LUDICA</p><h2>Generi preferiti</h2></div><a href="#/stats">Statistiche →</a></div>
+                <div id="profile-favorite-genres" class="profile-favorite-genres"></div>
+              </section>
+
+              <section class="detail-panel profile-archive-hub">
+                <div class="panel-heading"><div><p class="eyebrow">GESTISCI IL TUO ARCHIVIO</p><h2>Tutto al suo posto</h2></div></div>
+                <div class="profile-hub-grid">
+                  <a href="#/library"><span>▥</span><strong>La mia libreria</strong><small>Giochi e progressi</small></a>
+                  <a href="#/lists"><span>☷</span><strong>Le mie liste</strong><small>Raccolte personali</small></a>
+                  <a href="#/diary"><span>✎</span><strong>Diario di gioco</strong><small>Sessioni e ricordi</small></a>
+                  <a href="#/settings/connections"><span>⇩</span><strong>Importa giochi</strong><small>Account collegati</small></a>
+                  <a href="#/settings/privacy"><span>◉</span><strong>Privacy</strong><small>Visibilità e dati</small></a>
+                  <a href="#/settings/data"><span>↥</span><strong>Backup</strong><small>Esporta il tuo archivio</small></a>
+                </div>
               </section>
             </div>
+
+            <section class="profile-achievement-teaser">
+              <div><p class="eyebrow">I TUOI TRAGUARDI <span>IN ARRIVO</span></p><h2>Ogni impresa merita di essere ricordata.</h2><p>Trofei, achievement e completamenti troveranno qui una casa unica.</p></div>
+              <div class="achievement-art" aria-hidden="true"><span>♜</span><i></i><span>🏆</span><i></i><span>♜</span></div>
+            </section>
           </div>
         </section>
 
