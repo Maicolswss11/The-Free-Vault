@@ -1,4 +1,5 @@
 
+// Previous stable cache: ludograph-v5-3-rebrand-platform-identity
 // Previous stable cache: the-free-vault-v4-7-6-auth-callback-recovery
 // Previous stable cache: the-free-vault-v4-7-5-candidate-first-search
 // Previous stable cache: the-free-vault-v4-7-4-catalog-search-performance
@@ -9,7 +10,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-3-rebrand-platform-identity";
+const CACHE_NAME = "ludograph-v5-3-1-search-franchise-dedup";
 const APP_SHELL = [
   "./",
   "./index.html",

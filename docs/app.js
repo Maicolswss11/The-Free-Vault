@@ -956,6 +956,151 @@ function platformBadgesMarkup(platforms, { limit = 6, compact = false } = {}) {
   return chips.join("");
 }
 
+const GAME_TYPE_LABELS = Object.freeze({
+  main_game: "Gioco principale",
+  dlc_addon: "DLC / add-on",
+  expansion: "Espansione",
+  bundle: "Raccolta / bundle",
+  standalone_expansion: "Espansione autonoma",
+  mod: "Mod",
+  episode: "Episodio",
+  season: "Stagione",
+  remake: "Remake",
+  remaster: "Remaster",
+  expanded_game: "Edizione ampliata",
+  port: "Porting",
+  fork: "Versione derivata",
+  pack: "Pacchetto",
+  update: "Aggiornamento",
+  unknown: "Gioco enciclopedico",
+});
+
+const GAME_TYPE_PRIORITY = Object.freeze({
+  main_game: 0,
+  remake: 1,
+  remaster: 2,
+  expanded_game: 3,
+  standalone_expansion: 4,
+  expansion: 5,
+  port: 6,
+  episode: 7,
+  bundle: 8,
+  dlc_addon: 9,
+  pack: 10,
+  update: 11,
+  unknown: 20,
+});
+
+function gameTypeLabel(game) {
+  const type = String(game?.game_type || "unknown").toLowerCase();
+  return GAME_TYPE_LABELS[type] || type.replace(/_/g, " ");
+}
+
+function normalizedEditorialTitle(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[™®©]/g, "")
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
+}
+
+function normalizedCoverIdentity(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .split("?")[0]
+    .replace(/^https?:\/\//, "")
+    .replace(/\/t_[^/]+\//g, "/");
+}
+
+function editorialIdentityForGame(game) {
+  if (game?.editorial_identity) return String(game.editorial_identity);
+  const title = normalizedEditorialTitle(game?.title);
+  const cover = normalizedCoverIdentity(game?.image_url);
+  return title && cover ? `${title}|${cover}` : `game:${gameKey(game)}`;
+}
+
+function gameVariantPriority(game) {
+  const type = String(game?.game_type || "unknown").toLowerCase();
+  const completeness = [
+    game?.release_date || game?.release_year,
+    game?.developer,
+    Array.isArray(game?.platforms) && game.platforms.length,
+    game?.description,
+  ].filter(Boolean).length;
+  return [
+    GAME_TYPE_PRIORITY[type] ?? 20,
+    -completeness,
+    franchiseReleaseSortValue(game),
+    String(gameKey(game) || ""),
+  ];
+}
+
+function compareVariantRepresentatives(a, b) {
+  const left = gameVariantPriority(a);
+  const right = gameVariantPriority(b);
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] < right[index]) return -1;
+    if (left[index] > right[index]) return 1;
+  }
+  return 0;
+}
+
+function uniqueMergedValues(games, field) {
+  const values = [];
+  const seen = new Set();
+  for (const game of games || []) {
+    const source = Array.isArray(game?.[field]) ? game[field] : [];
+    for (const value of source) {
+      const key = String(value || "").toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      values.push(value);
+    }
+  }
+  return values;
+}
+
+function groupGameVariants(games, { limit = Infinity } = {}) {
+  const grouped = new Map();
+  (games || []).forEach((game, index) => {
+    const identity = editorialIdentityForGame(game);
+    if (!grouped.has(identity)) grouped.set(identity, { firstIndex: index, variants: [] });
+    grouped.get(identity).variants.push(game);
+  });
+
+  return [...grouped.entries()]
+    .map(([identity, group]) => {
+      const ordered = [...group.variants].sort(compareVariantRepresentatives);
+      const representative = ordered[0];
+      return {
+        ...representative,
+        editorial_identity: identity,
+        variants: ordered,
+        variant_keys: ordered.map((item) => gameKey(item)).filter(Boolean),
+        variant_count: ordered.length,
+        platforms: uniqueMergedValues(ordered, "platforms"),
+        stores: uniqueMergedValues(ordered, "stores"),
+        _variant_group_index: group.firstIndex,
+      };
+    })
+    .sort((a, b) => a._variant_group_index - b._variant_group_index)
+    .slice(0, limit);
+}
+
+function gameDisambiguationMarkup(game, { includeDeveloper = true } = {}) {
+  const parts = [];
+  const year = Number(game?.release_year || releaseYearOf(game) || 0);
+  if (year > 0) parts.push(String(year));
+  const platforms = (game?.platforms || []).slice(0, 3).map((value) => platformBrand(value).label);
+  if (platforms.length) parts.push(platforms.join(", "));
+  parts.push(gameTypeLabel(game));
+  if (includeDeveloper && game?.developer) parts.push(game.developer);
+  return parts.filter(Boolean).join(" · ");
+}
+
 function commercialListingsForGame(game) {
   const commercialStores = new Set(["epic", "steam", "playstation", "xbox", "gog", "nintendo"]);
   const candidates = listingsForGame(game)
@@ -1726,16 +1871,17 @@ async function renderGlobalSearchResults() {
     if (window.VaultCatalog?.configured()) {
       const response = await window.VaultCatalog.search({
         query: rawQuery,
-        limit: 8,
+        limit: 24,
         offset: 0,
         sort: "relevance",
       });
       if (requestId !== state.globalSearchRequestId || state.globalSearch.trim() !== rawQuery) return;
-      results = response.items;
+      results = groupGameVariants(response.items, { limit: 8 });
     } else {
-      results = uniqueSearchGames()
-        .filter((game) => allSearchText(game).includes(query))
-        .slice(0, 8);
+      results = groupGameVariants(
+        uniqueSearchGames().filter((game) => allSearchText(game).includes(query)),
+        { limit: 8 },
+      );
     }
 
     ui.globalSearchResults.replaceChildren();
@@ -1751,13 +1897,15 @@ async function renderGlobalSearchResults() {
         button.type = "button";
         button.className = "global-search-result";
         button.setAttribute("role", "option");
+        const variantCount = Number(game.variant_count || 1);
         button.innerHTML = `
           <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
           <span>
             <strong>${escapeHtml(game.title)}</strong>
-            <small>${escapeHtml(game.developer || game.publisher || (game.stores || []).map(storeLabel).join(" · "))}</small>
+            <small>${escapeHtml(gameDisambiguationMarkup(game))}</small>
+            ${variantCount > 1 ? `<small class="search-variant-note">${variantCount} versioni raggruppate</small>` : ""}
           </span>
-          <em>${escapeHtml((game.stores || [game.store]).map(storeLabel).join(" + "))}</em>`;
+          <em>${variantCount > 1 ? `${variantCount} versioni` : escapeHtml((game.stores || [game.store]).filter(Boolean).map(storeLabel).join(" + "))}</em>`;
         button.onclick = () => {
           state.globalSearch = "";
           ui.search.value = "";
@@ -4666,8 +4814,17 @@ function franchiseSelectionHas(key) {
   return (state.admin.franchiseGameSelection || []).some((item) => gameKey(item) === key);
 }
 
+function franchiseSelectionHasIdentity(identity) {
+  return (state.admin.franchiseGameSelection || [])
+    .some((item) => editorialIdentityForGame(item) === identity);
+}
+
 function currentFranchiseGameKeys() {
   return new Set((state.admin.selectedFranchise?.games || []).map((game) => gameKey(game)));
+}
+
+function currentFranchiseEditorialIdentities() {
+  return new Set((state.admin.selectedFranchise?.games || []).map(editorialIdentityForGame));
 }
 
 function prepareAdminFranchiseBatchMode() {
@@ -4679,9 +4836,10 @@ function prepareAdminFranchiseBatchMode() {
 
 function setAdminFranchiseGameSelection(game, selected) {
   const key = gameKey(game);
-  if (!key || currentFranchiseGameKeys().has(key)) return;
+  const identity = editorialIdentityForGame(game);
+  if (!key || currentFranchiseGameKeys().has(key) || currentFranchiseEditorialIdentities().has(identity)) return;
   const items = [...(state.admin.franchiseGameSelection || [])];
-  const index = items.findIndex((item) => gameKey(item) === key);
+  const index = items.findIndex((item) => editorialIdentityForGame(item) === identity);
   if (selected && index < 0) {
     prepareAdminFranchiseBatchMode();
     items.push(game);
@@ -4711,7 +4869,7 @@ function renderAdminFranchiseSelectedList() {
     item.innerHTML = `
       <span class="admin-selected-game-order">${index + 1}</span>
       <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
-      <div><strong>${escapeHtml(game.title || "Gioco")}</strong><small>${escapeHtml(String(game.release_year || game.release_date || game.match_key || ""))}</small></div>
+      <div><strong>${escapeHtml(game.title || "Gioco")}</strong><small>${escapeHtml(gameDisambiguationMarkup(game, { includeDeveloper: false }))}${Number(game.variant_count || 1) > 1 ? ` · ${Number(game.variant_count)} versioni unite` : ""}</small></div>
       <div class="admin-selected-game-actions">
         <button class="button button-secondary" data-up type="button" aria-label="Sposta su">↑</button>
         <button class="button button-secondary" data-down type="button" aria-label="Sposta giù">↓</button>
@@ -4738,30 +4896,30 @@ function renderAdminFranchiseSelectedList() {
 }
 
 function syncAdminFranchiseSearchRows() {
-  ui.adminFranchiseGameSearchResults?.querySelectorAll("[data-franchise-game-key]").forEach((row) => {
-    const key = row.dataset.franchiseGameKey;
+  ui.adminFranchiseGameSearchResults?.querySelectorAll("[data-franchise-identity]").forEach((row) => {
+    const identity = row.dataset.franchiseIdentity;
     const checkbox = row.querySelector('input[type="checkbox"]');
-    const selected = franchiseSelectionHas(key);
+    const selected = franchiseSelectionHasIdentity(identity);
     row.classList.toggle("is-selected", selected);
     if (checkbox) checkbox.checked = selected;
-    const label = row.querySelector("b");
+    const label = row.querySelector("[data-selection-label]");
     if (label) label.textContent = checkbox?.disabled ? "Già presente" : selected ? "Selezionato" : "Seleziona";
   });
 }
 
 function updateAdminFranchiseSearchActions() {
   const results = state.admin.franchiseSearchResults || [];
-  const existing = currentFranchiseGameKeys();
-  const available = results.filter((game) => !existing.has(gameKey(game)));
-  const selectedHere = available.filter((game) => franchiseSelectionHas(gameKey(game))).length;
+  const existing = currentFranchiseEditorialIdentities();
+  const available = results.filter((game) => !existing.has(editorialIdentityForGame(game)));
+  const selectedHere = available.filter((game) => franchiseSelectionHasIdentity(editorialIdentityForGame(game))).length;
   if (ui.adminFranchiseSearchActions) ui.adminFranchiseSearchActions.hidden = available.length === 0;
   if (ui.adminFranchiseSelectAll) {
     ui.adminFranchiseSelectAll.disabled = !available.length || selectedHere === available.length;
-    ui.adminFranchiseSelectAll.textContent = `Seleziona tutti i risultati (${available.length})`;
+    ui.adminFranchiseSelectAll.textContent = `Seleziona tutte le opere (${available.length})`;
   }
   if (ui.adminFranchiseDeselectResults) {
     ui.adminFranchiseDeselectResults.disabled = selectedHere === 0;
-    ui.adminFranchiseDeselectResults.textContent = `Deseleziona questi risultati (${selectedHere})`;
+    ui.adminFranchiseDeselectResults.textContent = `Deseleziona queste opere (${selectedHere})`;
   }
 }
 
@@ -5168,8 +5326,17 @@ async function saveFranchiseEditorRows(rows, button, successMessage) {
 
 async function openAdminFranchise(id) {
   try {
-    const data = await window.VaultFranchises.getAdminFranchise(id);
+    let data = await window.VaultFranchises.getAdminFranchise(id);
     if (!data?.franchise) throw new Error("Franchise non trovato.");
+    try {
+      const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(id);
+      if (consolidation?.franchise?.franchise) data = consolidation.franchise;
+      if (Number(consolidation?.merged || 0) > 0) {
+        showToast(`${Number(consolidation.merged)} duplicati editoriali uniti automaticamente.`);
+      }
+    } catch (error) {
+      console.warn("Consolidamento varianti franchise non disponibile", error);
+    }
     state.admin.selectedFranchise = data;
     const franchise = data.franchise;
     ui.adminFranchiseId.value = franchise.id;
@@ -5265,36 +5432,90 @@ function renderAdminEditorialSearchResults(container, games, kind) {
   }
 
   const existingFranchiseKeys = currentFranchiseGameKeys();
-  if (kind === "franchise") state.admin.franchiseSearchResults = games;
+  const existingFranchiseIdentities = currentFranchiseEditorialIdentities();
+  const franchiseGroups = kind === "franchise"
+    ? (games.some((game) => Array.isArray(game?.variants)) ? games : groupGameVariants(games))
+    : games;
+  if (kind === "franchise") state.admin.franchiseSearchResults = franchiseGroups;
 
-  for (const game of games) {
+  for (const game of franchiseGroups) {
     const key = gameKey(game);
     if (kind === "franchise") {
-      const alreadyLinked = existingFranchiseKeys.has(key);
+      const identity = editorialIdentityForGame(game);
+      const variants = Array.isArray(game.variants) && game.variants.length ? game.variants : [game];
+      const variantKeys = new Set([
+        ...(Array.isArray(game.variant_keys) ? game.variant_keys : []),
+        ...variants.map((item) => gameKey(item)),
+      ].filter(Boolean));
+      const alreadyLinked = existingFranchiseIdentities.has(identity)
+        || [...variantKeys].some((variantKey) => existingFranchiseKeys.has(variantKey));
+      const variantCount = Math.max(Number(game.variant_count || 0), variants.length, 1);
+
+      const group = document.createElement("article");
+      group.className = "admin-result-group";
+
       const row = document.createElement("label");
-      row.className = "admin-result-item admin-result-check";
-      row.dataset.franchiseGameKey = key;
+      row.className = "admin-result-item admin-result-check admin-result-group-main";
+      row.dataset.franchiseIdentity = identity;
       row.innerHTML = `
         <input class="admin-result-checkbox" type="checkbox" ${alreadyLinked ? "disabled" : ""}>
         <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
-        <span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.match_key || game.canonical_id || "")}</small></span>
-        <b>${alreadyLinked ? "Già presente" : "Seleziona"}</b>`;
+        <span class="admin-result-copy">
+          <strong>${escapeHtml(game.title)}</strong>
+          <small>${escapeHtml(gameDisambiguationMarkup(game))}</small>
+          <span class="platform-chip-list admin-result-platforms">${platformBadgesMarkup(game.platforms, { limit: 4, compact: true })}</span>
+          ${variantCount > 1 ? `<small class="admin-result-variant-summary">${variantCount} record uniti in una sola opera</small>` : ""}
+        </span>
+        <b data-selection-label>${alreadyLinked ? "Già presente" : "Seleziona"}</b>`;
       row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
       const checkbox = row.querySelector(".admin-result-checkbox");
-      checkbox.checked = franchiseSelectionHas(key);
+      checkbox.checked = franchiseSelectionHasIdentity(identity);
       row.classList.toggle("is-selected", checkbox.checked);
       checkbox.addEventListener("change", () => {
         setAdminFranchiseGameSelection(game, checkbox.checked);
         updateAdminFranchiseSelectionUI();
       });
-      container.append(row);
+      group.append(row);
+
+      if (variantCount > 1) {
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "admin-variant-toggle";
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.innerHTML = `<span>Mostra le ${variantCount} versioni</span><b aria-hidden="true">⌄</b>`;
+
+        const details = document.createElement("div");
+        details.className = "admin-variant-list";
+        details.hidden = true;
+        for (const variant of variants) {
+          const item = document.createElement("div");
+          item.className = "admin-variant-item";
+          item.innerHTML = `
+            <img src="${escapeAttr(variant.image_url || PLACEHOLDER)}" alt="">
+            <span><strong>${escapeHtml(variant.title || game.title)}</strong><small>${escapeHtml(gameDisambiguationMarkup(variant))}</small></span>
+            <code>${escapeHtml(variant.match_key || variant.canonical_id || "")}</code>`;
+          item.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+          details.append(item);
+        }
+        toggle.onclick = () => {
+          const expanded = toggle.getAttribute("aria-expanded") === "true";
+          toggle.setAttribute("aria-expanded", String(!expanded));
+          toggle.querySelector("span").textContent = expanded
+            ? `Mostra le ${variantCount} versioni`
+            : `Nascondi le ${variantCount} versioni`;
+          details.hidden = expanded;
+        };
+        group.append(toggle, details);
+      }
+
+      container.append(group);
       continue;
     }
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "admin-result-item";
-    button.innerHTML = `<img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt=""><span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.match_key || game.canonical_id || "")}</small></span><b>Seleziona</b>`;
+    button.innerHTML = `<img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt"><span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(gameDisambiguationMarkup(game))}</small></span><b>Seleziona</b>`;
     button.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
     button.onclick = () => {
       const gamesCount = state.admin.selectedCollection?.games?.length || 0;
@@ -5317,8 +5538,13 @@ async function searchAdminEditorialGames(kind) {
   if (query.length < 2) return;
   container.innerHTML = `<div class="route-loading">Ricerca…</div>`;
   try {
-    const result = await window.VaultCatalog.search({ query, limit: kind === "franchise" ? 50 : 12, offset: 0, force: true });
-    renderAdminEditorialSearchResults(container, result.items || [], kind);
+    if (kind === "franchise" && window.VaultFranchises?.searchAdminFranchiseCandidates) {
+      const groups = await window.VaultFranchises.searchAdminFranchiseCandidates(query, 50);
+      renderAdminEditorialSearchResults(container, groups || [], kind);
+    } else {
+      const result = await window.VaultCatalog.search({ query, limit: kind === "franchise" ? 100 : 12, offset: 0, force: true });
+      renderAdminEditorialSearchResults(container, result.items || [], kind);
+    }
   } catch (error) {
     console.error("Ricerca gioco editoriale fallita", error);
     container.innerHTML = `<div class="timeline-empty">Ricerca non disponibile.</div>`;
@@ -6283,7 +6509,10 @@ ui.adminFranchiseApplyJson?.addEventListener("click", async () => {
   setButtonLoading(ui.adminFranchiseApplyJson, true, "Applicazione…");
   try {
     const result = await window.VaultFranchises.importAdminFranchiseEditorial(franchise.id, payload, false);
-    state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+    const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(franchise.id);
+    state.admin.selectedFranchise = consolidation?.franchise?.franchise
+      ? consolidation.franchise
+      : await window.VaultFranchises.getAdminFranchise(franchise.id);
     syncFranchiseEditorRows(state.admin.selectedFranchise);
     renderAdminFranchiseGames();
     setAdminFranchiseJsonMessage(describeFranchiseImportResult(result), true);
@@ -6301,17 +6530,17 @@ ui.adminFranchiseGameSearchForm?.addEventListener("submit", async (event) => {
 });
 
 ui.adminFranchiseSelectAll?.addEventListener("click", () => {
-  const existing = currentFranchiseGameKeys();
+  const existing = currentFranchiseEditorialIdentities();
   for (const game of state.admin.franchiseSearchResults || []) {
-    if (!existing.has(gameKey(game))) setAdminFranchiseGameSelection(game, true);
+    if (!existing.has(editorialIdentityForGame(game))) setAdminFranchiseGameSelection(game, true);
   }
   updateAdminFranchiseSelectionUI();
 });
 
 ui.adminFranchiseDeselectResults?.addEventListener("click", () => {
-  const visibleKeys = new Set((state.admin.franchiseSearchResults || []).map((game) => gameKey(game)));
+  const visibleIdentities = new Set((state.admin.franchiseSearchResults || []).map(editorialIdentityForGame));
   state.admin.franchiseGameSelection = (state.admin.franchiseGameSelection || [])
-    .filter((game) => !visibleKeys.has(gameKey(game)));
+    .filter((game) => !visibleIdentities.has(editorialIdentityForGame(game)));
   updateAdminFranchiseSelectionUI();
 });
 
@@ -6367,6 +6596,8 @@ ui.adminFranchiseGameForm?.addEventListener("submit", async (event) => {
         narrativeOrder: ui.adminFranchiseNarrativeOrder.value,
         note: ui.adminFranchiseGameNote.value,
       });
+      const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(franchise.id);
+      if (consolidation?.franchise?.franchise) state.admin.selectedFranchise = consolidation.franchise;
       showToast("Gioco aggiornato nel franchise.");
     }
 

@@ -75,7 +75,7 @@ def test_franchise_admin_supports_multiple_game_selection_and_batch_save():
     assert "updateAdminFranchiseSelectionUI" in app
     assert "setAdminFranchiseGameSelection" in app
     assert "state.admin.franchiseSearchResults" in app
-    assert 'limit: kind === "franchise" ? 50 : 12' in app
+    assert "searchAdminFranchiseCandidates(query, 50)" in app
     assert "saveAdminFranchiseGames(franchise.id, payload)" in app
     assert 'rpc("admin_save_franchise_games_batch"' in client
 

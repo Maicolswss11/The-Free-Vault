@@ -39,6 +39,17 @@
     return rpc("admin_get_franchise", { p_id: id });
   }
 
+  async function searchAdminFranchiseCandidates(query, limit = 50) {
+    return rpc("admin_search_franchise_candidates", {
+      p_query: String(query || "").trim(),
+      p_limit: Math.max(1, Math.min(Number(limit) || 50, 50)),
+    });
+  }
+
+  async function consolidateAdminFranchiseVariants(franchiseId) {
+    return rpc("admin_consolidate_franchise_variants", { p_franchise_id: franchiseId });
+  }
+
   async function saveAdminFranchise(payload = {}) {
     return rpc("admin_save_franchise", {
       p_id: payload.id || null,
@@ -176,6 +187,8 @@
     getMemberships,
     listAdminFranchises,
     getAdminFranchise,
+    searchAdminFranchiseCandidates,
+    consolidateAdminFranchiseVariants,
     saveAdminFranchise,
     deleteAdminFranchise,
     saveAdminFranchiseGame,
