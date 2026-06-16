@@ -8090,3 +8090,604 @@ comment on function public.sync_user_library_batch(jsonb) is
 commit;
 
 notify pgrst, 'reload schema';
+
+-- Ludograph v5.3.3 — catalog search scalability hotfix.
+-- Migrazione sorgente: supabase/migrations/20260616_v533_catalog_search_scalability.sql
+
+create index if not exists catalog_games_canonical_title_trgm_idx
+on public.catalog_games using gin(lower(canonical_title) extensions.gin_trgm_ops);
+
+create index if not exists catalog_games_lower_canonical_title_idx
+on public.catalog_games(lower(canonical_title), match_key);
+
+create or replace function public.search_catalog(
+  p_query text default '',
+  p_stores text[] default null,
+  p_category text default null,
+  p_segment text default null,
+  p_price text default null,
+  p_year integer default null,
+  p_library_keys text[] default null,
+  p_favorite_keys text[] default null,
+  p_personal_filter text default null,
+  p_sort text default 'relevance',
+  p_limit integer default 36,
+  p_offset integer default 0
+)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+set statement_timeout = '15s'
+as $$
+with params as materialized (
+  select
+    lower(trim(coalesce(p_query, ''))) as q,
+    greatest(1, least(coalesce(p_limit, 36), 100)) as page_limit,
+    greatest(0, coalesce(p_offset, 0)) as page_offset,
+    least(5000, greatest(500,
+      (greatest(0, coalesce(p_offset, 0)) + greatest(1, least(coalesce(p_limit, 36), 100))) * 20
+    )) as candidate_limit
+),
+substring_candidates as materialized (
+  select ranked.match_key, ranked.relevance_score
+  from (
+    select cg.match_key,
+      case
+        when lower(cg.title) = p.q then 100::real
+        when lower(cg.canonical_title) = p.q then 98::real
+        when lower(cg.title) like p.q || '%' then 90::real
+        when lower(cg.canonical_title) like p.q || '%' then 88::real
+        when lower(cg.title) like '%' || p.q || '%' then 72::real
+        else 68::real
+      end as relevance_score,
+      cg.release_date, cg.title
+    from public.catalog_games cg
+    cross join params p
+    where p.q <> '' and (
+      lower(cg.title) like '%' || p.q || '%'
+      or lower(cg.canonical_title) like '%' || p.q || '%'
+    )
+    order by relevance_score desc, lower(cg.title), cg.release_date asc nulls last, cg.match_key
+    limit (select candidate_limit from params)
+  ) ranked
+),
+fuzzy_candidates as materialized (
+  select ranked.match_key, ranked.relevance_score
+  from (
+    select cg.match_key,
+      greatest(
+        extensions.similarity(lower(cg.title), p.q),
+        extensions.similarity(lower(cg.canonical_title), p.q)
+      )::real * 25 + 35 as relevance_score,
+      cg.release_date, cg.title
+    from public.catalog_games cg
+    cross join params p
+    where p.q <> ''
+      and char_length(p.q) >= 4
+      and not exists (select 1 from substring_candidates)
+      and (
+        lower(cg.title) operator(extensions.%) p.q
+        or lower(cg.canonical_title) operator(extensions.%) p.q
+      )
+    order by relevance_score desc, lower(cg.title), cg.release_date asc nulls last, cg.match_key
+    limit (select least(candidate_limit, 1000) from params)
+  ) ranked
+),
+search_candidates as materialized (
+  select candidate.match_key, max(candidate.relevance_score)::real as relevance_score
+  from (
+    select * from substring_candidates
+    union all
+    select * from fuzzy_candidates
+  ) candidate
+  group by candidate.match_key
+),
+source_rows as not materialized (
+  select cg.match_key, cg.title, cg.release_date, cg.sort_price, sc.relevance_score
+  from search_candidates sc
+  join public.catalog_games cg on cg.match_key = sc.match_key
+  union all
+  select cg.match_key, cg.title, cg.release_date, cg.sort_price, 0::real
+  from public.catalog_games cg cross join params p where p.q = ''
+),
+eligible as not materialized (
+  select sr.*
+  from source_rows sr
+  join public.catalog_games cg on cg.match_key = sr.match_key
+  where
+    (p_stores is null or cardinality(p_stores) = 0 or cg.stores && p_stores)
+    and (p_category is null or p_category = '' or p_category = 'all' or cg.category_group = p_category)
+    and (p_segment is null or p_segment = '' or p_segment = 'all' or cg.market_segment = p_segment)
+    and (p_year is null or cg.release_year = p_year)
+    and (
+      p_price is null or p_price = '' or p_price = 'all'
+      or (p_price = 'free' and exists (
+        select 1 from jsonb_array_elements(cg.store_listings) listing
+        where coalesce((listing ->> 'discount_price')::bigint, (listing ->> 'original_price')::bigint, 1) = 0
+      ))
+      or (p_price = 'discounted' and exists (
+        select 1 from jsonb_array_elements(cg.store_listings) listing
+        where (listing ->> 'original_price') is not null
+          and (listing ->> 'discount_price') is not null
+          and (listing ->> 'discount_price')::bigint < (listing ->> 'original_price')::bigint
+      ))
+      or (p_price = 'paid' and cg.sort_price > 0)
+    )
+    and (
+      p_personal_filter is null or p_personal_filter = '' or p_personal_filter = 'all'
+      or (p_personal_filter = 'saved' and (
+        cg.match_key = any(coalesce(p_library_keys, '{}'::text[]))
+        or cg.canonical_id = any(coalesce(p_library_keys, '{}'::text[]))
+      ))
+      or (p_personal_filter = 'favorite' and (
+        cg.match_key = any(coalesce(p_favorite_keys, '{}'::text[]))
+        or cg.canonical_id = any(coalesce(p_favorite_keys, '{}'::text[]))
+      ))
+    )
+),
+counted as materialized (
+  select case
+    when ((select q from params) = ''
+      and (p_stores is null or cardinality(p_stores) = 0)
+      and (p_category is null or p_category in ('', 'all'))
+      and (p_segment is null or p_segment in ('', 'all'))
+      and (p_price is null or p_price in ('', 'all'))
+      and p_year is null
+      and (p_personal_filter is null or p_personal_filter in ('', 'all')))
+    then coalesce((select total_games from public.catalog_stats_cache where singleton), 0)
+    else (select count(*) from eligible)
+  end::bigint as total_count
+),
+paged_keys as materialized (
+  select e.* from eligible e cross join params p
+  order by
+    case when p_sort = 'title' or (p_sort = 'relevance' and p.q = '') then lower(e.title) end asc nulls last,
+    case when p_sort = 'date' then e.release_date end desc nulls last,
+    case when p_sort = 'value' then e.sort_price end desc nulls last,
+    case when p_sort = 'relevance' and p.q <> '' then e.relevance_score end desc nulls last,
+    lower(e.title), e.match_key
+  limit (select page_limit from params) offset (select page_offset from params)
+),
+page_rows as materialized (
+  select cg, pk.relevance_score, pk.title as sort_title,
+    pk.release_date as sort_release_date, pk.sort_price as sort_value,
+    pk.match_key as sort_match_key
+  from paged_keys pk join public.catalog_games cg on cg.match_key = pk.match_key
+)
+select jsonb_build_object(
+  'items', coalesce(jsonb_agg(public.catalog_game_card_json(cg)
+    order by
+      case when p_sort = 'title' or (p_sort = 'relevance' and (select q from params) = '') then lower(sort_title) end asc nulls last,
+      case when p_sort = 'date' then sort_release_date end desc nulls last,
+      case when p_sort = 'value' then sort_value end desc nulls last,
+      case when p_sort = 'relevance' and (select q from params) <> '' then relevance_score end desc nulls last,
+      lower(sort_title), sort_match_key
+  ), '[]'::jsonb),
+  'total', (select total_count from counted),
+  'limit', (select page_limit from params),
+  'offset', (select page_offset from params),
+  'has_more', ((select page_offset + page_limit from params) < (select total_count from counted)),
+  'candidate_limited', ((select q from params) <> ''
+    and (select count(*) from search_candidates) >= (select candidate_limit from params))
+)
+from page_rows;
+$$;
+
+revoke all on function public.search_catalog(text, text[], text, text, text, integer, text[], text[], text, text, integer, integer) from public;
+grant execute on function public.search_catalog(text, text[], text, text, text, integer, text[], text[], text, text, integer, integer) to anon, authenticated;
+-- Ludograph v5.3.4 — deterministic bounded catalog search execution plan
+--
+-- v5.3.3 added the correct trigram indexes, but the single SQL function still
+-- allowed PostgreSQL to choose a pathological generic plan. In production the
+-- raw indexed title lookup completed in milliseconds while search_catalog kept
+-- running for minutes. This replacement performs candidate discovery first,
+-- stores at most 5,000 ordered keys in a local array, and only then evaluates
+-- filters, counts and JSON payloads over that bounded set.
+
+begin;
+
+create or replace function public.search_catalog(
+  p_query text default '',
+  p_stores text[] default null,
+  p_category text default null,
+  p_segment text default null,
+  p_price text default null,
+  p_year integer default null,
+  p_library_keys text[] default null,
+  p_favorite_keys text[] default null,
+  p_personal_filter text default null,
+  p_sort text default 'relevance',
+  p_limit integer default 36,
+  p_offset integer default 0
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+set statement_timeout = '15s'
+as $$
+declare
+  v_q text := lower(trim(coalesce(p_query, '')));
+  v_limit integer := greatest(1, least(coalesce(p_limit, 36), 100));
+  v_offset integer := greatest(0, coalesce(p_offset, 0));
+  v_candidate_limit integer;
+  v_candidate_keys text[] := '{}'::text[];
+  v_candidate_limited boolean := false;
+  v_total bigint := 0;
+  v_result jsonb;
+  v_has_filters boolean;
+begin
+  v_candidate_limit := least(
+    5000,
+    greatest(500, (v_offset + v_limit) * 20)
+  );
+
+  v_has_filters :=
+    (p_stores is not null and cardinality(p_stores) > 0)
+    or (p_category is not null and p_category not in ('', 'all'))
+    or (p_segment is not null and p_segment not in ('', 'all'))
+    or (p_price is not null and p_price not in ('', 'all'))
+    or p_year is not null
+    or (p_personal_filter is not null and p_personal_filter not in ('', 'all'));
+
+  if v_q <> '' then
+    -- Phase 1: indexed substring candidates. Each branch can use its own GIN
+    -- trigram index; the bounded array becomes the hard boundary for all later
+    -- work, independently of the generic plan chosen for the RPC.
+    select coalesce(array_agg(limited.match_key order by limited.relevance_score desc, limited.sort_title, limited.release_date asc nulls last, limited.match_key), '{}'::text[])
+    into v_candidate_keys
+    from (
+      select
+        deduped.match_key,
+        deduped.relevance_score,
+        deduped.sort_title,
+        deduped.release_date
+      from (
+        select
+          raw.match_key,
+          max(raw.relevance_score)::real as relevance_score,
+          min(raw.sort_title) as sort_title,
+          min(raw.release_date) as release_date
+        from (
+          select
+            cg.match_key,
+            case
+              when lower(cg.title) = v_q then 100::real
+              when lower(cg.title) like v_q || '%' then 90::real
+              else 72::real
+            end as relevance_score,
+            lower(cg.title) as sort_title,
+            cg.release_date
+          from public.catalog_games cg
+          where lower(cg.title) like '%' || v_q || '%'
+
+          union all
+
+          select
+            cg.match_key,
+            case
+              when lower(cg.canonical_title) = v_q then 98::real
+              when lower(cg.canonical_title) like v_q || '%' then 88::real
+              else 68::real
+            end as relevance_score,
+            lower(cg.title) as sort_title,
+            cg.release_date
+          from public.catalog_games cg
+          where lower(cg.canonical_title) like '%' || v_q || '%'
+        ) raw
+        group by raw.match_key
+      ) deduped
+      order by deduped.relevance_score desc, deduped.sort_title,
+        deduped.release_date asc nulls last, deduped.match_key
+      limit v_candidate_limit
+    ) limited;
+
+    -- Phase 2: fuzzy matching only when substring lookup found nothing.
+    if cardinality(v_candidate_keys) = 0 and char_length(v_q) >= 4 then
+      select coalesce(array_agg(limited.match_key order by limited.relevance_score desc, limited.sort_title, limited.release_date asc nulls last, limited.match_key), '{}'::text[])
+      into v_candidate_keys
+      from (
+        select
+          deduped.match_key,
+          deduped.relevance_score,
+          deduped.sort_title,
+          deduped.release_date
+        from (
+          select
+            raw.match_key,
+            max(raw.relevance_score)::real as relevance_score,
+            min(raw.sort_title) as sort_title,
+            min(raw.release_date) as release_date
+          from (
+            select
+              cg.match_key,
+              (35 + extensions.similarity(lower(cg.title), v_q) * 25)::real as relevance_score,
+              lower(cg.title) as sort_title,
+              cg.release_date
+            from public.catalog_games cg
+            where lower(cg.title) operator(extensions.%) v_q
+
+            union all
+
+            select
+              cg.match_key,
+              (35 + extensions.similarity(lower(cg.canonical_title), v_q) * 25)::real as relevance_score,
+              lower(cg.title) as sort_title,
+              cg.release_date
+            from public.catalog_games cg
+            where lower(cg.canonical_title) operator(extensions.%) v_q
+          ) raw
+          group by raw.match_key
+        ) deduped
+        order by deduped.relevance_score desc, deduped.sort_title,
+          deduped.release_date asc nulls last, deduped.match_key
+        limit least(v_candidate_limit, 1000)
+      ) limited;
+    end if;
+
+    v_candidate_limited := cardinality(v_candidate_keys) >= v_candidate_limit;
+
+    with candidate_keys as materialized (
+      select keys.match_key, keys.relevance_rank
+      from unnest(v_candidate_keys) with ordinality as keys(match_key, relevance_rank)
+    ), eligible as materialized (
+      select
+        cg.match_key,
+        cg.title,
+        cg.release_date,
+        cg.sort_price,
+        ck.relevance_rank
+      from candidate_keys ck
+      join public.catalog_games cg on cg.match_key = ck.match_key
+      where
+        (p_stores is null or cardinality(p_stores) = 0 or cg.stores && p_stores)
+        and (p_category is null or p_category = '' or p_category = 'all' or cg.category_group = p_category)
+        and (p_segment is null or p_segment = '' or p_segment = 'all' or cg.market_segment = p_segment)
+        and (p_year is null or cg.release_year = p_year)
+        and (
+          p_price is null or p_price = '' or p_price = 'all'
+          or (p_price = 'free' and exists (
+            select 1
+            from jsonb_array_elements(cg.store_listings) listing
+            where coalesce(
+              (listing ->> 'discount_price')::bigint,
+              (listing ->> 'original_price')::bigint,
+              1
+            ) = 0
+          ))
+          or (p_price = 'discounted' and exists (
+            select 1
+            from jsonb_array_elements(cg.store_listings) listing
+            where (listing ->> 'original_price') is not null
+              and (listing ->> 'discount_price') is not null
+              and (listing ->> 'discount_price')::bigint < (listing ->> 'original_price')::bigint
+          ))
+          or (p_price = 'paid' and cg.sort_price > 0)
+        )
+        and (
+          p_personal_filter is null or p_personal_filter = '' or p_personal_filter = 'all'
+          or (p_personal_filter = 'saved' and (
+            cg.match_key = any(coalesce(p_library_keys, '{}'::text[]))
+            or cg.canonical_id = any(coalesce(p_library_keys, '{}'::text[]))
+          ))
+          or (p_personal_filter = 'favorite' and (
+            cg.match_key = any(coalesce(p_favorite_keys, '{}'::text[]))
+            or cg.canonical_id = any(coalesce(p_favorite_keys, '{}'::text[]))
+          ))
+        )
+    ), page_keys as materialized (
+      select e.*
+      from eligible e
+      order by
+        case when p_sort = 'title' then lower(e.title) end asc nulls last,
+        case when p_sort = 'date' then e.release_date end desc nulls last,
+        case when p_sort = 'value' then e.sort_price end desc nulls last,
+        case when p_sort = 'relevance' or p_sort is null or p_sort = '' then e.relevance_rank end asc nulls last,
+        lower(e.title) asc,
+        e.match_key asc
+      limit v_limit
+      offset v_offset
+    ), page_payload as (
+      select coalesce(jsonb_agg(
+        public.catalog_game_card_json(cg)
+        order by
+          case when p_sort = 'title' then lower(pk.title) end asc nulls last,
+          case when p_sort = 'date' then pk.release_date end desc nulls last,
+          case when p_sort = 'value' then pk.sort_price end desc nulls last,
+          case when p_sort = 'relevance' or p_sort is null or p_sort = '' then pk.relevance_rank end asc nulls last,
+          lower(pk.title) asc,
+          pk.match_key asc
+      ), '[]'::jsonb) as items
+      from page_keys pk
+      join public.catalog_games cg on cg.match_key = pk.match_key
+    )
+    select
+      (select count(*) from eligible),
+      jsonb_build_object(
+        'items', page_payload.items,
+        'total', (select count(*) from eligible),
+        'limit', v_limit,
+        'offset', v_offset,
+        'has_more', v_offset + v_limit < (select count(*) from eligible),
+        'candidate_limited', v_candidate_limited
+      )
+    into v_total, v_result
+    from page_payload;
+
+    return coalesce(v_result, jsonb_build_object(
+      'items', '[]'::jsonb,
+      'total', 0,
+      'limit', v_limit,
+      'offset', v_offset,
+      'has_more', false,
+      'candidate_limited', false
+    ));
+  end if;
+
+  -- Empty-query fast path. With no filters, use the cached catalog total and
+  -- page directly from indexed sort columns. This is the normal catalog home.
+  if not v_has_filters then
+    select coalesce(total_games, 0)
+    into v_total
+    from public.catalog_stats_cache
+    where singleton;
+
+    v_total := coalesce(v_total, 0);
+
+    if p_sort = 'date' then
+      select jsonb_build_object(
+        'items', coalesce(jsonb_agg(public.catalog_game_card_json(page.game)
+          order by page.release_date desc nulls last, lower(page.title), page.match_key), '[]'::jsonb),
+        'total', v_total,
+        'limit', v_limit,
+        'offset', v_offset,
+        'has_more', v_offset + v_limit < v_total,
+        'candidate_limited', false
+      )
+      into v_result
+      from (
+        select cg as game, cg.release_date, cg.title, cg.match_key
+        from public.catalog_games cg
+        order by cg.release_date desc nulls last, lower(cg.title), cg.match_key
+        limit v_limit offset v_offset
+      ) page;
+    elsif p_sort = 'value' then
+      select jsonb_build_object(
+        'items', coalesce(jsonb_agg(public.catalog_game_card_json(page.game)
+          order by page.sort_price desc nulls last, lower(page.title), page.match_key), '[]'::jsonb),
+        'total', v_total,
+        'limit', v_limit,
+        'offset', v_offset,
+        'has_more', v_offset + v_limit < v_total,
+        'candidate_limited', false
+      )
+      into v_result
+      from (
+        select cg as game, cg.sort_price, cg.title, cg.match_key
+        from public.catalog_games cg
+        order by cg.sort_price desc nulls last, lower(cg.title), cg.match_key
+        limit v_limit offset v_offset
+      ) page;
+    else
+      select jsonb_build_object(
+        'items', coalesce(jsonb_agg(public.catalog_game_card_json(page.game)
+          order by lower(page.title), page.match_key), '[]'::jsonb),
+        'total', v_total,
+        'limit', v_limit,
+        'offset', v_offset,
+        'has_more', v_offset + v_limit < v_total,
+        'candidate_limited', false
+      )
+      into v_result
+      from (
+        select cg as game, cg.title, cg.match_key
+        from public.catalog_games cg
+        order by lower(cg.title), cg.match_key
+        limit v_limit offset v_offset
+      ) page;
+    end if;
+
+    return v_result;
+  end if;
+
+  -- Filtered browsing without a text query. It may inspect the catalog, but it
+  -- is isolated from the normal text-search path and keeps the previous API.
+  with eligible as materialized (
+    select
+      cg.match_key,
+      cg.title,
+      cg.release_date,
+      cg.sort_price
+    from public.catalog_games cg
+    where
+      (p_stores is null or cardinality(p_stores) = 0 or cg.stores && p_stores)
+      and (p_category is null or p_category = '' or p_category = 'all' or cg.category_group = p_category)
+      and (p_segment is null or p_segment = '' or p_segment = 'all' or cg.market_segment = p_segment)
+      and (p_year is null or cg.release_year = p_year)
+      and (
+        p_price is null or p_price = '' or p_price = 'all'
+        or (p_price = 'free' and exists (
+          select 1
+          from jsonb_array_elements(cg.store_listings) listing
+          where coalesce(
+            (listing ->> 'discount_price')::bigint,
+            (listing ->> 'original_price')::bigint,
+            1
+          ) = 0
+        ))
+        or (p_price = 'discounted' and exists (
+          select 1
+          from jsonb_array_elements(cg.store_listings) listing
+          where (listing ->> 'original_price') is not null
+            and (listing ->> 'discount_price') is not null
+            and (listing ->> 'discount_price')::bigint < (listing ->> 'original_price')::bigint
+        ))
+        or (p_price = 'paid' and cg.sort_price > 0)
+      )
+      and (
+        p_personal_filter is null or p_personal_filter = '' or p_personal_filter = 'all'
+        or (p_personal_filter = 'saved' and (
+          cg.match_key = any(coalesce(p_library_keys, '{}'::text[]))
+          or cg.canonical_id = any(coalesce(p_library_keys, '{}'::text[]))
+        ))
+        or (p_personal_filter = 'favorite' and (
+          cg.match_key = any(coalesce(p_favorite_keys, '{}'::text[]))
+          or cg.canonical_id = any(coalesce(p_favorite_keys, '{}'::text[]))
+        ))
+      )
+  ), page_keys as materialized (
+    select e.*
+    from eligible e
+    order by
+      case when p_sort = 'date' then e.release_date end desc nulls last,
+      case when p_sort = 'value' then e.sort_price end desc nulls last,
+      lower(e.title) asc,
+      e.match_key asc
+    limit v_limit offset v_offset
+  ), page_payload as (
+    select coalesce(jsonb_agg(
+      public.catalog_game_card_json(cg)
+      order by
+        case when p_sort = 'date' then pk.release_date end desc nulls last,
+        case when p_sort = 'value' then pk.sort_price end desc nulls last,
+        lower(pk.title), pk.match_key
+    ), '[]'::jsonb) as items
+    from page_keys pk
+    join public.catalog_games cg on cg.match_key = pk.match_key
+  )
+  select
+    (select count(*) from eligible),
+    jsonb_build_object(
+      'items', page_payload.items,
+      'total', (select count(*) from eligible),
+      'limit', v_limit,
+      'offset', v_offset,
+      'has_more', v_offset + v_limit < (select count(*) from eligible),
+      'candidate_limited', false
+    )
+  into v_total, v_result
+  from page_payload;
+
+  return coalesce(v_result, jsonb_build_object(
+    'items', '[]'::jsonb,
+    'total', 0,
+    'limit', v_limit,
+    'offset', v_offset,
+    'has_more', false,
+    'candidate_limited', false
+  ));
+end;
+$$;
+
+revoke all on function public.search_catalog(text, text[], text, text, text, integer, text[], text[], text, text, integer, integer) from public;
+grant execute on function public.search_catalog(text, text[], text, text, text, integer, text[], text[], text, text, integer, integer) to anon, authenticated;
+
+comment on function public.search_catalog(text, text[], text, text, text, integer, text[], text[], text, text, integer, integer) is
+'Ludograph v5.3.4: two-phase bounded search; indexed candidate keys are materialized before filtering and JSON generation.';
+
+commit;
+
+notify pgrst, 'reload schema';
