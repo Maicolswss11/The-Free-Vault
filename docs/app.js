@@ -649,11 +649,13 @@ function escapeAttr(value) {
 }
 
 function gameKey(game) {
+  if (!game || typeof game !== "object") return "";
   return game.match_key || game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
     `${game.store || "epic"}:${game.namespace || "unknown"}:${game.external_id || game.title}`;
 }
 
 function gameAliases(game) {
+  if (!game || typeof game !== "object") return [];
   return [
     game.match_key,
     game.canonical_id,
@@ -1054,7 +1056,8 @@ function normalizedMasterIdentity(value) {
 }
 
 function masterIdentityForGame(game) {
-  const direct = game?.master_game_id || game?.game_id;
+  if (!game || typeof game !== "object") return "";
+  const direct = game.master_game_id || game.game_id;
   if (direct) return normalizedMasterIdentity(direct);
   const key = String(gameKey(game) || "");
   return key.startsWith("master:") ? normalizedMasterIdentity(key) : "";
@@ -1124,9 +1127,11 @@ function flattenedUniqueVariants(games) {
   const output = [];
   const seen = new Set();
   for (const game of games || []) {
-    const variants = Array.isArray(game?.variants) && game.variants.length ? game.variants : [game];
+    if (!game || typeof game !== "object") continue;
+    const variants = Array.isArray(game.variants) && game.variants.length ? game.variants : [game];
     for (const variant of variants) {
-      const key = gameKey(variant) || `${variant?.title || ""}:${variant?.image_url || ""}`;
+      if (!variant || typeof variant !== "object") continue;
+      const key = gameKey(variant) || `${variant.title || ""}:${variant.image_url || ""}`;
       if (!key || seen.has(key)) continue;
       seen.add(key);
       output.push(variant);
@@ -1992,7 +1997,8 @@ async function renderGlobalSearchResults() {
         sort: "relevance",
       });
       if (requestId !== state.globalSearchRequestId || state.globalSearch.trim() !== rawQuery) return;
-      results = groupGameVariants(response.items, { limit: 8 });
+      const searchItems = Array.isArray(response?.items) ? response.items : [];
+      results = groupGameVariants(searchItems, { limit: 8 });
     } else {
       results = groupGameVariants(
         uniqueSearchGames().filter((game) => allSearchText(game).includes(query)),
@@ -5707,10 +5713,10 @@ async function searchAdminEditorialGames(kind) {
   try {
     if (kind === "franchise" && window.VaultFranchises?.searchAdminFranchiseCandidates) {
       const groups = await window.VaultFranchises.searchAdminFranchiseCandidates(query, 50);
-      renderAdminEditorialSearchResults(container, groups || [], kind);
+      renderAdminEditorialSearchResults(container, Array.isArray(groups) ? groups : [], kind);
     } else {
       const result = await window.VaultCatalog.search({ query, limit: kind === "franchise" ? 100 : 12, offset: 0, force: true });
-      renderAdminEditorialSearchResults(container, result.items || [], kind);
+      renderAdminEditorialSearchResults(container, Array.isArray(result?.items) ? result.items : [], kind);
     }
   } catch (error) {
     console.error("Ricerca gioco editoriale fallita", error);
