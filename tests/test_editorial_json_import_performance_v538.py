@@ -43,4 +43,4 @@ def test_v538_frontend_does_not_consolidate_after_json_import():
 
 def test_v538_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-3-8-editorial-json-import-performance"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-3-9-franchise-page-stability"' in worker

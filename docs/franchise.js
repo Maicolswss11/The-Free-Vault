@@ -23,6 +23,13 @@
     return rpc("franchise_detail", { p_slug: String(slug || "").trim() });
   }
 
+  async function getFranchiseGameVariants(slug, gameKey) {
+    return rpc("franchise_game_variants", {
+      p_slug: String(slug || "").trim(),
+      p_game_key: String(gameKey || "").trim(),
+    });
+  }
+
   async function getCollection(slug) {
     return rpc("editorial_collection_detail", { p_slug: String(slug || "").trim() });
   }
@@ -183,6 +190,7 @@
   window.VaultFranchises = {
     getDirectory,
     getFranchise,
+    getFranchiseGameVariants,
     getCollection,
     getMemberships,
     listAdminFranchises,

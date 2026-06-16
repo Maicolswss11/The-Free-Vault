@@ -4344,6 +4344,7 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   cursor: pointer;
 }
 .franchise-variants-toggle:hover { border-color: rgba(74, 168, 255, .5); }
+.franchise-variants-toggle:disabled { cursor: default; opacity: .66; border-color: rgba(148, 163, 184, .18); }
 .franchise-variants-toggle b { transition: transform .18s ease; }
 .franchise-variants-toggle[aria-expanded="true"] b { transform: rotate(180deg); }
 .franchise-variant-list {

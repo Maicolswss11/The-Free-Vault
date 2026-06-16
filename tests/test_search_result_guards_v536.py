@@ -25,4 +25,4 @@ def test_v536_variant_grouping_filters_invalid_entries():
 
 def test_v536_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-3-8-editorial-json-import-performance"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-3-9-franchise-page-stability"' in worker

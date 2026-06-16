@@ -3362,8 +3362,36 @@ function franchiseWorkVariants(game) {
   });
 }
 
+function renderFranchiseVariantItems(list, variants, game) {
+  list.replaceChildren();
+  for (const variant of variants) {
+    const item = document.createElement("article");
+    item.className = "franchise-variant-item";
+    item.innerHTML = `
+      <img src="${escapeAttr(variant.image_url || game.image_url || PLACEHOLDER)}" alt="">
+      <div>
+        <strong>${escapeHtml(variant.title || game.title)}</strong>
+        <small>${escapeHtml(gameDisambiguationMarkup(variant))}</small>
+        <div class="platform-chip-list">${platformBadgesMarkup(variant.platforms, { limit: 4, compact: true })}</div>
+      </div>
+      <div class="franchise-variant-actions">
+        <a class="button button-secondary" href="${escapeAttr(gameRoute(variant))}">Scheda</a>
+        <button class="button button-secondary" type="button" data-variant-library>${getLibraryEntry(variant) ? "Rimuovi" : "Aggiungi"}</button>
+      </div>`;
+    item.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+    item.querySelector("[data-variant-library]").onclick = () => {
+      toggleLibraryWithoutRerender(variant);
+      item.querySelector("[data-variant-library]").textContent = getLibraryEntry(variant) ? "Rimuovi" : "Aggiungi";
+      renderFranchiseProgress(state.franchiseData?.games || []);
+    };
+    list.append(item);
+  }
+}
+
 function renderFranchiseGameRow(game) {
   const progress = franchiseGameProgress(game);
+  const variantsLoaded = game.__franchiseVariantsLoaded === true || Array.isArray(game?.variants);
+  if (Array.isArray(game?.variants)) game.__franchiseVariantsLoaded = true;
   const variants = franchiseWorkVariants(game);
   const row = document.createElement("article");
   row.className = "franchise-game-row";
@@ -3381,53 +3409,71 @@ function renderFranchiseGameRow(game) {
         ${progress.status ? `<span>${escapeHtml(statusLabel(progress.status))} · ${Math.max(0, Math.min(100, progress.percent || 0))}%</span>` : `<span>Non iniziato</span>`}
       </div>
       ${game.franchise_note ? `<p>${escapeHtml(game.franchise_note)}</p>` : ""}
-      ${variants.length ? `
-        <button class="franchise-variants-toggle" type="button" aria-expanded="false">
-          <span>${variants.length} ${variants.length === 1 ? "versione o porting" : "versioni e porting"}</span>
-          <b aria-hidden="true">⌄</b>
-        </button>
-        <div class="franchise-variant-list" hidden></div>` : ""}
+      <button class="franchise-variants-toggle" type="button" aria-expanded="false" ${variantsLoaded && !variants.length ? "disabled" : ""}>
+        <span>${variantsLoaded ? (variants.length ? `${variants.length} ${variants.length === 1 ? "versione o porting" : "versioni e porting"}` : "Nessuna versione aggiuntiva") : "Versioni e porting"}</span>
+        <b aria-hidden="true">⌄</b>
+      </button>
+      <div class="franchise-variant-list" hidden></div>
       <div class="franchise-game-actions"><a class="button button-secondary" href="${escapeAttr(gameRoute(game))}">Scheda</a><button class="button button-secondary" data-saga-library type="button">${getLibraryEntry(game) ? "Rimuovi dalla libreria" : "Aggiungi alla libreria"}</button></div>
     </div>`;
   row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
   row.querySelector(".franchise-game-cover").onclick = () => navigate(gameRoute(game));
   row.querySelector("[data-saga-library]").onclick = () => {
     toggleLibraryWithoutRerender(game);
-    renderFranchiseSections();
+    row.querySelector("[data-saga-library]").textContent = getLibraryEntry(game) ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
     renderFranchiseProgress(state.franchiseData?.games || []);
   };
 
-  if (variants.length) {
-    const toggle = row.querySelector(".franchise-variants-toggle");
-    const list = row.querySelector(".franchise-variant-list");
-    for (const variant of variants) {
-      const item = document.createElement("article");
-      item.className = "franchise-variant-item";
-      item.innerHTML = `
-        <img src="${escapeAttr(variant.image_url || game.image_url || PLACEHOLDER)}" alt="">
-        <div>
-          <strong>${escapeHtml(variant.title || game.title)}</strong>
-          <small>${escapeHtml(gameDisambiguationMarkup(variant))}</small>
-          <div class="platform-chip-list">${platformBadgesMarkup(variant.platforms, { limit: 4, compact: true })}</div>
-        </div>
-        <div class="franchise-variant-actions">
-          <a class="button button-secondary" href="${escapeAttr(gameRoute(variant))}">Scheda</a>
-          <button class="button button-secondary" type="button" data-variant-library>${getLibraryEntry(variant) ? "Rimuovi" : "Aggiungi"}</button>
-        </div>`;
-      item.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
-      item.querySelector("[data-variant-library]").onclick = () => {
-        toggleLibraryWithoutRerender(variant);
-        renderFranchiseSections();
-        renderFranchiseProgress(state.franchiseData?.games || []);
-      };
-      list.append(item);
+  const toggle = row.querySelector(".franchise-variants-toggle");
+  const toggleLabel = toggle.querySelector("span");
+  const list = row.querySelector(".franchise-variant-list");
+  if (variants.length) renderFranchiseVariantItems(list, variants, game);
+
+  toggle.onclick = async () => {
+    if (game.__franchiseVariantsLoading) return;
+
+    if (!game.__franchiseVariantsLoaded) {
+      const slug = state.route.params.slug;
+      const key = gameKey(game);
+      game.__franchiseVariantsLoading = true;
+      toggle.disabled = true;
+      toggleLabel.textContent = "Caricamento versioni…";
+      try {
+        const payload = await window.VaultFranchises.getFranchiseGameVariants(slug, key);
+        if (!row.isConnected || state.route.name !== "franchise" || state.route.params.slug !== slug) return;
+        game.variants = Array.isArray(payload?.variants) ? payload.variants : [];
+        game.variant_count = Number(payload?.variant_count || game.variants.length || 0);
+        game.editorial_work_key = payload?.editorial_work_key || game.editorial_work_key || null;
+        game.__franchiseVariantsLoaded = true;
+        const loadedVariants = franchiseWorkVariants(game);
+        renderFranchiseVariantItems(list, loadedVariants, game);
+        if (!loadedVariants.length) {
+          toggleLabel.textContent = "Nessuna versione aggiuntiva";
+          toggle.disabled = true;
+          list.hidden = true;
+          return;
+        }
+        toggleLabel.textContent = `${loadedVariants.length} ${loadedVariants.length === 1 ? "versione o porting" : "versioni e porting"}`;
+        toggle.disabled = false;
+        toggle.setAttribute("aria-expanded", "true");
+        list.hidden = false;
+      } catch (error) {
+        console.error("Versioni del gioco non disponibili", error);
+        if (!row.isConnected) return;
+        toggleLabel.textContent = "Versioni non disponibili · Riprova";
+        toggle.disabled = false;
+      } finally {
+        game.__franchiseVariantsLoading = false;
+      }
+      return;
     }
-    toggle.onclick = () => {
-      const expanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", String(!expanded));
-      list.hidden = expanded;
-    };
-  }
+
+    const loadedVariants = franchiseWorkVariants(game);
+    if (!loadedVariants.length) return;
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!expanded));
+    list.hidden = expanded;
+  };
   return row;
 }
 
@@ -3574,13 +3620,21 @@ function renderFranchiseOverview(data) {
 async function renderFranchisePage() {
   const requestId = ++state.editorialRequestId;
   const slug = state.route.params.slug;
+  state.franchiseData = null;
   state.franchiseOrder = "release";
   $$('[data-franchise-order]').forEach((button) => button.classList.toggle("is-active", button.dataset.franchiseOrder === "release"));
   updateDocumentTitle("Caricamento franchise");
   ui.franchiseTitle.textContent = "Caricamento…";
   ui.franchiseDescription.textContent = "Recupero la cronologia della saga.";
+  ui.franchiseMeta.replaceChildren();
   ui.franchiseStatus.hidden = true;
+  ui.franchiseHero.classList.remove("uses-game-art");
+  ui.franchiseHeroImage.onerror = null;
+  ui.franchiseHeroImage.removeAttribute("src");
+  ui.franchiseHeroImage.alt = "";
+  ui.franchiseHeroImage.hidden = true;
   ui.franchiseSections.innerHTML = `<div class="route-loading">Caricamento saga…</div>`;
+  ui.franchiseOverview.replaceChildren();
   ui.franchiseOverview.hidden = true;
   ui.franchiseProgress.hidden = true;
   try {
@@ -3616,9 +3670,18 @@ async function renderFranchisePage() {
     updateDocumentTitle("Franchise non trovato");
     ui.franchiseTitle.textContent = "Franchise non disponibile";
     ui.franchiseDescription.textContent = "La saga richiesta non è pubblicata oppure la migrazione v4.6 non è stata applicata.";
+    state.franchiseData = null;
     ui.franchiseStatus.textContent = error.message || "Franchise non disponibile.";
     ui.franchiseStatus.hidden = false;
+    ui.franchiseHero.classList.remove("uses-game-art");
+    ui.franchiseHeroImage.onerror = null;
+    ui.franchiseHeroImage.removeAttribute("src");
+    ui.franchiseHeroImage.alt = "";
+    ui.franchiseHeroImage.hidden = true;
+    ui.franchiseMeta.replaceChildren();
+    ui.franchiseOverview.replaceChildren();
     ui.franchiseOverview.hidden = true;
+    ui.franchiseProgress.hidden = true;
     ui.franchiseSections.replaceChildren();
   }
 }
