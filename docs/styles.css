@@ -4325,3 +4325,63 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
     max-width: 100%;
   }
 }
+
+/* Ludograph v5.3.2 — subordinate versions inside franchise works */
+.franchise-variants-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: fit-content;
+  margin: 0 0 14px;
+  padding: 8px 11px;
+  border: 1px solid rgba(74, 168, 255, .24);
+  border-radius: 11px;
+  color: #b8dfff;
+  background: rgba(74, 168, 255, .07);
+  font-size: .76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.franchise-variants-toggle:hover { border-color: rgba(74, 168, 255, .5); }
+.franchise-variants-toggle b { transition: transform .18s ease; }
+.franchise-variants-toggle[aria-expanded="true"] b { transform: rotate(180deg); }
+.franchise-variant-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .075);
+  border-radius: 14px;
+  background: rgba(5, 8, 13, .42);
+}
+.franchise-variant-list[hidden] { display: none; }
+.franchise-variant-item {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, .065);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .025);
+}
+.franchise-variant-item > img {
+  width: 48px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.franchise-variant-item strong,
+.franchise-variant-item small { display: block; }
+.franchise-variant-item small { margin: 3px 0 7px; color: var(--muted); }
+.franchise-variant-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.franchise-variant-actions .button { min-height: 34px; padding: 7px 10px; font-size: .72rem; }
+
+@media (max-width: 700px) {
+  .franchise-variant-item { grid-template-columns: 42px minmax(0, 1fr); }
+  .franchise-variant-item > img { width: 42px; height: 52px; }
+  .franchise-variant-actions { grid-column: 1 / -1; justify-content: stretch; }
+  .franchise-variant-actions .button { flex: 1; text-align: center; }
+}

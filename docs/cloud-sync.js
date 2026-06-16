@@ -1,6 +1,11 @@
 (() => {
   let timer = null;
   let syncingUserId = null;
+  let syncedLibrary = {};
+  let syncedLists = {};
+
+  const LIBRARY_BATCH_SIZE = 75;
+  const LIST_BATCH_SIZE = 50;
 
   function clientAndUser() {
     const auth = window.VaultAuth;
@@ -23,6 +28,23 @@
 
   function entryUpdatedAt(entry) {
     return entry?.updatedAt || entry?.updated_at || entry?.addedAt || new Date(0).toISOString();
+  }
+
+  function validTimestamp(value, fallback) {
+    const parsed = Date.parse(value || "");
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback;
+  }
+
+  function chunks(values, size) {
+    const output = [];
+    for (let index = 0; index < values.length; index += size) {
+      output.push(values.slice(index, index + size));
+    }
+    return output;
+  }
+
+  function sameValue(left, right) {
+    return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
   }
 
   function mergeLibrary(localLibrary, rows) {
@@ -57,9 +79,56 @@
     return merged;
   }
 
+  function pendingLibraryChanges(localLibrary, remoteRows) {
+    const remoteByKey = new Map((remoteRows || []).map((row) => [row.game_key, row]));
+    const pending = {};
+    for (const [gameKey, entry] of Object.entries(localLibrary || {})) {
+      const remote = remoteByKey.get(gameKey);
+      if (!remote || new Date(entryUpdatedAt(entry)) > new Date(remote.updated_at || 0)) {
+        pending[gameKey] = entry;
+      }
+    }
+    return pending;
+  }
+
+  function pendingListChanges(localLists, remoteRows) {
+    const remoteById = new Map((remoteRows || []).map((row) => [row.id, row]));
+    const pending = {};
+    for (const [listId, list] of Object.entries(localLists || {})) {
+      const remote = remoteById.get(listId);
+      if (!remote || new Date(list.updatedAt || 0) > new Date(remote.updated_at || 0)) {
+        pending[listId] = list;
+      }
+    }
+    return pending;
+  }
+
+  function changedLibraryEntries(library) {
+    const changed = {};
+    for (const [gameKey, entry] of Object.entries(library || {})) {
+      if (!sameValue(entry, syncedLibrary[gameKey])) changed[gameKey] = entry;
+    }
+    return changed;
+  }
+
+  function changedLists(lists) {
+    const changed = {};
+    for (const [listId, list] of Object.entries(lists || {})) {
+      if (!sameValue(list, syncedLists[listId])) changed[listId] = list;
+    }
+    return changed;
+  }
+
   async function pull(localLibrary, localLists, expectedUserId = null) {
     const { client, user } = assertCurrentUser(expectedUserId);
-    if (!client || !user) return { library: localLibrary, lists: localLists };
+    if (!client || !user) {
+      return {
+        library: localLibrary,
+        lists: localLists,
+        pendingLibrary: localLibrary,
+        pendingLists: localLists,
+      };
+    }
     const userId = user.id;
 
     const [libraryResult, listsResult] = await Promise.all([
@@ -70,10 +139,29 @@
     if (listsResult.error) throw listsResult.error;
 
     assertCurrentUser(userId);
-    return {
-      library: mergeLibrary(localLibrary, libraryResult.data),
-      lists: mergeLists(localLists, listsResult.data),
-    };
+    const pendingLibrary = pendingLibraryChanges(localLibrary, libraryResult.data);
+    const pendingLists = pendingListChanges(localLists, listsResult.data);
+    const library = mergeLibrary(localLibrary, libraryResult.data);
+    const lists = mergeLists(localLists, listsResult.data);
+
+    syncedLibrary = Object.fromEntries((libraryResult.data || []).map((row) => [
+      row.game_key,
+      { ...(row.data || {}), updatedAt: row.updated_at },
+    ]));
+    syncedLists = Object.fromEntries((listsResult.data || []).map((row) => [
+      row.id,
+      {
+        id: row.id,
+        name: row.name,
+        description: row.description || "",
+        visibility: row.visibility || "private",
+        games: row.game_keys || [],
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      },
+    ]));
+
+    return { library, lists, pendingLibrary, pendingLists };
   }
 
   function explainListSyncError(error) {
@@ -84,6 +172,23 @@
       );
     }
     return error;
+  }
+
+  async function pushLibraryRows(client, userId, rows) {
+    for (const batch of chunks(rows, LIBRARY_BATCH_SIZE)) {
+      assertCurrentUser(userId);
+      const payload = batch.map(({ game_key, data, updated_at }) => ({ game_key, data, updated_at }));
+      const { error } = await client.rpc("sync_user_library_batch", { p_rows: payload });
+      if (error) throw error;
+    }
+  }
+
+  async function pushListRows(client, userId, rows) {
+    for (const batch of chunks(rows, LIST_BATCH_SIZE)) {
+      assertCurrentUser(userId);
+      const { error } = await client.from("user_lists").upsert(batch, { onConflict: "id" });
+      if (error) throw explainListSyncError(error);
+    }
   }
 
   async function push(library, lists, expectedUserId = null) {
@@ -99,37 +204,27 @@
     syncingUserId = userId;
     try {
       const now = new Date().toISOString();
-      const libraryRows = Object.entries(library).map(([gameKey, entry]) => ({
-        user_id: userId,
+      const libraryRows = Object.entries(library || {}).map(([gameKey, entry]) => ({
         game_key: gameKey,
         data: entry,
-        updated_at: entryUpdatedAt(entry) > now ? entryUpdatedAt(entry) : now,
+        updated_at: validTimestamp(entryUpdatedAt(entry), now),
       }));
-      const listRows = Object.values(lists).map((list) => ({
+      const listRows = Object.values(lists || {}).map((list) => ({
         id: list.id,
         user_id: userId,
         name: list.name,
         description: list.description || null,
         visibility: list.visibility || "private",
         game_keys: list.games || [],
-        created_at: list.createdAt || now,
-        updated_at: list.updatedAt || now,
+        created_at: validTimestamp(list.createdAt, now),
+        updated_at: validTimestamp(list.updatedAt, now),
       }));
 
-      if (libraryRows.length) {
-        assertCurrentUser(userId);
-        const { error } = await client.from("user_library").upsert(libraryRows, {
-          onConflict: "user_id,game_key",
-        });
-        if (error) throw error;
-      }
-      if (listRows.length) {
-        assertCurrentUser(userId);
-        const { error } = await client.from("user_lists").upsert(listRows, {
-          onConflict: "id",
-        });
-        if (error) throw explainListSyncError(error);
-      }
+      if (libraryRows.length) await pushLibraryRows(client, userId, libraryRows);
+      if (listRows.length) await pushListRows(client, userId, listRows);
+
+      for (const [gameKey, entry] of Object.entries(library || {})) syncedLibrary[gameKey] = cloneValue(entry);
+      for (const [listId, list] of Object.entries(lists || {})) syncedLists[listId] = cloneValue(list);
     } finally {
       if (syncingUserId === userId) syncingUserId = null;
     }
@@ -151,7 +246,10 @@
 
     timer = setTimeout(() => {
       timer = null;
-      push(librarySnapshot, listsSnapshot, expectedUserId).catch((error) => {
+      const libraryChanges = changedLibraryEntries(librarySnapshot);
+      const listChanges = changedLists(listsSnapshot);
+      if (!Object.keys(libraryChanges).length && !Object.keys(listChanges).length) return;
+      push(libraryChanges, listChanges, expectedUserId).catch((error) => {
         console.error("Sincronizzazione cloud fallita", error);
         window.dispatchEvent(new CustomEvent("tfv:sync-error", { detail: error }));
       });
@@ -167,6 +265,7 @@
       .eq("user_id", user.id)
       .eq("game_key", gameKey);
     if (error) throw error;
+    delete syncedLibrary[gameKey];
   }
 
   async function deleteList(listId) {
@@ -178,6 +277,7 @@
       .eq("user_id", user.id)
       .eq("id", listId);
     if (error) throw error;
+    delete syncedLists[listId];
   }
 
   window.VaultCloud = {

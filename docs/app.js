@@ -1007,23 +1007,80 @@ function normalizedEditorialTitle(value) {
 }
 
 function normalizedCoverIdentity(value) {
-  return String(value || "")
+  const normalized = String(value || "")
     .trim()
     .toLowerCase()
     .split("?")[0]
     .replace(/^https?:\/\//, "")
     .replace(/\/t_[^/]+\//g, "/");
+  if (!normalized) return "";
+
+  const filename = normalized.split("/").pop() || "";
+  const token = filename.replace(/\.(?:avif|gif|jpe?g|png|webp)$/i, "");
+  if (/^[a-z0-9_-]{5,}$/i.test(token)) return token;
+  return normalized;
+}
+
+const SUBORDINATE_GAME_TYPES = new Set(["port", "fork", "expanded_game"]);
+const SEPARATE_GAME_TYPES = new Set([
+  "remake",
+  "remaster",
+  "bundle",
+  "dlc_addon",
+  "expansion",
+  "standalone_expansion",
+  "episode",
+  "pack",
+  "update",
+]);
+
+function normalizedGameType(game) {
+  return String(game?.game_type || "unknown").toLowerCase();
+}
+
+function isSubordinateVariant(game) {
+  return SUBORDINATE_GAME_TYPES.has(normalizedGameType(game));
+}
+
+function isPrimaryWorkCandidate(game) {
+  const type = normalizedGameType(game);
+  return !SUBORDINATE_GAME_TYPES.has(type) && !SEPARATE_GAME_TYPES.has(type);
+}
+
+function normalizedMasterIdentity(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^master:/, "");
+}
+
+function masterIdentityForGame(game) {
+  const direct = game?.master_game_id || game?.game_id;
+  if (direct) return normalizedMasterIdentity(direct);
+  const key = String(gameKey(game) || "");
+  return key.startsWith("master:") ? normalizedMasterIdentity(key) : "";
+}
+
+function variantParentIdentity(game) {
+  const direct = game?.variant_parent_id
+    || game?.metadata?.parent_game
+    || game?.metadata?.version_parent;
+  if (!direct) return "";
+  const normalized = normalizedMasterIdentity(direct);
+  return normalized.startsWith("igdb:") ? normalized : `igdb:${normalized}`;
 }
 
 function editorialIdentityForGame(game) {
+  if (game?.editorial_work_key) return String(game.editorial_work_key);
   if (game?.editorial_identity) return String(game.editorial_identity);
+  const parent = variantParentIdentity(game);
+  if (parent) return `work:${parent}`;
   const title = normalizedEditorialTitle(game?.title);
   const cover = normalizedCoverIdentity(game?.image_url);
   return title && cover ? `${title}|${cover}` : `game:${gameKey(game)}`;
 }
 
 function gameVariantPriority(game) {
-  const type = String(game?.game_type || "unknown").toLowerCase();
+  const type = normalizedGameType(game);
   const completeness = [
     game?.release_date || game?.release_year,
     game?.developer,
@@ -1063,10 +1120,68 @@ function uniqueMergedValues(games, field) {
   return values;
 }
 
+function flattenedUniqueVariants(games) {
+  const output = [];
+  const seen = new Set();
+  for (const game of games || []) {
+    const variants = Array.isArray(game?.variants) && game.variants.length ? game.variants : [game];
+    for (const variant of variants) {
+      const key = gameKey(variant) || `${variant?.title || ""}:${variant?.image_url || ""}`;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      output.push(variant);
+    }
+  }
+  return output;
+}
+
 function groupGameVariants(games, { limit = Infinity } = {}) {
+  const flatGames = flattenedUniqueVariants(games);
+  const titleBuckets = new Map();
+  const referencedParents = new Set();
+
+  for (const game of flatGames) {
+    const title = normalizedEditorialTitle(game?.title);
+    if (!titleBuckets.has(title)) titleBuckets.set(title, []);
+    titleBuckets.get(title).push(game);
+    const parent = variantParentIdentity(game);
+    if (parent) referencedParents.add(parent);
+  }
+
+  const titleAnchors = new Map();
+  for (const [title, bucket] of titleBuckets.entries()) {
+    const primaries = bucket.filter(isPrimaryWorkCandidate).sort(compareVariantRepresentatives);
+    const primaryCoverGroups = new Map();
+    for (const primary of primaries) {
+      const cover = normalizedCoverIdentity(primary?.image_url) || `key:${gameKey(primary)}`;
+      if (!primaryCoverGroups.has(cover)) primaryCoverGroups.set(cover, []);
+      primaryCoverGroups.get(cover).push(primary);
+    }
+    if (primaryCoverGroups.size === 1 && primaries.length) {
+      titleAnchors.set(title, primaries[0]);
+    }
+  }
+
   const grouped = new Map();
-  (games || []).forEach((game, index) => {
-    const identity = editorialIdentityForGame(game);
+  flatGames.forEach((game, index) => {
+    const title = normalizedEditorialTitle(game?.title);
+    const parent = variantParentIdentity(game);
+    const master = masterIdentityForGame(game);
+    const anchor = titleAnchors.get(title);
+    const anchorMaster = masterIdentityForGame(anchor);
+    const hasSubordinates = (titleBuckets.get(title) || []).some(isSubordinateVariant);
+
+    let identity = "";
+    if (parent) {
+      identity = `work:${parent}`;
+    } else if (master && referencedParents.has(master)) {
+      identity = `work:${master}`;
+    } else if (anchor && anchorMaster && hasSubordinates && (isSubordinateVariant(game) || isPrimaryWorkCandidate(game))) {
+      identity = `work:${anchorMaster}`;
+    } else {
+      identity = editorialIdentityForGame(game);
+    }
+
     if (!grouped.has(identity)) grouped.set(identity, { firstIndex: index, variants: [] });
     grouped.get(identity).variants.push(game);
   });
@@ -1078,6 +1193,7 @@ function groupGameVariants(games, { limit = Infinity } = {}) {
       return {
         ...representative,
         editorial_identity: identity,
+        editorial_work_key: identity,
         variants: ordered,
         variant_keys: ordered.map((item) => gameKey(item)).filter(Boolean),
         variant_count: ordered.length,
@@ -3228,8 +3344,21 @@ function franchiseOrderValue(game) {
   return Number(game.release_order || 100000);
 }
 
+function franchiseWorkVariants(game) {
+  const primaryKey = gameKey(game);
+  const variants = Array.isArray(game?.variants) ? game.variants : [];
+  const seen = new Set();
+  return variants.filter((variant) => {
+    const key = gameKey(variant);
+    if (!key || key === primaryKey || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function renderFranchiseGameRow(game) {
   const progress = franchiseGameProgress(game);
+  const variants = franchiseWorkVariants(game);
   const row = document.createElement("article");
   row.className = "franchise-game-row";
   row.innerHTML = `
@@ -3246,6 +3375,12 @@ function renderFranchiseGameRow(game) {
         ${progress.status ? `<span>${escapeHtml(statusLabel(progress.status))} · ${Math.max(0, Math.min(100, progress.percent || 0))}%</span>` : `<span>Non iniziato</span>`}
       </div>
       ${game.franchise_note ? `<p>${escapeHtml(game.franchise_note)}</p>` : ""}
+      ${variants.length ? `
+        <button class="franchise-variants-toggle" type="button" aria-expanded="false">
+          <span>${variants.length} ${variants.length === 1 ? "versione o porting" : "versioni e porting"}</span>
+          <b aria-hidden="true">⌄</b>
+        </button>
+        <div class="franchise-variant-list" hidden></div>` : ""}
       <div class="franchise-game-actions"><a class="button button-secondary" href="${escapeAttr(gameRoute(game))}">Scheda</a><button class="button button-secondary" data-saga-library type="button">${getLibraryEntry(game) ? "Rimuovi dalla libreria" : "Aggiungi alla libreria"}</button></div>
     </div>`;
   row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
@@ -3255,6 +3390,38 @@ function renderFranchiseGameRow(game) {
     renderFranchiseSections();
     renderFranchiseProgress(state.franchiseData?.games || []);
   };
+
+  if (variants.length) {
+    const toggle = row.querySelector(".franchise-variants-toggle");
+    const list = row.querySelector(".franchise-variant-list");
+    for (const variant of variants) {
+      const item = document.createElement("article");
+      item.className = "franchise-variant-item";
+      item.innerHTML = `
+        <img src="${escapeAttr(variant.image_url || game.image_url || PLACEHOLDER)}" alt="">
+        <div>
+          <strong>${escapeHtml(variant.title || game.title)}</strong>
+          <small>${escapeHtml(gameDisambiguationMarkup(variant))}</small>
+          <div class="platform-chip-list">${platformBadgesMarkup(variant.platforms, { limit: 4, compact: true })}</div>
+        </div>
+        <div class="franchise-variant-actions">
+          <a class="button button-secondary" href="${escapeAttr(gameRoute(variant))}">Scheda</a>
+          <button class="button button-secondary" type="button" data-variant-library>${getLibraryEntry(variant) ? "Rimuovi" : "Aggiungi"}</button>
+        </div>`;
+      item.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
+      item.querySelector("[data-variant-library]").onclick = () => {
+        toggleLibraryWithoutRerender(variant);
+        renderFranchiseSections();
+        renderFranchiseProgress(state.franchiseData?.games || []);
+      };
+      list.append(item);
+    }
+    toggle.onclick = () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      list.hidden = expanded;
+    };
+  }
   return row;
 }
 
@@ -5434,7 +5601,7 @@ function renderAdminEditorialSearchResults(container, games, kind) {
   const existingFranchiseKeys = currentFranchiseGameKeys();
   const existingFranchiseIdentities = currentFranchiseEditorialIdentities();
   const franchiseGroups = kind === "franchise"
-    ? (games.some((game) => Array.isArray(game?.variants)) ? games : groupGameVariants(games))
+    ? groupGameVariants(games)
     : games;
   if (kind === "franchise") state.admin.franchiseSearchResults = franchiseGroups;
 
@@ -6058,7 +6225,11 @@ async function synchronizeSignedInUser(snapshot) {
     state.lists = merged.lists;
     persistPersonalDataLocally();
 
-    await window.VaultCloud.push(state.library, state.lists, nextUserId);
+    await window.VaultCloud.push(
+      merged.pendingLibrary || {},
+      merged.pendingLists || {},
+      nextUserId,
+    );
 
     if (
       generation !== personalStorageGeneration ||
