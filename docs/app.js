@@ -5499,17 +5499,8 @@ async function saveFranchiseEditorRows(rows, button, successMessage) {
 
 async function openAdminFranchise(id) {
   try {
-    let data = await window.VaultFranchises.getAdminFranchise(id);
+    const data = await window.VaultFranchises.getAdminFranchise(id);
     if (!data?.franchise) throw new Error("Franchise non trovato.");
-    try {
-      const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(id);
-      if (consolidation?.franchise?.franchise) data = consolidation.franchise;
-      if (Number(consolidation?.merged || 0) > 0) {
-        showToast(`${Number(consolidation.merged)} duplicati editoriali uniti automaticamente.`);
-      }
-    } catch (error) {
-      console.warn("Consolidamento varianti franchise non disponibile", error);
-    }
     state.admin.selectedFranchise = data;
     const franchise = data.franchise;
     ui.adminFranchiseId.value = franchise.id;
@@ -6759,7 +6750,9 @@ ui.adminFranchiseGameForm?.addEventListener("submit", async (event) => {
       try {
         enrichment = await window.VaultFranchises.enrichCatalogGames(payload.map((game) => game.gameKey));
         window.VaultCatalog?.clearCache();
-        state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+        if (Number(enrichment?.updated || 0) > 0) {
+          state.admin.selectedFranchise = await window.VaultFranchises.getAdminFranchise(franchise.id);
+        }
       } catch (error) {
         console.warn("Arricchimento automatico Steam non disponibile", error);
       }
@@ -6773,8 +6766,6 @@ ui.adminFranchiseGameForm?.addEventListener("submit", async (event) => {
         narrativeOrder: ui.adminFranchiseNarrativeOrder.value,
         note: ui.adminFranchiseGameNote.value,
       });
-      const consolidation = await window.VaultFranchises.consolidateAdminFranchiseVariants(franchise.id);
-      if (consolidation?.franchise?.franchise) state.admin.selectedFranchise = consolidation.franchise;
       showToast("Gioco aggiornato nel franchise.");
     }
 

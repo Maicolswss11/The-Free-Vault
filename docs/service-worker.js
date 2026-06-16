@@ -10,7 +10,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-3-6-search-result-guards";
+const CACHE_NAME = "ludograph-v5-3-7-franchise-batch-performance";
 const APP_SHELL = [
   "./",
   "./index.html",

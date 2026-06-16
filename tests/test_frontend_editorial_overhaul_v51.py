@@ -23,7 +23,7 @@ def test_franchise_mass_editor_is_exposed_in_frontend():
     assert "function syncFranchiseEditorRows" in app
     assert "function saveFranchiseEditorRows" in app
     assert "removeAdminFranchiseGames" in franchise
-    assert "offset += 100" in franchise
+    assert "offset += 250" in franchise
 
 
 def test_franchise_mass_removal_rpc_is_versioned():
@@ -68,7 +68,7 @@ def test_navigation_uses_svg_icons_and_account_is_improved():
 
 def test_v51_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-3-6-search-result-guards"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-3-7-franchise-batch-performance"' in worker
 
 
 def test_v511_franchise_header_does_not_overlap_desktop_rows():

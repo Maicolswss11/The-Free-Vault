@@ -66,7 +66,7 @@
   }
 
   async function saveAdminFranchiseGame(franchiseId, payload = {}) {
-    return rpc("admin_save_franchise_game", {
+    await rpc("admin_save_franchise_game", {
       p_franchise_id: franchiseId,
       p_game_key: payload.gameKey || "",
       p_relation_type: payload.relationType || "main",
@@ -76,6 +76,7 @@
         : Number(payload.narrativeOrder),
       p_note: payload.note || null,
     });
+    return getAdminFranchise(franchiseId);
   }
 
   async function saveAdminFranchiseGames(franchiseId, games = []) {
@@ -90,14 +91,13 @@
     }));
     if (!payload.length) throw new Error("Seleziona almeno un gioco da salvare.");
 
-    let result = null;
-    for (let offset = 0; offset < payload.length; offset += 100) {
-      result = await rpc("admin_save_franchise_games_batch", {
+    for (let offset = 0; offset < payload.length; offset += 250) {
+      await rpc("admin_save_franchise_games_batch", {
         p_franchise_id: franchiseId,
-        p_games: payload.slice(offset, offset + 100),
+        p_games: payload.slice(offset, offset + 250),
       });
     }
-    return result;
+    return getAdminFranchise(franchiseId);
   }
 
   async function removeAdminFranchiseGames(franchiseId, gameKeys = []) {
