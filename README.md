@@ -990,3 +990,33 @@ ludograph-v5-3-rebrand-platform-identity
 ```
 
 Non sono richieste migrazioni SQL né sincronizzazioni del catalogo.
+
+
+## v5.4 — Complete Visual Overhaul
+
+L'interfaccia usa un nuovo design system globale, separato dalla logica storica
+in `docs/visual-overhaul.css`. Il layer ridisegna tutte le route pubbliche,
+personali e amministrative senza modificare il contratto del backend.
+
+Interventi principali:
+
+- shell desktop e mobile, sidebar, topbar e navigazione inferiore;
+- home, catalogo, ricerca globale e card dei giochi;
+- Scopri, franchise, collezioni e pagine entità;
+- scheda gioco, pannelli personali e disponibilità;
+- diario, statistiche, libreria e liste;
+- profilo personale e pubblico, feed, utenti, notifiche e liste condivise;
+- impostazioni, autenticazione e stati di sistema;
+- pannelli amministrativi, editor franchise e risultati di ricerca;
+- design responsive, focus accessibile e supporto `prefers-reduced-motion`.
+
+La route corrente viene esposta tramite `body[data-route]`, per consentire
+rifiniture visuali specifiche senza accoppiare il CSS al router.
+
+La cache PWA corrente è:
+
+```text
+ludograph-v5-4-complete-visual-overhaul
+```
+
+Non sono richieste migrazioni SQL, workflow di catalogo o riavvii del backend.

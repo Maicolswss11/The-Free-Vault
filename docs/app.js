@@ -1774,6 +1774,7 @@ function navigate(hash) {
 function handleRoute() {
   closeMobileOverlaysForNavigation();
   state.route = parseRoute();
+  document.body.dataset.route = state.route.name;
   setActiveNavigation(state.route.name);
 
   if (state.route.name === "catalog") {
