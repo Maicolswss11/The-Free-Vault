@@ -50,4 +50,4 @@ def test_v552_rebuilds_account_presentation_and_updates_cache():
     assert "updateAccountLevelLabel" in app
     assert ".account-copy small" in css
     assert ".topbar #refresh-button" in css
-    assert 'const CACHE_NAME = "ludograph-v5-5-3-mobile-franchise-stability"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-4-profile-fidelity"' in worker

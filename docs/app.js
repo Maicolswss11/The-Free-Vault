@@ -2638,10 +2638,10 @@ function entryProgress(entry) {
 }
 
 function routeGameArtwork(entries = libraryEntryRecords()) {
-  return entries.find((entry) => entry?.favorite && entry.game?.image_url)?.game?.image_url
-    || entries.find((entry) => ["playing", "paused", "completed"].includes(entry?.status) && entry.game?.image_url)?.game?.image_url
-    || entries.find((entry) => entry.game?.image_url)?.game?.image_url
-    || "";
+  const selected = entries.find((entry) => entry?.favorite && homeArtwork(entry.game))
+    || entries.find((entry) => ["playing", "paused", "completed"].includes(entry?.status) && homeArtwork(entry.game))
+    || entries.find((entry) => homeArtwork(entry.game));
+  return selected ? homeArtwork(selected.game) : "";
 }
 
 function renderHomeDiaryPreview(diaryEntries = []) {
@@ -6629,40 +6629,93 @@ function renderAuthPage() {
   }
 }
 
+function profileStreakDays(entries = []) {
+  const days = new Set(entries.map((entry) => homeLocalDateKey(entry.playedAt || entry.createdAt)).filter(Boolean));
+  if (!days.size) return 0;
+  const cursor = new Date();
+  cursor.setHours(12, 0, 0, 0);
+  if (!days.has(homeLocalDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (days.has(homeLocalDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 function profileStats() {
-  const entries = Object.values(state.library);
+  const entries = libraryEntryRecords();
+  const journalEntries = window.VaultJournal?.listEntries() || [];
   const journal = window.VaultJournal?.summarize() || { sessionMinutes: 0, sessions: 0 };
+  const completed = entries.filter((entry) => entry.status === "completed").length;
+  const played = entries.filter((entry) => ["playing", "paused", "completed", "abandoned", "replay"].includes(entry.status)).length;
+  const favorites = entries.filter((entry) => entry.favorite).length;
+  const ratings = entries.map((entry) => Number(entry.rating || 0)).filter((rating) => rating > 0);
+  const averageRating = ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
+  const sessionMinutes = Math.max(0, Number(journal.totalMinutes ?? journal.sessionMinutes ?? 0));
   return {
     library: entries.length,
-    completed: entries.filter((entry) => entry.status === "completed").length,
-    favorites: entries.filter((entry) => entry.favorite).length,
+    completed,
+    favorites,
     lists: Object.keys(state.lists).length,
-    hours: formatMinutes(journal.sessionMinutes),
-    sessions: journal.sessions,
+    hours: formatMinutes(sessionMinutes),
+    minutes: sessionMinutes,
+    sessions: Number(journal.sessions || journalEntries.length || 0),
+    streak: profileStreakDays(journalEntries),
+    averageRating,
+    ratings: ratings.length,
+    played,
+    playedPercent: entries.length ? Math.round((played / entries.length) * 100) : 0,
+    journalEntries,
   };
+}
+
+function profileActivityStatus(entry, type) {
+  const progress = entry ? entryProgress(entry) : 0;
+  if (type === "completed" || entry?.status === "completed") {
+    return `<span class="profile-activity-result is-complete"><svg aria-hidden="true"><use href="#icon-trophy"></use></svg><b>100%</b></span>`;
+  }
+  if (type === "favorite") {
+    return `<span class="profile-activity-result is-favorite"><svg aria-hidden="true"><use href="#icon-heart"></use></svg></span>`;
+  }
+  if (progress > 0) {
+    return `<span class="profile-activity-result is-progress"><i><b style="width:${progress}%"></b></i><em>${progress}%</em></span>`;
+  }
+  return `<span class="profile-activity-result"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></span>`;
 }
 
 function renderProfileRecentGames() {
   ui.profileRecentGames.replaceChildren();
-  const entries = Object.values(state.library)
-    .filter((entry) => entry?.game)
-    .sort((a, b) => new Date(b.addedAt || b.updatedAt || 0) - new Date(a.addedAt || a.updatedAt || 0))
-    .slice(0, 5);
-  if (!entries.length) {
-    ui.profileRecentGames.innerHTML = `<div class="timeline-empty">La libreria è ancora vuota.</div>`;
+  const entries = libraryEntryRecords();
+  const diaryEntries = window.VaultJournal?.listEntries({ limit: 12 }) || [];
+  const activities = buildHomeActivity(entries, diaryEntries).slice(0, 4);
+  if (!activities.length) {
+    ui.profileRecentGames.innerHTML = `<div class="timeline-empty">La tua attività comparirà qui quando aggiungerai un gioco o registrerai una sessione.</div>`;
     return;
   }
-  for (const entry of entries) {
-    const game = entry.game;
+  const entriesByKey = new Map(entries.map((entry) => [gameKey(entry.game), entry]));
+  for (const activity of activities) {
+    const game = activity.gameKey ? (resolveGameByKey(activity.gameKey) || journalGame(activity)) : journalGame(activity);
+    const entry = entriesByKey.get(gameKey(game));
     const link = document.createElement("a");
-    link.className = "profile-game-row";
+    link.className = `profile-activity-row is-${activity.type || "library"}`;
     link.href = gameRoute(game);
     link.innerHTML = `
-      <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="">
-      <span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(entry.status || "In libreria")}</small></span>
-      <span>→</span>`;
+      <img src="${escapeAttr(activity.gameImageUrl || game.image_url || PLACEHOLDER)}" alt="">
+      <span class="profile-activity-copy"><small>${escapeHtml(activity.detail || "Ha aggiornato la libreria")}</small><strong>${escapeHtml(activity.gameTitle || game.title || "Gioco")}</strong><time>${escapeHtml(relativeTime(activity.timestamp))}</time></span>
+      ${profileActivityStatus(entry, activity.type)}`;
     ui.profileRecentGames.append(link);
   }
+}
+
+function profileGenreIconId(genre) {
+  const value = String(genre || "").toLocaleLowerCase("it");
+  if (/azione|action|avventura|adventure/.test(value)) return "genre-action";
+  if (/gdr|rpg|role/.test(value)) return "genre-rpg";
+  if (/open world|mondo aperto/.test(value)) return "genre-open";
+  if (/souls|dark fantasy|horror/.test(value)) return "genre-souls";
+  if (/strateg|tattic|simul/.test(value)) return "genre-strategy";
+  return "genre-other";
 }
 
 function renderProfileGenres() {
@@ -6675,9 +6728,25 @@ function renderProfileGenres() {
     }
   }
   let values = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (!values.length) values = [["Azione / Avventura", 0], ["GDR", 0], ["Open World", 0], ["Strategia", 0]];
-  const max = Math.max(1, ...values.map(([, count]) => count));
-  ui.profileFavoriteGenres.innerHTML = values.map(([genre, count], index) => `<article><span class="genre-rank">${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(genre)}</strong><i><b style="width:${Math.round((count / max) * 100)}%"></b></i><em>${count || "—"}</em></article>`).join("");
+  if (!values.length) values = [["Azione / Avventura", 0], ["GDR", 0], ["Open World", 0], ["Strategia", 0], ["Indie", 0], ["Altro", 0]];
+  const total = Math.max(1, values.reduce((sum, [, count]) => sum + count, 0));
+  const percentages = values.map(([, count]) => count ? Math.max(4, Math.round((count / total) * 100)) : 0);
+  ui.profileFavoriteGenres.innerHTML = values.map(([genre], index) => {
+    const percentage = percentages[index];
+    return `<article>
+      <span class="profile-genre-icon"><svg aria-hidden="true"><use href="#icon-${profileGenreIconId(genre)}"></use></svg></span>
+      <strong>${escapeHtml(genre)}</strong>
+      <i><b style="width:${percentage}%"></b></i>
+      <em>${percentage ? `${percentage}%` : "—"}</em>
+    </article>`;
+  }).join("");
+}
+
+function profileMemberSince(user, profile) {
+  const raw = profile?.created_at || user?.created_at;
+  const date = raw ? new Date(raw) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Membro Ludograph";
+  return `Membro da ${date.toLocaleDateString("it-IT", { month: "short", year: "numeric" }).replace(".", "")}`;
 }
 
 function renderProfilePage() {
@@ -6691,10 +6760,11 @@ function renderProfilePage() {
   }
 
   const displayName = profile?.display_name || profile?.username || "Profilo";
+  const level = accountLevelValue();
   applyAvatar(ui.profilePageAvatar, user, profile);
   ui.profilePageName.textContent = displayName;
   ui.profilePageHandle.textContent = profile?.username ? `@${profile.username}` : "";
-  ui.profilePageBio.textContent = profile?.bio || "Nessuna bio inserita.";
+  ui.profilePageBio.textContent = profile?.bio || "Raccogli, ricorda e racconta la tua storia di gioco.";
   ui.profilePageEmail.textContent = user.email || "";
   ui.profileVisibilityBadge.textContent = profile?.is_public === false ? "Profilo privato" : "Profilo pubblico";
   ui.viewPublicProfile.hidden = !profile?.username || profile?.is_public === false;
@@ -6703,13 +6773,37 @@ function renderProfilePage() {
   ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
   ui.profileBio.value = profile?.bio || "";
 
+  const levelChip = $("#profile-level-chip");
+  const levelBadge = $("#profile-level-badge");
+  const memberSince = $("#profile-member-since-text");
+  const verifiedBadge = $("#profile-verified-badge");
+  if (levelChip) levelChip.textContent = level;
+  if (levelBadge) levelBadge.textContent = `Livello ${level}`;
+  if (memberSince) memberSince.textContent = profileMemberSince(user, profile);
+  if (verifiedBadge) verifiedBadge.hidden = !Boolean(user.email_confirmed_at || user.confirmed_at);
+
   const stats = profileStats();
-  $("#profile-stat-library").textContent = stats.library;
-  $("#profile-stat-completed").textContent = stats.completed;
-  $("#profile-stat-favorites").textContent = stats.favorites;
-  $("#profile-stat-lists").textContent = stats.lists;
+  $("#profile-stat-library").textContent = stats.library.toLocaleString("it-IT");
+  $("#profile-stat-completed").textContent = stats.completed.toLocaleString("it-IT");
   $("#profile-stat-hours").textContent = stats.hours;
-  $("#profile-stat-sessions").textContent = stats.sessions;
+  $("#profile-stat-streak").textContent = stats.streak.toLocaleString("it-IT");
+  $("#profile-stat-rating").textContent = stats.averageRating ? stats.averageRating.toFixed(1) : "—";
+  $("#profile-stat-played").textContent = `${stats.playedPercent}%`;
+  $("#profile-stat-library-meta").textContent = stats.favorites ? `${stats.favorites} preferiti` : "Il tuo archivio";
+  $("#profile-stat-completed-meta").textContent = stats.library ? `${Math.round((stats.completed / stats.library) * 100)}% della libreria` : "Nessun completamento";
+  $("#profile-stat-hours-meta").textContent = stats.sessions ? `${stats.sessions} session${stats.sessions === 1 ? "e" : "i"} registrat${stats.sessions === 1 ? "a" : "e"}` : "Nessuna sessione";
+  $("#profile-stat-streak-meta").textContent = stats.streak ? "Continua così" : "Registra una sessione";
+  $("#profile-stat-rating-stars").textContent = stats.averageRating ? `${"★".repeat(Math.round(stats.averageRating))}${"☆".repeat(Math.max(0, 5 - Math.round(stats.averageRating)))}` : "☆☆☆☆☆";
+  $("#profile-stat-played-meta").textContent = `${stats.played} di ${stats.library}`;
+
+  $("#profile-hero-hours").textContent = stats.hours;
+  $("#profile-hero-library").textContent = stats.library.toLocaleString("it-IT");
+  $("#profile-hero-completed").textContent = stats.completed.toLocaleString("it-IT");
+  $("#profile-hero-active").textContent = stats.journalEntries.some((entry) => homeLocalDateKey(entry.playedAt || entry.createdAt) === homeLocalDateKey()) ? "Attivo oggi" : "Archivio sincronizzato";
+  $("#profile-hub-library-count").textContent = `${stats.library} gioch${stats.library === 1 ? "o" : "i"}`;
+  $("#profile-hub-lists-count").textContent = `${stats.lists} list${stats.lists === 1 ? "a" : "e"}`;
+  $("#profile-hub-diary-count").textContent = `${stats.sessions} voc${stats.sessions === 1 ? "e" : "i"}`;
+
   renderProfileRecentGames();
   renderProfileGenres();
   const profileArtwork = routeGameArtwork();

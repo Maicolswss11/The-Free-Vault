@@ -44,6 +44,24 @@
     <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
     <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
     <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
+    <symbol id="icon-gamepad" viewBox="0 0 24 24"><path d="M7.2 7h9.6a4.2 4.2 0 0 1 4.1 5.1l-1.2 5.2a2.4 2.4 0 0 1-4 1.2l-1.7-1.7H10l-1.7 1.7a2.4 2.4 0 0 1-4-1.2l-1.2-5.2A4.2 4.2 0 0 1 7.2 7Z"/><path d="M7 10v4M5 12h4M16.5 11.5h.01M18.5 13.5h.01"/></symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></symbol>
+    <symbol id="icon-pie" viewBox="0 0 24 24"><path d="M11 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M14 3.5A7.5 7.5 0 0 1 20.5 10H14V3.5Z"/></symbol>
+    <symbol id="icon-flame" viewBox="0 0 24 24"><path d="M13.5 3.5c.4 3-1.5 4.2-2.8 5.8-1.1 1.3-1.7 2.5-1.2 4.3.6-1 1.5-1.8 2.6-2.5-.2 2.2 2 3 2 5.2 0 2.6-2 4.7-4.6 4.7S5 18.9 5 16.3c0-5.2 4.8-7.2 8.5-12.8Z"/></symbol>
+    <symbol id="icon-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m14 7 3 3M4 20h5"/></symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5M14 8l4 4-4 4M18 12H9"/></symbol>
+    <symbol id="icon-box" viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7v10l8 4 8-4V7M12 11v10"/></symbol>
+    <symbol id="icon-video" viewBox="0 0 24 24"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2v-4Z"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16.5 8"/></symbol>
+    <symbol id="icon-genre-action" viewBox="0 0 24 24"><path d="m14 4 6 6-9 9H5v-6l9-9Z"/><path d="m12 6 6 6M5 19l-2 2"/></symbol>
+    <symbol id="icon-genre-rpg" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.7 2.8 8.1 7 10 4.2-1.9 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></symbol>
+    <symbol id="icon-genre-open" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21M12 3C9.6 5.5 8.4 8.5 8.4 12S9.6 18.5 12 21"/></symbol>
+    <symbol id="icon-genre-souls" viewBox="0 0 24 24"><path d="M8 4h8l3 5-2 10H7L5 9l3-5Z"/><path d="M9 10h.01M15 10h.01M9 15h6"/></symbol>
+    <symbol id="icon-genre-strategy" viewBox="0 0 24 24"><path d="M4 20h16M7 20v-7h4v7M13 20V8h4v12M6 10l4-4 3 2 5-5"/></symbol>
+    <symbol id="icon-genre-other" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></symbol>
   </svg>
   <div class="app-shell">
     <aside id="app-sidebar" class="sidebar" aria-label="Navigazione principale" aria-hidden="false">
@@ -897,63 +915,100 @@
           <div id="profile-signed-in" hidden>
             <section class="profile-hero">
               <div id="profile-hero-backdrop" class="profile-hero-backdrop" aria-hidden="true"></div>
-              <span id="profile-page-avatar" class="account-avatar account-avatar-xl">?</span>
+
+              <div class="profile-avatar-shell">
+                <span id="profile-page-avatar" class="account-avatar account-avatar-xl">?</span>
+                <span id="profile-level-chip" class="profile-level-chip">1</span>
+              </div>
+
               <div class="profile-identity">
                 <p class="eyebrow">MEMBRO DELLA COMMUNITY</p>
-                <h1 id="profile-page-name">Profilo</h1>
+                <div class="profile-name-line">
+                  <h1 id="profile-page-name">Profilo</h1>
+                  <span id="profile-verified-badge" class="profile-verified-badge" title="Email verificata" hidden><svg aria-hidden="true"><use href="#icon-check"></use></svg></span>
+                </div>
                 <p id="profile-page-handle" class="profile-handle"></p>
                 <p id="profile-page-bio" class="profile-bio"></p>
                 <div class="profile-badges">
-                  <span class="profile-badge profile-badge-blue">Archivista</span>
-                  <span class="profile-badge profile-badge-purple">Collezionista</span>
-                  <span id="profile-visibility-badge" class="profile-badge">Profilo pubblico</span>
-                  <span id="cloud-status" class="profile-badge profile-badge-green">Sincronizzazione pronta</span>
+                  <span class="profile-badge profile-badge-blue"><svg aria-hidden="true"><use href="#icon-check"></use></svg><b id="profile-level-badge">Livello 1</b></span>
+                  <span class="profile-badge profile-badge-purple"><svg aria-hidden="true"><use href="#icon-box"></use></svg>Collezionista</span>
+                  <span class="profile-badge profile-badge-green"><svg aria-hidden="true"><use href="#icon-shield-check"></use></svg><b id="cloud-status">Sincronizzazione pronta</b></span>
+                  <span id="profile-member-since" class="profile-badge"><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b id="profile-member-since-text">Membro Ludograph</b></span><span id="profile-visibility-badge" hidden>Profilo pubblico</span>
                 </div>
-                <p id="profile-page-email" class="muted"></p>
+                <p id="profile-page-email" class="profile-private-email" hidden></p>
               </div>
+
+              <aside class="profile-hero-summary" aria-label="Riepilogo profilo">
+                <div><span>Tempo di gioco totale</span><strong id="profile-hero-hours">0 h</strong><i><svg aria-hidden="true"><use href="#icon-clock"></use></svg></i></div>
+                <div><span>Giochi posseduti</span><strong id="profile-hero-library">0</strong></div>
+                <div><span>Completati</span><strong id="profile-hero-completed">0</strong></div>
+                <div class="profile-active-state"><span><b></b><em id="profile-hero-active">Archivio sincronizzato</em></span></div>
+              </aside>
+
               <div class="profile-hero-actions">
-                <a id="view-public-profile" class="button button-primary" href="#/profile">Vedi profilo pubblico</a>
-                <a class="button button-secondary" href="#/settings/profile">Modifica profilo</a>
-                <button id="logout-button" class="button button-ghost" type="button">Esci</button>
+                <a id="view-public-profile" class="button button-primary" href="#/profile"><span>Vedi profilo pubblico</span><svg aria-hidden="true"><use href="#icon-external"></use></svg></a>
+                <a class="button button-secondary" href="#/settings/profile"><span>Modifica profilo</span><svg aria-hidden="true"><use href="#icon-edit"></use></svg></a>
+                <button id="logout-button" class="button button-ghost profile-logout-button" type="button" aria-label="Esci dall’account" title="Esci dall’account"><svg aria-hidden="true"><use href="#icon-logout"></use></svg></button>
               </div>
             </section>
 
             <section class="profile-stats" aria-label="Statistiche profilo">
-              <article><i>🎮</i><strong id="profile-stat-library">0</strong><span>Giochi posseduti</span></article>
-              <article><i>🏆</i><strong id="profile-stat-completed">0</strong><span>Giochi completati</span></article>
-              <article><i>♥</i><strong id="profile-stat-favorites">0</strong><span>Preferiti</span></article>
-              <article><i>◷</i><strong id="profile-stat-hours">0 h</strong><span>Tempo di gioco</span></article>
-              <article><i>☄</i><strong id="profile-stat-sessions">0</strong><span>Sessioni diario</span></article>
-              <article><i>▤</i><strong id="profile-stat-lists">0</strong><span>Liste create</span></article>
+              <article>
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg></span>
+                <div><strong id="profile-stat-library">0</strong><span>Giochi posseduti</span><small id="profile-stat-library-meta">Il tuo archivio</small></div>
+              </article>
+              <article>
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-trophy"></use></svg></span>
+                <div><strong id="profile-stat-completed">0</strong><span>Giochi completati</span><small id="profile-stat-completed-meta">0% della libreria</small></div>
+              </article>
+              <article>
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-clock"></use></svg></span>
+                <div><strong id="profile-stat-hours">0 h</strong><span>Tempo di gioco</span><small id="profile-stat-hours-meta">Nessuna sessione</small></div>
+              </article>
+              <article class="is-streak">
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-flame"></use></svg></span>
+                <div><strong id="profile-stat-streak">0</strong><span>Giorni di streak</span><small id="profile-stat-streak-meta">Registra una sessione</small></div>
+              </article>
+              <article class="is-rating">
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-star"></use></svg></span>
+                <div><strong id="profile-stat-rating">—</strong><span>Valutazione media</span><small id="profile-stat-rating-stars" class="profile-rating-stars">☆☆☆☆☆</small></div>
+              </article>
+              <article>
+                <span class="profile-stat-icon"><svg aria-hidden="true"><use href="#icon-pie"></use></svg></span>
+                <div><strong id="profile-stat-played">0%</strong><span>Giochi giocati</span><small id="profile-stat-played-meta">0 di 0</small></div>
+              </article>
             </section>
 
             <div class="profile-dashboard-grid">
               <section class="detail-panel profile-activity-panel">
-                <div class="panel-heading"><div><p class="eyebrow">ATTIVITÀ RECENTI</p><h2>La tua cronologia</h2></div><a href="#/feed">Vedi tutto →</a></div>
+                <div class="panel-heading"><div><p class="eyebrow">ATTIVITÀ RECENTI</p><h2>La tua cronologia</h2></div><a href="#/feed">Vedi tutto <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a></div>
                 <div id="profile-recent-games" class="profile-recent-games"></div>
+                <a class="profile-panel-footer" href="#/feed">Vedi tutta l’attività <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
               </section>
 
               <section class="detail-panel profile-genres-panel">
-                <div class="panel-heading"><div><p class="eyebrow">IDENTITÀ LUDICA</p><h2>Generi preferiti</h2></div><a href="#/stats">Statistiche →</a></div>
+                <div class="panel-heading"><div><p class="eyebrow">GENERI PREFERITI</p><h2>La tua identità ludica</h2></div><a href="#/stats">Vedi tutti <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a></div>
                 <div id="profile-favorite-genres" class="profile-favorite-genres"></div>
               </section>
 
               <section class="detail-panel profile-archive-hub">
                 <div class="panel-heading"><div><p class="eyebrow">GESTISCI IL TUO ARCHIVIO</p><h2>Tutto al suo posto</h2></div></div>
                 <div class="profile-hub-grid">
-                  <a href="#/library"><span>▥</span><strong>La mia libreria</strong><small>Giochi e progressi</small></a>
-                  <a href="#/lists"><span>☷</span><strong>Le mie liste</strong><small>Raccolte personali</small></a>
-                  <a href="#/diary"><span>✎</span><strong>Diario di gioco</strong><small>Sessioni e ricordi</small></a>
-                  <a href="#/settings/connections"><span>⇩</span><strong>Importa giochi</strong><small>Account collegati</small></a>
-                  <a href="#/settings/privacy"><span>◉</span><strong>Privacy</strong><small>Visibilità e dati</small></a>
-                  <a href="#/settings/data"><span>↥</span><strong>Backup</strong><small>Esporta il tuo archivio</small></a>
+                  <a href="#/library"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-library"></use></svg></span><div><strong>La mia libreria</strong><small id="profile-hub-library-count">Giochi e progressi</small></div></a>
+                  <a href="#/lists"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-list"></use></svg></span><div><strong>Le mie liste</strong><small id="profile-hub-lists-count">Raccolte personali</small></div></a>
+                  <a href="#/franchises"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-box"></use></svg></span><div><strong>Collezioni</strong><small>Saghe e percorsi</small></div></a>
+                  <a href="#/diary"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-diary"></use></svg></span><div><strong>Diario di gioco</strong><small id="profile-hub-diary-count">Sessioni e ricordi</small></div></a>
+                  <a href="#/diary"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-video"></use></svg></span><div><strong>Gameplay e note</strong><small>La tua memoria di gioco</small></div></a>
+                  <a href="#/settings/connections"><span class="profile-hub-icon"><svg aria-hidden="true"><use href="#icon-download"></use></svg></span><div><strong>Importa giochi</strong><small>Sincronizza le piattaforme</small></div></a>
                 </div>
+                <a class="profile-archive-footer" href="#/library">Vai alla libreria <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
               </section>
             </div>
 
             <section class="profile-achievement-teaser">
-              <div><p class="eyebrow">I TUOI TRAGUARDI <span>IN ARRIVO</span></p><h2>Ogni impresa merita di essere ricordata.</h2><p>Trofei, achievement e completamenti troveranno qui una casa unica.</p></div>
-              <div class="achievement-art" aria-hidden="true"><span>♜</span><i></i><span>🏆</span><i></i><span>♜</span></div>
+              <div class="profile-achievement-copy"><p class="eyebrow">I TUOI TRAGUARDI <span>IN ARRIVO</span></p><h2>Ogni impresa merita di essere ricordata.</h2><p>Trofei, achievement e completamenti troveranno qui una casa unica.</p></div>
+              <div class="achievement-art" aria-hidden="true"><span><svg><use href="#icon-shield-check"></use></svg></span><i></i><strong><svg><use href="#icon-trophy"></use></svg></strong><i></i><span><svg><use href="#icon-shield-check"></use></svg></span></div>
+              <a class="button button-secondary profile-achievement-action" href="#/stats">Scopri di più <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
             </section>
           </div>
         </section>
