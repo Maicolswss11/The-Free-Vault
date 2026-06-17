@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-17T05:17:07.291246+00:00",
+  "generated_at": "2026-06-17T11:17:35.298949+00:00",
   "current": [
     {
       "epic_id": "7f0ab2828f9743d0abc6612a11222fdf",
@@ -83,6 +83,28 @@
       "fmt_original_price": "19,49 €",
       "start_date": "2026-06-18T15:00:00+00:00",
       "end_date": "2026-06-25T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Kwalee"
+    },
+    {
+      "epic_id": "bbccf66ad70e492d812e031e17f93b9d",
+      "namespace": "1c6e13038e00432ba0a3c11bb85d1d5f",
+      "title": "Voidwrought",
+      "description": "Voidwrought è un videogioco d'azione a piattaforme 2D ambientato in un mondo di orrori cosmici disegnato a mano. Esplora i resti della Prima civiltà e combatti gli dei che la popolano. Accresci i tuoi poteri, scopri antichi Artefatti ed espandi il tuo santuario tra le rovine.",
+      "image_url": "./assets/covers/bf8bcee1a9be65f655eb891a.jpg",
+      "store_url": "https://store.epicgames.com/it/p/voidwrought-ce8f4b",
+      "original_price": 1799,
+      "discount_price": 1799,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "17,99 €",
+      "start_date": "2026-06-25T15:00:00+00:00",
+      "end_date": "2026-07-02T15:00:00+00:00",
       "promotion_type": "upcoming",
       "is_current": false,
       "is_upcoming": true,

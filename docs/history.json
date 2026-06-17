@@ -1,6 +1,31 @@
 {
-  "updated_at": "2026-06-17T05:17:07.291246+00:00",
+  "updated_at": "2026-06-17T11:17:35.298949+00:00",
   "games": [
+    {
+      "epic_id": "bbccf66ad70e492d812e031e17f93b9d",
+      "namespace": "1c6e13038e00432ba0a3c11bb85d1d5f",
+      "title": "Voidwrought",
+      "description": "Voidwrought è un videogioco d'azione a piattaforme 2D ambientato in un mondo di orrori cosmici disegnato a mano. Esplora i resti della Prima civiltà e combatti gli dei che la popolano. Accresci i tuoi poteri, scopri antichi Artefatti ed espandi il tuo santuario tra le rovine.",
+      "image_url": "./assets/covers/bf8bcee1a9be65f655eb891a.jpg",
+      "store_url": "https://store.epicgames.com/it/p/voidwrought-ce8f4b",
+      "original_price": 1799,
+      "discount_price": 1799,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "17,99 €",
+      "start_date": "2026-06-25T15:00:00+00:00",
+      "end_date": "2026-07-02T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Kwalee",
+      "promotion_key": "bbccf66ad70e492d812e031e17f93b9d|2026-06-25T15:00:00+00:00|2026-07-02T15:00:00+00:00",
+      "first_seen_at": "2026-06-17T11:17:35.298949+00:00",
+      "last_seen_at": "2026-06-17T11:17:35.298949+00:00"
+    },
     {
       "epic_id": "ea365d314ecf4224a5f58d2d7430e7aa",
       "namespace": "e4ef0c8c500a41eaa57c53d32410595d",
@@ -24,7 +49,7 @@
       "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games",
       "promotion_key": "ea365d314ecf4224a5f58d2d7430e7aa|2026-06-18T15:00:00+00:00|2026-06-25T15:00:00+00:00",
       "first_seen_at": "2026-06-10T10:31:46.885810+00:00",
-      "last_seen_at": "2026-06-17T05:17:07.291246+00:00"
+      "last_seen_at": "2026-06-17T11:17:35.298949+00:00"
     },
     {
       "epic_id": "aee7ec395d054078a48d867849e2a550",
@@ -49,7 +74,7 @@
       "publisher": "Kwalee",
       "promotion_key": "aee7ec395d054078a48d867849e2a550|2026-06-18T15:00:00+00:00|2026-06-25T15:00:00+00:00",
       "first_seen_at": "2026-06-10T10:31:46.885810+00:00",
-      "last_seen_at": "2026-06-17T05:17:07.291246+00:00"
+      "last_seen_at": "2026-06-17T11:17:35.298949+00:00"
     },
     {
       "epic_id": "7f0ab2828f9743d0abc6612a11222fdf",
@@ -74,7 +99,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "7f0ab2828f9743d0abc6612a11222fdf|2026-06-11T15:00:00+00:00|2026-06-18T15:00:00+00:00",
       "first_seen_at": "2026-06-08T18:36:59.123256+00:00",
-      "last_seen_at": "2026-06-17T05:17:07.291246+00:00"
+      "last_seen_at": "2026-06-17T11:17:35.298949+00:00"
     },
     {
       "epic_id": "eb6ae87e73d94d2c96bab3c4da4dd3de",
@@ -99,7 +124,7 @@
       "publisher": "Wired Productions",
       "promotion_key": "eb6ae87e73d94d2c96bab3c4da4dd3de|2026-06-11T15:00:00+00:00|2026-06-18T15:00:00+00:00",
       "first_seen_at": "2026-06-08T18:36:59.123256+00:00",
-      "last_seen_at": "2026-06-17T05:17:07.291246+00:00"
+      "last_seen_at": "2026-06-17T11:17:35.298949+00:00"
     },
     {
       "epic_id": "a6a2d59fa54946dbbf16f14730c2e5f0",
