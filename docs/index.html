@@ -36,6 +36,13 @@
     <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M5 21V4m0 1h11l-1.5 3L16 11H5"/></symbol>
     <symbol id="icon-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01M11 7h6M11 17h6"/></symbol>
     <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5M6.2 8.5A7 7 0 0 1 18.8 7M17.8 15.5A7 7 0 0 1 5.2 17"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.7" cy="10.7" r="6.7"/><path d="m16 16 4.2 4.2"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-trophy" viewBox="0 0 24 24"><path d="M8 4h8v3.5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H4v1.2A5 5 0 0 0 9 12M16 6h4v1.2a5 5 0 0 1-5 4.8M12 11.5V17M8.5 21h7M9.5 17h5v4h-5Z"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.2-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.8-7 10-7 10Z"/></symbol>
+    <symbol id="icon-library-add" viewBox="0 0 24 24"><path d="M4 4h4v16H4zM10 4h4v16h-4zM17 5v8M13 9h8"/><path d="m17 15 2.5-.7 1.5 5.2-4 1.1-.8-2.8"/></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
     <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
   </svg>
   <div class="app-shell">
@@ -125,7 +132,7 @@
           aria-expanded="false"
         >☰</button>
         <div class="search-box">
-          <span aria-hidden="true">⌕</span>
+          <svg class="search-icon" aria-hidden="true"><use href="#icon-search"></use></svg>
           <input
             id="search-input"
             type="search"
@@ -139,7 +146,7 @@
           <div id="global-search-results" class="global-search-results" role="listbox" hidden></div>
         </div>
         <div class="topbar-actions">
-          <a id="quick-add-button" class="quick-add-button" href="#/catalog" aria-label="Aggiungi un gioco"><span>＋</span><b>Aggiungi</b></a>
+          <a id="quick-add-button" class="quick-add-button" href="#/catalog" aria-label="Aggiungi un gioco"><svg aria-hidden="true"><use href="#icon-plus"></use></svg><b>Aggiungi</b></a>
           <button id="refresh-button" class="icon-button" type="button" title="Aggiorna dati" aria-label="Aggiorna dati"><svg class="topbar-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg></button>
           <button id="install-button" class="install-button" type="button" hidden>Installa app</button>
           <button id="notification-button" class="icon-button notification-button" type="button" title="Notifiche" aria-label="Apri notifiche">
@@ -148,7 +155,7 @@
           </button>
           <button id="account-button" class="account-button" type="button" aria-label="Apri account">
             <span id="account-avatar" class="account-avatar">?</span>
-            <span id="account-label">Accedi</span>
+            <span class="account-copy"><strong id="account-label">Accedi</strong><small id="account-level">Profilo personale</small></span>
             <svg class="account-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
           </button>
         </div>
@@ -182,6 +189,11 @@
                 <button id="hero-library" class="button button-glass" type="button">Aggiungi alla libreria</button>
                 <button id="hero-details" class="button button-glass" type="button">Scheda completa</button>
               </div>
+            </div>
+            <div id="hero-carousel-controls" class="carousel-controls hero-carousel-controls" aria-label="Controlli contenuti in evidenza" hidden>
+              <button id="hero-carousel-previous" class="carousel-arrow" type="button" aria-label="Contenuto precedente"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button>
+              <div id="hero-carousel-dots" class="carousel-dots" role="tablist" aria-label="Seleziona contenuto"></div>
+              <button id="hero-carousel-next" class="carousel-arrow" type="button" aria-label="Contenuto successivo"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button>
             </div>
           </section>
           </div>
@@ -236,10 +248,15 @@
             </article>
             <aside class="home-panel home-editorial-panel">
               <div id="home-editorial-feature" class="home-editorial-feature">
-                <p class="eyebrow">IN EVIDENZA NEL CATALOGO</p>
+                <p id="home-editorial-feature-kicker" class="eyebrow">IN EVIDENZA NEL CATALOGO</p>
                 <h2 id="home-editorial-feature-title">Esplora oltre la libreria.</h2>
                 <p id="home-editorial-feature-copy">Franchise, continuità e collezioni curate per riscoprire la storia del medium.</p>
                 <a id="home-editorial-feature-link" class="button button-secondary" href="#/franchises">Scopri di più</a>
+                <div id="home-editorial-carousel-controls" class="carousel-controls editorial-carousel-controls" aria-label="Controlli selezione editoriale" hidden>
+                  <button id="home-editorial-previous" class="carousel-arrow" type="button" aria-label="Selezione precedente"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button>
+                  <div id="home-editorial-dots" class="carousel-dots" role="tablist" aria-label="Seleziona evidenza"></div>
+                  <button id="home-editorial-next" class="carousel-arrow" type="button" aria-label="Selezione successiva"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button>
+                </div>
               </div>
               <div class="home-editorial-collections">
                 <header><p class="eyebrow">COLLEZIONI IN EVIDENZA</p><a href="#/franchises">Esplora tutte →</a></header>

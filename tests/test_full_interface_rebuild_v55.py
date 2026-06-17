@@ -15,12 +15,12 @@ def test_v55_loads_structural_interface_layer():
 
 def test_v55_renders_data_driven_home_library_profile_and_game_views():
     app = read("docs/app.js")
-    for marker in ["renderHomeExperience", "renderHomeDiaryPreview", "hydrateHomeEditorialHighlights", "renderLibraryExperience", "renderProfileGenres", "gameSummaryProgress", "gamePageBackdrop"]:
+    for marker in ["renderHomeExperience", "renderHomeDiaryPreview", "hydrateHomeHighlights", "renderLibraryExperience", "renderProfileGenres", "gameSummaryProgress", "gamePageBackdrop"]:
         assert marker in app
 
 def test_v55_pwa_cache_includes_interface_layer():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-1-home-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-2-home-topbar-fidelity"' in worker
     assert '"./interface-rebuild.css"' in worker
 
 def test_v55_keeps_mobile_and_reduced_motion_support():

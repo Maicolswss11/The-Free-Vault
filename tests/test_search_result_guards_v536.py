@@ -25,4 +25,4 @@ def test_v536_variant_grouping_filters_invalid_entries():
 
 def test_v536_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-1-home-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-2-home-topbar-fidelity"' in worker

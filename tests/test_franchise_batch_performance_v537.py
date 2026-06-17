@@ -39,4 +39,4 @@ def test_v537_frontend_chunks_large_batches_and_refreshes_once():
 
 def test_v537_updates_pwa_cache():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-5-1-home-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-2-home-topbar-fidelity"' in worker

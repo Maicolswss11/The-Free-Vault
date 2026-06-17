@@ -37,6 +37,7 @@ const state = {
   entityRequestId: 0,
   editorialDirectory: null,
   homeEditorialLoading: false,
+  homeDiscoveryLoading: false,
   franchiseData: null,
   franchiseOrder: "release",
   collectionData: null,
@@ -89,6 +90,15 @@ const state = {
   dataLoaded: false,
 };
 
+const HOME_HERO_ROTATION_MS = 9000;
+const HOME_CATALOG_ROTATION_MS = 11000;
+let homeHeroSlides = [];
+let homeHeroIndex = 0;
+let homeHeroTimer = null;
+let homeCatalogSlides = [];
+let homeCatalogIndex = 0;
+let homeCatalogTimer = null;
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
@@ -109,9 +119,14 @@ const ui = {
   homeActivityList: $("#home-activity-list"),
   homeDiaryPreview: $("#home-diary-preview"),
   homeEditorialFeature: $("#home-editorial-feature"),
+  homeEditorialFeatureKicker: $("#home-editorial-feature-kicker"),
   homeEditorialFeatureTitle: $("#home-editorial-feature-title"),
   homeEditorialFeatureCopy: $("#home-editorial-feature-copy"),
   homeEditorialFeatureLink: $("#home-editorial-feature-link"),
+  homeEditorialCarouselControls: $("#home-editorial-carousel-controls"),
+  homeEditorialPrevious: $("#home-editorial-previous"),
+  homeEditorialNext: $("#home-editorial-next"),
+  homeEditorialDots: $("#home-editorial-dots"),
   homeEditorialList: $("#home-editorial-list"),
   libraryShowcase: $("#library-showcase"),
   libraryLanes: $("#library-lanes"),
@@ -317,6 +332,10 @@ const ui = {
   heroLink: $("#hero-link"),
   heroLibrary: $("#hero-library"),
   heroDetails: $("#hero-details"),
+  heroCarouselControls: $("#hero-carousel-controls"),
+  heroCarouselPrevious: $("#hero-carousel-previous"),
+  heroCarouselNext: $("#hero-carousel-next"),
+  heroCarouselDots: $("#hero-carousel-dots"),
   sidebarUpdate: $("#sidebar-update"),
   sidebarDataNote: $("#sidebar-data-note"),
   install: $("#install-button"),
@@ -349,6 +368,7 @@ const ui = {
   accountButton: $("#account-button"),
   accountAvatar: $("#account-avatar"),
   accountLabel: $("#account-label"),
+  accountLevel: $("#account-level"),
   authEyebrow: $("#auth-page-eyebrow"),
   authTitle: $("#auth-page-title"),
   authSubtitle: $("#auth-page-subtitle"),
@@ -2109,20 +2129,91 @@ function updateStats() {
   ui.statLists.textContent = Object.keys(state.lists).length.toLocaleString("it-IT");
   ui.statTodayMinutes.textContent = formatMinutes(todayMinutes);
   ui.statTodaySessions.textContent = todayEntries.length.toLocaleString("it-IT");
+  updateAccountLevelLabel();
 }
 
-function renderHero() {
-  const entries = libraryEntryRecords();
-  const personalEntry = entries.find((entry) => ["playing", "paused", "replay"].includes(entry.status)) || entries[0] || null;
-  const promotion = state.current[0] ? normalizePromotion(state.current[0]) : null;
-  const game = personalEntry?.game || promotion;
-  const isPersonal = Boolean(personalEntry);
+function homeArtwork(game) {
+  return game?.hero_image_url
+    || game?.background_image_url
+    || game?.wide_image_url
+    || game?.image_url
+    || PLACEHOLDER;
+}
 
-  ui.hero.hidden = state.route.name !== "home" || !game;
-  if (!game) return;
+function uniqueHomeItems(items, keyOf) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = String(keyOf(item) || "").trim().toLocaleLowerCase("it");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
-  const artwork = game.hero_image_url || game.background_image_url || game.image_url || PLACEHOLDER;
+function buildHomeHeroSlides(entries = libraryEntryRecords()) {
+  const diaryEntries = window.VaultJournal?.listEntries({ limit: 12 }) || [];
+  const byKey = new Map(entries.map((entry) => [gameKey(entry.game), entry]));
+  const diaryEntriesInLibrary = diaryEntries
+    .map((entry) => byKey.get(entry.gameKey) || byKey.get(gameKey(journalGame(entry))))
+    .filter(Boolean);
+  const active = entries.filter((entry) => ["playing", "paused", "replay"].includes(entry.status));
+  const favorites = entries.filter((entry) => entry.favorite);
+  const personal = uniqueHomeItems(
+    [...diaryEntriesInLibrary, ...active, ...favorites, ...entries],
+    (entry) => gameKey(entry.game)
+  ).slice(0, 4).map((entry) => ({ kind: "personal", entry, game: entry.game }));
+
+  const promotions = state.current.slice(0, 2)
+    .map(normalizePromotion)
+    .filter(Boolean)
+    .map((game) => ({ kind: "promotion", entry: null, game }));
+
+  return uniqueHomeItems(
+    [...personal, ...promotions],
+    (slide) => gameKey(slide.game) || slide.game?.title
+  ).filter((slide) => slide.game?.title).slice(0, 4);
+}
+
+function stopHomeHeroRotation() {
+  if (homeHeroTimer) window.clearInterval(homeHeroTimer);
+  homeHeroTimer = null;
+}
+
+function startHomeHeroRotation() {
+  stopHomeHeroRotation();
+  if (state.route.name !== "home" || homeHeroSlides.length < 2) return;
+  homeHeroTimer = window.setInterval(() => {
+    renderHomeHeroSlide((homeHeroIndex + 1) % homeHeroSlides.length, { restartTimer: false });
+  }, HOME_HERO_ROTATION_MS);
+}
+
+function renderHomeHeroDots() {
+  if (!ui.heroCarouselControls || !ui.heroCarouselDots) return;
+  ui.heroCarouselControls.hidden = homeHeroSlides.length < 2;
+  ui.heroCarouselDots.replaceChildren();
+  homeHeroSlides.forEach((slide, index) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "carousel-dot";
+    dot.setAttribute("role", "tab");
+    dot.setAttribute("aria-label", `Mostra ${slide.game.title}`);
+    dot.setAttribute("aria-selected", String(index === homeHeroIndex));
+    dot.classList.toggle("is-active", index === homeHeroIndex);
+    dot.addEventListener("click", () => renderHomeHeroSlide(index));
+    ui.heroCarouselDots.append(dot);
+  });
+}
+
+function renderHomeHeroSlide(index, { restartTimer = true } = {}) {
+  if (!homeHeroSlides.length) return;
+  homeHeroIndex = (Number(index) + homeHeroSlides.length) % homeHeroSlides.length;
+  const slide = homeHeroSlides[homeHeroIndex];
+  const { game, entry: personalEntry } = slide;
+  const isPersonal = slide.kind === "personal";
+  const artwork = homeArtwork(game);
+
   ui.hero.classList.toggle("is-personal-hero", isPersonal);
+  ui.hero.dataset.slideKind = slide.kind;
   ui.heroImage.src = artwork;
   ui.heroImage.alt = game.title || "";
   ui.heroImage.onerror = () => { ui.heroImage.src = PLACEHOLDER; };
@@ -2130,13 +2221,14 @@ function renderHero() {
 
   if (isPersonal) {
     const gameJournalEntries = window.VaultJournal?.listEntries({ gameKey: gameKey(game) }) || [];
-    const journalMinutes = gameJournalEntries.reduce((sum, entry) => sum + Number(entry.minutesPlayed || 0), 0);
+    const latestEntry = gameJournalEntries[0] || null;
+    const journalMinutes = gameJournalEntries.reduce((sum, item) => sum + Number(item.minutesPlayed || 0), 0);
     const progress = window.VaultJournal?.getProgress(gameKey(game));
-    const totalMinutes = Math.max(journalMinutes, Number(progress?.manualPlaytimeMinutes || 0), Number(personalEntry.steamPlaytimeMinutes || 0));
-    ui.heroKicker.textContent = "IN EVIDENZA";
-    ui.heroDescription.textContent = game.description || game.summary || "Riprendi il viaggio e continua a costruire la tua storia di gioco.";
-    ui.heroPrice.textContent = "Giocato di recente";
-    ui.heroCountdown.textContent = totalMinutes ? `${formatMinutes(totalMinutes)} totali` : statusLabel(personalEntry.status);
+    const totalMinutes = Math.max(journalMinutes, Number(progress?.manualPlaytimeMinutes || 0), Number(personalEntry?.steamPlaytimeMinutes || 0));
+    ui.heroKicker.textContent = "IN EVIDENZA · DALLA TUA LIBRERIA";
+    ui.heroDescription.textContent = `Riprendi ${game.title} e continua a costruire la tua storia di gioco.`;
+    ui.heroPrice.textContent = latestEntry ? `Giocato ${relativeTime(latestEntry.playedAt || latestEntry.createdAt)}` : statusLabel(personalEntry?.status);
+    ui.heroCountdown.textContent = totalMinutes ? `${formatMinutes(totalMinutes)} totali` : `${entryProgress(personalEntry)}% completato`;
     ui.heroLink.textContent = "Vedi scheda gioco";
     ui.heroLink.href = gameRoute(game);
     ui.heroLink.removeAttribute("target");
@@ -2145,7 +2237,7 @@ function renderHero() {
     ui.heroDetails.hidden = true;
   } else {
     ui.heroKicker.textContent = "IN EVIDENZA · GRATIS ORA";
-    ui.heroDescription.textContent = game.description || "";
+    ui.heroDescription.textContent = "Disponibile gratuitamente per un periodo limitato. Aggiungilo ora alla tua libreria.";
     ui.heroPrice.textContent = game.fmt_original_price ? `${game.fmt_original_price} → GRATIS` : "GRATIS";
     ui.heroCountdown.textContent = countdownText(game);
     ui.heroLink.textContent = "Riscatta su Epic";
@@ -2159,6 +2251,27 @@ function renderHero() {
     ui.heroLibrary.onclick = () => toggleLibraryWithoutRerender(game);
     ui.heroDetails.onclick = () => navigate(gameRoute(game));
   }
+
+  renderHomeHeroDots();
+  if (restartTimer) startHomeHeroRotation();
+}
+
+function renderHero() {
+  const previousKey = homeHeroSlides[homeHeroIndex]
+    ? gameKey(homeHeroSlides[homeHeroIndex].game) || homeHeroSlides[homeHeroIndex].game?.title
+    : null;
+  homeHeroSlides = buildHomeHeroSlides();
+  const retainedIndex = previousKey
+    ? homeHeroSlides.findIndex((slide) => (gameKey(slide.game) || slide.game?.title) === previousKey)
+    : -1;
+  homeHeroIndex = retainedIndex >= 0 ? retainedIndex : 0;
+
+  ui.hero.hidden = state.route.name !== "home" || !homeHeroSlides.length;
+  if (!homeHeroSlides.length) {
+    stopHomeHeroRotation();
+    return;
+  }
+  renderHomeHeroSlide(homeHeroIndex);
 }
 
 function badgeText(game) {
@@ -2555,30 +2668,137 @@ function renderHomeDiaryPreview(diaryEntries = []) {
   </a>`;
 }
 
-function renderHomeCatalogFeature(entries = libraryEntryRecords()) {
-  if (!ui.homeEditorialFeature) return;
-  const featured = state.current[1]
-    ? normalizePromotion(state.current[1])
-    : state.upcoming[0]
-      ? normalizePromotion(state.upcoming[0])
-      : state.current[0]
-        ? normalizePromotion(state.current[0])
-        : entries[0]?.game || null;
+function catalogGameSlide(game, source = "catalog") {
+  if (!game?.title) return null;
+  const copyBySource = {
+    recommendation: "Una proposta selezionata a partire dalla tua libreria e dai tuoi segnali di gioco.",
+    community: "Tra i titoli più apprezzati e discussi dalla community di Ludograph.",
+    recent: "Una delle uscite più recenti entrate nell’archivio universale.",
+    indie: "Una scoperta indipendente scelta dall’archivio universale.",
+    catalog: "Un’opera da scoprire nell’archivio universale di Ludograph.",
+  };
+  const kickerBySource = {
+    recommendation: "SCELTO PER TE",
+    community: "IN EVIDENZA NEL CATALOGO",
+    recent: "NUOVO NELL’ARCHIVIO",
+    indie: "SCOPERTA INDIPENDENTE",
+    catalog: "IN EVIDENZA NEL CATALOGO",
+  };
+  return {
+    key: `game:${gameKey(game) || game.title}`,
+    title: game.title,
+    copy: copyBySource[source] || copyBySource.catalog,
+    artwork: homeArtwork(game),
+    href: gameRoute(game),
+    kicker: kickerBySource[source] || kickerBySource.catalog,
+    button: "Vedi scheda gioco",
+  };
+}
 
-  if (!featured) {
+function buildHomeCatalogSlides(entries = libraryEntryRecords()) {
+  const directory = state.editorialDirectory || { franchises: [], collections: [] };
+  const discovery = state.discoveryData || {};
+  const candidates = [];
+
+  for (const game of (state.discoveryRecommendations?.items || []).slice(0, 2)) {
+    candidates.push(catalogGameSlide(game, "recommendation"));
+  }
+  if (discovery.communityTop?.[0]) candidates.push(catalogGameSlide(discovery.communityTop[0], "community"));
+  if (discovery.recent?.[0]) candidates.push(catalogGameSlide(discovery.recent[0], "recent"));
+  if (discovery.indie?.[0]) candidates.push(catalogGameSlide(discovery.indie[0], "indie"));
+
+  for (const franchise of (directory.franchises || []).slice(0, 2)) {
+    candidates.push({
+      key: `franchise:${franchise.slug}`,
+      title: franchise.name,
+      copy: franchise.description || `Ripercorri ${franchise.game_count || "tutti i"} giochi, continuità e diramazioni della saga.`,
+      artwork: franchise.hero_image_url || PLACEHOLDER,
+      href: franchiseRoute(franchise.slug),
+      kicker: "FRANCHISE IN EVIDENZA",
+      button: "Esplora il franchise",
+    });
+  }
+  for (const collection of (directory.collections || []).slice(0, 1)) {
+    candidates.push({
+      key: `collection:${collection.slug}`,
+      title: collection.title,
+      copy: collection.description || "Una selezione editoriale curata per attraversare la storia del videogioco.",
+      artwork: collection.cover_image_url || PLACEHOLDER,
+      href: editorialCollectionRoute(collection.slug),
+      kicker: "COLLEZIONE IN EVIDENZA",
+      button: "Apri la collezione",
+    });
+  }
+
+  if (!candidates.filter(Boolean).length) {
+    for (const entry of entries.slice(0, 3)) candidates.push(catalogGameSlide(entry.game, "catalog"));
+  }
+
+  return uniqueHomeItems(candidates.filter(Boolean), (slide) => slide.key || slide.title).slice(0, 4);
+}
+
+function stopHomeCatalogRotation() {
+  if (homeCatalogTimer) window.clearInterval(homeCatalogTimer);
+  homeCatalogTimer = null;
+}
+
+function startHomeCatalogRotation() {
+  stopHomeCatalogRotation();
+  if (state.route.name !== "home" || homeCatalogSlides.length < 2) return;
+  homeCatalogTimer = window.setInterval(() => {
+    renderHomeCatalogSlide((homeCatalogIndex + 1) % homeCatalogSlides.length, { restartTimer: false });
+  }, HOME_CATALOG_ROTATION_MS);
+}
+
+function renderHomeCatalogDots() {
+  if (!ui.homeEditorialCarouselControls || !ui.homeEditorialDots) return;
+  ui.homeEditorialCarouselControls.hidden = homeCatalogSlides.length < 2;
+  ui.homeEditorialDots.replaceChildren();
+  homeCatalogSlides.forEach((slide, index) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.className = "carousel-dot";
+    dot.setAttribute("role", "tab");
+    dot.setAttribute("aria-label", `Mostra ${slide.title}`);
+    dot.setAttribute("aria-selected", String(index === homeCatalogIndex));
+    dot.classList.toggle("is-active", index === homeCatalogIndex);
+    dot.addEventListener("click", () => renderHomeCatalogSlide(index));
+    ui.homeEditorialDots.append(dot);
+  });
+}
+
+function renderHomeCatalogSlide(index, { restartTimer = true } = {}) {
+  if (!homeCatalogSlides.length) return;
+  homeCatalogIndex = (Number(index) + homeCatalogSlides.length) % homeCatalogSlides.length;
+  const slide = homeCatalogSlides[homeCatalogIndex];
+  ui.homeEditorialFeatureKicker.textContent = slide.kicker;
+  ui.homeEditorialFeatureTitle.textContent = slide.title;
+  ui.homeEditorialFeatureCopy.textContent = slide.copy;
+  ui.homeEditorialFeatureLink.href = slide.href;
+  ui.homeEditorialFeatureLink.textContent = slide.button;
+  ui.homeEditorialFeature.style.setProperty("--home-feature-art", slide.artwork ? `url("${String(slide.artwork).replaceAll('"', '%22')}")` : "none");
+  renderHomeCatalogDots();
+  if (restartTimer) startHomeCatalogRotation();
+}
+
+function renderHomeCatalogFeature(entries = libraryEntryRecords()) {
+  const previousKey = homeCatalogSlides[homeCatalogIndex]?.key || null;
+  homeCatalogSlides = buildHomeCatalogSlides(entries);
+  const retainedIndex = previousKey ? homeCatalogSlides.findIndex((slide) => slide.key === previousKey) : -1;
+  homeCatalogIndex = retainedIndex >= 0 ? retainedIndex : 0;
+
+  if (!homeCatalogSlides.length) {
+    stopHomeCatalogRotation();
+    ui.homeEditorialFeatureKicker.textContent = "ARCHIVIO EDITORIALE";
     ui.homeEditorialFeatureTitle.textContent = "Esplora oltre la libreria.";
     ui.homeEditorialFeatureCopy.textContent = "Franchise, continuità e collezioni curate per riscoprire la storia del medium.";
     ui.homeEditorialFeatureLink.href = "#/franchises";
+    ui.homeEditorialFeatureLink.textContent = "Esplora l’archivio";
     ui.homeEditorialFeature.style.setProperty("--home-feature-art", "none");
+    ui.homeEditorialCarouselControls.hidden = true;
     return;
   }
-
-  const artwork = featured.hero_image_url || featured.background_image_url || featured.image_url || "";
-  ui.homeEditorialFeatureTitle.textContent = featured.title;
-  ui.homeEditorialFeatureCopy.textContent = featured.description || (getMode(featured) === "upcoming" ? "Un nuovo titolo sta per arrivare nel catalogo." : "Scopri una delle opere attualmente in evidenza.");
-  ui.homeEditorialFeatureLink.href = gameRoute(featured);
-  ui.homeEditorialFeatureLink.textContent = "Scopri di più";
-  ui.homeEditorialFeature.style.setProperty("--home-feature-art", artwork ? `url("${String(artwork).replaceAll('"', '%22')}")` : "none");
+  renderHomeCatalogSlide(homeCatalogIndex);
 }
 
 function renderHomeEditorialHighlights(entries = libraryEntryRecords()) {
@@ -2621,17 +2841,77 @@ function renderHomeEditorialHighlights(entries = libraryEntryRecords()) {
   }
 }
 
-async function hydrateHomeEditorialHighlights(entries = libraryEntryRecords()) {
-  if (state.editorialDirectory || state.homeEditorialLoading || !window.VaultFranchises) return;
+async function hydrateHomeHighlights(entries = libraryEntryRecords()) {
+  if (state.homeEditorialLoading || state.homeDiscoveryLoading) return;
   state.homeEditorialLoading = true;
+  state.homeDiscoveryLoading = true;
   try {
-    state.editorialDirectory = await window.VaultFranchises.getDirectory() || { franchises: [], collections: [] };
-    if (state.route.name === "home") renderHomeEditorialHighlights(entries);
+    const tasks = [];
+    if (!state.editorialDirectory && window.VaultFranchises) {
+      tasks.push(window.VaultFranchises.getDirectory().then((directory) => {
+        state.editorialDirectory = directory || { franchises: [], collections: [] };
+      }));
+    }
+    if (!state.discoveryData && window.VaultCatalog?.configured()) {
+      tasks.push(window.VaultCatalog.getDiscovery({ limit: 8 }).then((data) => { state.discoveryData = data; }));
+    }
+    if (!state.discoveryRecommendations && state.auth.user && window.VaultCatalog?.getRecommendations) {
+      tasks.push(window.VaultCatalog.getRecommendations({ limit: 8 }).then((data) => { state.discoveryRecommendations = data; }));
+    }
+    if (tasks.length) await Promise.allSettled(tasks);
+    if (state.route.name === "home") {
+      renderHomeCatalogFeature(entries);
+      renderHomeEditorialHighlights(entries);
+    }
   } catch (error) {
-    console.warn("Highlights editoriali Home non disponibili", error);
+    console.warn("Highlights Home non disponibili", error);
   } finally {
     state.homeEditorialLoading = false;
+    state.homeDiscoveryLoading = false;
   }
+}
+
+function homeActivityIcon(type) {
+  const icon = {
+    journal: "diary",
+    session: "clock",
+    completed: "trophy",
+    favorite: "heart",
+    library: "library-add",
+  }[type] || "library-add";
+  return `<svg aria-hidden="true"><use href="#icon-${icon}"></use></svg>`;
+}
+
+function buildHomeActivity(entries, diaryEntries) {
+  const activities = [];
+  for (const item of diaryEntries) {
+    activities.push({
+      ...item,
+      type: item.note ? "journal" : "session",
+      detail: item.note ? "Ha aggiunto una nuova entrata al diario" : "Ha aggiornato il tempo di gioco",
+      timestamp: item.playedAt || item.createdAt,
+    });
+  }
+  for (const entry of entries) {
+    const type = entry.status === "completed" ? "completed" : entry.favorite ? "favorite" : "library";
+    const detail = type === "completed"
+      ? "Ha completato"
+      : type === "favorite"
+        ? "Ha aggiunto ai preferiti"
+        : "Ha aggiunto alla libreria";
+    activities.push({
+      gameKey: gameKey(entry.game),
+      gameTitle: entry.game.title,
+      gameImageUrl: entry.game.image_url,
+      type,
+      detail,
+      timestamp: entry.updatedAt || entry.addedAt,
+    });
+  }
+  return uniqueHomeItems(
+    activities.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)),
+    (item) => `${item.type}:${item.gameKey || item.gameTitle}`
+  ).slice(0, 4);
 }
 
 function renderHomeExperience() {
@@ -2639,7 +2919,11 @@ function renderHomeExperience() {
   ui.homeStage.hidden = !isHome;
   ui.homePersonalGrid.hidden = !isHome;
   document.querySelector("#dashboard-page > .stats-grid").hidden = !isHome;
-  if (!isHome) return;
+  if (!isHome) {
+    stopHomeHeroRotation();
+    stopHomeCatalogRotation();
+    return;
+  }
 
   const displayName = state.auth.profile?.display_name || state.auth.profile?.username || "GIOCATORE";
   ui.homeWelcomeName.textContent = String(displayName).toLocaleUpperCase("it");
@@ -2661,11 +2945,8 @@ function renderHomeExperience() {
     }
   }
 
-  const diaryEntries = window.VaultJournal?.listEntries({ limit: 4 }) || [];
-  const activity = diaryEntries.length ? diaryEntries : entries.slice(0, 4).map((entry) => ({
-    gameKey: gameKey(entry.game), gameTitle: entry.game.title, gameImageUrl: entry.game.image_url,
-    playedAt: entry.updatedAt || entry.addedAt, minutesPlayed: 0, note: "Aggiunto alla libreria",
-  }));
+  const diaryEntries = window.VaultJournal?.listEntries({ limit: 8 }) || [];
+  const activity = buildHomeActivity(entries, diaryEntries);
   ui.homeActivityList.replaceChildren();
   if (!activity.length) {
     ui.homeActivityList.innerHTML = `<div class="v55-empty"><strong>La tua storia comincia qui.</strong><span>Aggiungi giochi o registra una sessione.</span></div>`;
@@ -2673,10 +2954,9 @@ function renderHomeExperience() {
     for (const itemData of activity) {
       const game = journalGame(itemData);
       const item = document.createElement("a");
-      item.className = "home-activity-item";
+      item.className = `home-activity-item is-${itemData.type}`;
       item.href = gameRoute(game);
-      const detail = itemData.minutesPlayed ? `${formatMinutes(itemData.minutesPlayed)} registrati` : (itemData.note || "Attività libreria");
-      item.innerHTML = `<span class="activity-symbol">${itemData.minutesPlayed ? "◷" : "+"}</span><span><small>${escapeHtml(detail)}</small><strong>${escapeHtml(itemData.gameTitle || game.title)}</strong></span><time>${relativeTime(itemData.playedAt || itemData.createdAt)}</time>`;
+      item.innerHTML = `<span class="activity-symbol">${homeActivityIcon(itemData.type)}</span><span><small>${escapeHtml(itemData.detail)}</small><strong>${escapeHtml(itemData.gameTitle || game.title)}</strong></span><time>${relativeTime(itemData.timestamp)}</time>`;
       ui.homeActivityList.append(item);
     }
   }
@@ -2684,7 +2964,7 @@ function renderHomeExperience() {
   renderHomeDiaryPreview(diaryEntries);
   renderHomeCatalogFeature(entries);
   renderHomeEditorialHighlights(entries);
-  void hydrateHomeEditorialHighlights(entries);
+  void hydrateHomeHighlights(entries);
 }
 
 function libraryLaneMarkup(title, entries, variant = "compact") {
@@ -5030,6 +5310,23 @@ function applyAvatar(element, user, profile) {
   element.textContent = url ? "" : initialsForAccount(user, profile);
 }
 
+function accountLevelValue() {
+  const entries = libraryEntryRecords();
+  const journalEntries = window.VaultJournal?.listEntries() || [];
+  const completed = entries.filter((entry) => entry.status === "completed").length;
+  const favorites = entries.filter((entry) => entry.favorite).length;
+  const minutes = journalEntries.reduce((sum, entry) => sum + Math.max(0, Number(entry.minutesPlayed || 0)), 0);
+  const points = entries.length * 28 + completed * 120 + favorites * 45 + journalEntries.length * 36 + Math.floor(minutes / 20);
+  return Math.max(1, Math.floor(points / 150) + 1);
+}
+
+function updateAccountLevelLabel(snapshot = state.auth) {
+  if (!ui.accountLevel) return;
+  if (!snapshot?.configured) ui.accountLevel.textContent = "Configurazione richiesta";
+  else if (!snapshot?.user) ui.accountLevel.textContent = "Profilo locale";
+  else ui.accountLevel.textContent = `Livello ${accountLevelValue()}`;
+}
+
 function updateAccountUI(snapshot) {
   state.auth = snapshot;
   state.admin.loaded = false;
@@ -5040,6 +5337,7 @@ function updateAccountUI(snapshot) {
     ui.accountAvatar.classList.remove("has-image");
     ui.accountAvatar.style.backgroundImage = "";
     ui.accountButton.setAttribute("aria-label", "Configura account");
+    updateAccountLevelLabel(snapshot);
     ui.sidebarDataNote.textContent = "Account cloud non configurato.";
     void refreshNotificationCount();
     return;
@@ -5050,6 +5348,7 @@ function updateAccountUI(snapshot) {
     ui.accountAvatar.classList.remove("has-image");
     ui.accountAvatar.style.backgroundImage = "";
     ui.accountButton.setAttribute("aria-label", "Accedi");
+    updateAccountLevelLabel(snapshot);
     ui.sidebarDataNote.textContent = "I dati personali sono salvati localmente.";
     void refreshNotificationCount();
     return;
@@ -5057,6 +5356,7 @@ function updateAccountUI(snapshot) {
   ui.accountLabel.textContent = snapshot.profile?.display_name || snapshot.profile?.username || "Profilo";
   ui.accountButton.setAttribute("aria-label", `Apri account di ${ui.accountLabel.textContent}`);
   applyAvatar(ui.accountAvatar, snapshot.user, snapshot.profile);
+  updateAccountLevelLabel(snapshot);
   ui.sidebarDataNote.textContent = "Libreria, liste e attività sono collegate al tuo account.";
   void refreshNotificationCount();
 }
@@ -7448,6 +7748,19 @@ $("#picker-create-list").addEventListener("click", () => {
 ui.exportLibrary.addEventListener("click", exportData);
 ui.importLibrary.addEventListener("click", () => ui.importLibraryFile.click());
 ui.importLibraryFile.addEventListener("change", () => importData(ui.importLibraryFile.files[0]));
+ui.heroCarouselPrevious?.addEventListener("click", () => renderHomeHeroSlide(homeHeroIndex - 1));
+ui.heroCarouselNext?.addEventListener("click", () => renderHomeHeroSlide(homeHeroIndex + 1));
+ui.hero?.addEventListener("mouseenter", stopHomeHeroRotation);
+ui.hero?.addEventListener("mouseleave", startHomeHeroRotation);
+ui.hero?.addEventListener("focusin", stopHomeHeroRotation);
+ui.hero?.addEventListener("focusout", startHomeHeroRotation);
+ui.homeEditorialPrevious?.addEventListener("click", () => renderHomeCatalogSlide(homeCatalogIndex - 1));
+ui.homeEditorialNext?.addEventListener("click", () => renderHomeCatalogSlide(homeCatalogIndex + 1));
+ui.homeEditorialFeature?.addEventListener("mouseenter", stopHomeCatalogRotation);
+ui.homeEditorialFeature?.addEventListener("mouseleave", startHomeCatalogRotation);
+ui.homeEditorialFeature?.addEventListener("focusin", stopHomeCatalogRotation);
+ui.homeEditorialFeature?.addEventListener("focusout", startHomeCatalogRotation);
+
 ui.accountButton.addEventListener("click", () => navigate(state.auth.user ? "#/profile" : "#/login"));
 ui.notificationButton.addEventListener("click", () => navigate(state.auth.user ? "#/notifications" : "#/login"));
 

@@ -29,7 +29,7 @@ def test_v54_tracks_current_route_for_route_level_presentation():
 
 def test_v54_pwa_caches_visual_layer():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-1-home-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-2-home-topbar-fidelity"' in worker
     assert '"./visual-overhaul.css"' in worker
 
 
