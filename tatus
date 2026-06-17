@@ -1,0 +1,135 @@
+[33mec1fa89[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m chore: update Epic free games data
+[33m527e233[m Rebuild Ludograph interface v5.5
+[33mc283a10[m Add complete visual overhaul v5.4
+[33mbbf55af[m chore: update Epic free games data
+[33mf8aecab[m Fix franchise page loading and stale hero v5.3.9
+[33m8513b1c[m Optimize editorial JSON import v5.3.8
+[33mcf6473e[m chore: update Epic free games data
+[33m486f254[m Optimize franchise batch saving v5.3.7
+[33mc6f0b34[m Fix invalid variant results in global and editorial search
+[33mee96d69[m Fix editorial franchise search scalability v5.3.5
+[33m4e4dcbc[m Fix catalog search execution plan v5.3.4
+[33m9e2f436[m chore: update Epic free games data
+[33m4397e50[m Add canonical game works and resilient cloud sync v5.3.2
+[33md0ad333[m Add search disambiguation and franchise deduplication v5.3.1
+[33m0c08263[m chore: update Epic free games data
+[33m078fa0a[m chore: update Epic free games data
+[33m61cbc0f[m Rebrand project as Ludograph and add platform identity v5.3
+[33m1f8b1da[m chore: update Epic free games data
+[33m156b3be[m Add franchise graph and editorial JSON import v5.2
+[33m8496b2c[m Refine store logos and editorial UI
+[33m5fc4ec6[m Fix franchise editor header overlap
+[33m385354e[m Add frontend and editorial overhaul v5.1
+[33mfbc2be2[m chore: update Epic free games data
+[33m4cc5f54[m chore: update Epic free games data
+[33me4e802c[m chore: update Epic free games data
+[33m85de238[m Restore catalog safe date helper
+[33m553753d[m Fix IGDB PostgREST batch RPC resolution
+[33ma32cc63[m Verify self-hosted Supabase target
+[33m924a9b3[m Fix IGDB game status query
+[33m833dfd4[m Add Universal Game Database v5.0 phase 1
+[33md318df4[m chore: update Epic free games data
+[33m8aa0222[m chore: update Epic free games data
+[33m196df0e[m Add PlayStation catalog sync v4.8
+[33m595d21c[m chore: raise catalog storage limit for self-hosted database
+[33ma404077[m chore: switch production to self-hosted Supabasev2
+[33m186f13c[m chore: switch production to self-hosted Supabase
+[33mdb51e7f[m feat: add complete self-hosted auth email templates v4.7.8
+[33m87e508e[m feat: add OTP password recovery v4.7.7
+[33mac24d98[m fix: handle auth callback errors and password recovery v4.7.6
+[33m20cc33e[m chore: update Epic free games data
+[33m992c496[m chore: update Epic free games data
+[33m7870ce5[m chore: update Epic free games data
+[33m0b3633f[m chore: update Epic free games data
+[33m1d5ebe5[m chore: update Epic free games data
+[33md86604d[m chore: update Epic free games data
+[33mf75eb04[m chore: update Epic free games data
+[33mdbb7ab3[m chore: update Epic free games data
+[33m39792d8[m fix: optimize catalog search performance v4.7.4
+[33m34b59ce[m chore: update Epic free games data
+[33m20fea9c[m chore: update Epic free games data
+[33m7246fd0[m fix: fetch Steam metadata per app and preserve original release years
+[33m75224eb[m fix: enrich franchise games with Steam metadata v4.7.2
+[33m9fb2ae5[m fix: complete v4.7.1 files and migrations
+[33ma0235fb[m fix: add true bulk franchise game selection v4.7.1
+[33m047f5d5[m chore: update Epic free games data
+[33m08b40d0[m chore: update Epic free games data
+[33m7d635db[m feat: add franchises and editorial collections v4.6
+[33m80b86cb[m chore: update Epic free games data
+[33mcbb4baa[m fix: preserve progress form when selecting personal rating
+[33m2ebeabb[m chore: update Epic free games data
+[33m1623f72[m feat: add catalog quality and admin tools
+[33m50d73ef[m test: align cache assertions with runtime hotfix
+[33m41fdf6f[m chore: update Epic free games data
+[33m44653e0[m fix: restore frontend runtime after discovery update
+[33m5be1934[m feat: add advanced discovery and catalog entity pages
+[33m5d43649[m feat: add complete mobile drawer and filter panel
+[33m491147e[m chore: update Epic free games data
+[33m2a0aabf[m chore: update Epic free games data
+[33m644e12b[m feat: add game journal progress and personal statistics
+[33md6b4fa6[m chore: update Epic free games data
+[33m6186b46[m fix: isolate local data between user accounts
+[33m502e0a9[m chore: update Epic free games data
+[33m85ce57c[m fix: make catalog synchronization incremental
+[33m1fd597a[m chore: update Epic free games data
+[33m92d2f3b[m fix: add preaggregated catalog read model
+[33mce711f7[m fix: finalize large catalogs in bounded batches
+[33mb019b42[m feat: move catalog search and pagination to Supabase
+[33m218026b[m chore: update Epic free games data
+[33ma897d68[m chore: sync Epic catalog
+[33m6428e4e[m chore: sync Steam catalog
+[33m6c7675f[m fix: use public Steam API and prevent test network calls
+[33m83a6881[m chore: sync Steam catalog
+[33mbafbb09[m fix: use public Steam Web API host
+[33m126b040[m chore: sync Epic catalog
+[33m5283a01[m feat: add Steam catalog account linking and library import
+[33m6ebb580[m feat: add follows activity feed likes comments and notifications
+[33m879de9c[m chore: update Epic free games data
+[33m0ee7f01[m fix in supabase folder
+[33m248b986[m feat: add global search contextual filters and multistore foundation
+[33m1300ba2[m chore: update Epic free games data
+[33m6300347[m feat: add public reviews profiles and shareable lists
+[33m1a72102[m feat: complete account settings privacy and recovery
+[33me84d050[m chore: update Epic free games data
+[33m989669b[m feat: add routed game pages and full user profiles
+[33m591ba23[m Update Supabase configuration with new URL and key
+[33m983a7f1[m feat: add user accounts and cloud synchronization
+[33m01930c5[m feat: add user accounts and cloud synchronization
+[33m6fffd66[m Refactor stat-icon styles for better color handling
+[33m3ac6719[m Update service-worker.js
+[33m5f2ad34[m Fix CACHE_NAME in service worker and update stat-icon SVG dimensions in styles.css
+[33m3b3d256[m Refactor stat card and grid styles in styles.css
+[33m46f0206[m chore: update Epic free games data
+[33md4c8a1d[m Add styles for stat-icon SVG elements
+[33m3679a0e[m Update stat cards with SVG icons and structure
+[33m4172603[m Update CACHE_NAME for service worker
+[33mdffa822[m Refactor styles for stat icons and mobile topbar
+[33m19f7c3a[m Improve game price handling and visibility
+[33m77e51cf[m Remove menu button from the topbar
+[33m25fc4a9[m Implement mobile styles for navigation and search
+[33m59ed800[m Refactor mobile navigation buttons for clarity
+[33m9fdc80d[m Hide menu button when present
+[33m2b54a71[m chore: sync Epic catalog
+[33m64a49b2[m chore: update Epic free games data
+[33m47c78e8[m chore: update Epic free games data
+[33me4222e2[m chore: sync Epic catalog
+[33m6d34cfd[m Improve error handling in catalog_client.py
+[33med0f959[m chore: update Epic free games data
+[33mc34950c[m fix: update Epic catalog GraphQL endpoint
+[33ma3a9e05[m feat: add IndexedDB library notes and ratings
+[33m475f24a[m feat: add IndexedDB library notes and ratings
+[33mde8f022[m feat: refine mobile UI and add library import export
+[33m6ccf1ec[m chore: update Epic free games data
+[33mede355b[m fix: restore repository structure and release v2
+[33mf888599[m Add files via upload
+[33m813c5e4[m Update GitHub Actions and add new files to commit
+[33m75de3e2[m feat: release The Free Vault v2
+[33m4233fd8[m chore: update Epic free games data
+[33m512420e[m chore: update Epic free games data
+[33mf0f3b42[m Restore GitHub Actions workflow
+[33m89a2e66[m Merge remote repository and keep tested local poller
+[33mebdbab9[m Initial commit
+[33m315e6de[m Delete CNAME
+[33m5c4ff57[m Create CNAME
+[33meea5bdc[m Add files via upload
+[33m75f826f[m Initial commit
