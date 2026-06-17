@@ -47,4 +47,4 @@ def test_v539_frontend_loads_variants_lazily():
 
 def test_v539_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-7-game-page-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-8-game-media-gallery"' in worker

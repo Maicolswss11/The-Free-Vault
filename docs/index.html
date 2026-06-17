@@ -606,11 +606,29 @@
 
           <nav class="game-subnav" aria-label="Sezioni della scheda">
             <button data-game-scroll="game-overview" type="button">Panoramica</button>
+            <button id="game-media-nav" data-game-scroll="game-media-panel" type="button" hidden>Media</button>
             <button data-game-scroll="game-progress-panel" type="button">Il tuo percorso</button>
             <button data-game-scroll="game-session-panel" type="button">Diario</button>
             <button data-game-scroll="game-page-availability" type="button">Disponibilità</button>
             <button data-game-scroll="game-social-panel" type="button">Recensioni</button>
           </nav>
+
+          <section id="game-media-panel" class="game-media-panel detail-panel" hidden>
+            <header class="game-media-heading">
+              <div>
+                <p class="eyebrow">GALLERIA</p>
+                <h2>Screenshot e video</h2>
+              </div>
+              <span id="game-media-count" class="game-media-count"></span>
+            </header>
+            <div id="game-media-gallery" class="game-media-gallery" aria-live="polite"></div>
+          </section>
+
+          <dialog id="game-media-dialog" class="game-media-dialog" aria-label="Visualizzatore media">
+            <button id="game-media-dialog-close" class="game-media-dialog-close" type="button" aria-label="Chiudi visualizzatore">×</button>
+            <div id="game-media-dialog-content" class="game-media-dialog-content"></div>
+            <p id="game-media-dialog-caption" class="game-media-dialog-caption"></p>
+          </dialog>
 
           <div id="game-overview" class="game-detail-grid">
             <section id="game-progress-panel" class="detail-panel game-progress-panel">

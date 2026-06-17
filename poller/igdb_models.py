@@ -164,6 +164,54 @@ def _cover_url(raw: dict[str, Any]) -> str | None:
     return f"https://images.igdb.com/igdb/image/upload/t_cover_big_2x/{image_id}.jpg"
 
 
+def _igdb_image_url(image_id: str, size: str = "t_screenshot_huge") -> str:
+    return f"https://images.igdb.com/igdb/image/upload/{size}/{image_id}.jpg"
+
+
+def _media_images(raw: dict[str, Any], field_name: str, *, limit: int) -> list[dict[str, object]]:
+    media: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for item in raw.get(field_name) or []:
+        if not isinstance(item, dict):
+            continue
+        image_id = _text(item.get("image_id"))
+        if not image_id or image_id in seen:
+            continue
+        seen.add(image_id)
+        media.append({
+            "image_id": image_id,
+            "url": _igdb_image_url(image_id),
+            "thumbnail_url": _igdb_image_url(image_id, "t_screenshot_med"),
+            "width": _integer(item.get("width")),
+            "height": _integer(item.get("height")),
+        })
+        if len(media) >= limit:
+            break
+    return media
+
+
+def _media_videos(raw: dict[str, Any], *, limit: int = 8) -> list[dict[str, object]]:
+    videos: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for item in raw.get("videos") or []:
+        if not isinstance(item, dict):
+            continue
+        video_id = _text(item.get("video_id"))
+        if not video_id or video_id in seen:
+            continue
+        seen.add(video_id)
+        videos.append({
+            "name": _text(item.get("name")) or "Trailer",
+            "video_id": video_id,
+            "url": f"https://www.youtube.com/watch?v={video_id}",
+            "embed_url": f"https://www.youtube-nocookie.com/embed/{video_id}",
+            "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+        })
+        if len(videos) >= limit:
+            break
+    return videos
+
+
 def _platform_family(name: str | None, slug: str | None) -> str:
     identity = normalize_identity(" ".join(filter(None, (name, slug))))
     if any(marker in identity for marker in ("playstation", "ps vita", "psp")):
@@ -351,6 +399,9 @@ def normalize_igdb_page(records: Iterable[dict[str, Any]]) -> MasterBatch:
         cover_url = _cover_url(raw)
         source_url = _text(raw.get("url")) or f"https://www.igdb.com/games/{slug}"
         alternatives = _alternative_titles(raw)
+        screenshots = _media_images(raw, "screenshots", limit=12)
+        artworks = _media_images(raw, "artworks", limit=6)
+        videos = _media_videos(raw)
 
         platform_slugs: list[str] = []
         for platform_raw in raw.get("platforms") or []:
@@ -390,6 +441,9 @@ def normalize_igdb_page(records: Iterable[dict[str, Any]]) -> MasterBatch:
                 "version_parent": _object_id(raw.get("version_parent")),
                 "rating": raw.get("rating"),
                 "rating_count": raw.get("rating_count"),
+                "screenshots": screenshots,
+                "artworks": artworks,
+                "videos": videos,
             },
         })
 

@@ -139,6 +139,14 @@ const ui = {
   dashboardPage: $("#dashboard-page"),
   gamePage: $("#game-page"),
   gamePageBackdrop: $("#game-page-backdrop"),
+  gameMediaNav: $("#game-media-nav"),
+  gameMediaPanel: $("#game-media-panel"),
+  gameMediaCount: $("#game-media-count"),
+  gameMediaGallery: $("#game-media-gallery"),
+  gameMediaDialog: $("#game-media-dialog"),
+  gameMediaDialogClose: $("#game-media-dialog-close"),
+  gameMediaDialogContent: $("#game-media-dialog-content"),
+  gameMediaDialogCaption: $("#game-media-dialog-caption"),
   gameSummaryProgress: $("#game-summary-progress"),
   gameSummaryProgressRing: $("#game-summary-progress-ring"),
   gameSummaryProgressStatus: $("#game-summary-progress-status"),
@@ -3194,10 +3202,137 @@ function renderCommunityGameRating(reviews, unavailableMessage = "") {
   }
 }
 
+function gameMediaUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw, window.location.href);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizedGameMedia(game) {
+  const seenImages = new Set();
+  const images = [];
+  const appendImages = (items, kind) => {
+    for (const item of Array.isArray(items) ? items : []) {
+      const source = typeof item === "string" ? item : item?.url;
+      const url = gameMediaUrl(source);
+      if (!url || seenImages.has(url)) continue;
+      seenImages.add(url);
+      images.push({
+        type: "image",
+        kind,
+        url,
+        thumbnailUrl: gameMediaUrl(item?.thumbnail_url) || url,
+        caption: kind === "artwork" ? `Artwork di ${game?.title || "gioco"}` : `Screenshot di ${game?.title || "gioco"}`,
+      });
+    }
+  };
+  appendImages(game?.screenshots, "screenshot");
+  appendImages(game?.artworks, "artwork");
+
+  const seenVideos = new Set();
+  const videos = [];
+  for (const item of Array.isArray(game?.videos) ? game.videos : []) {
+    const rawId = String(item?.video_id || "").trim();
+    if (!/^[A-Za-z0-9_-]{6,32}$/.test(rawId) || seenVideos.has(rawId)) continue;
+    seenVideos.add(rawId);
+    videos.push({
+      type: "video",
+      videoId: rawId,
+      thumbnailUrl: gameMediaUrl(item?.thumbnail_url) || `https://i.ytimg.com/vi/${rawId}/hqdefault.jpg`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${rawId}`,
+      caption: String(item?.name || "Trailer").trim() || "Trailer",
+    });
+  }
+  return [...images, ...videos];
+}
+
+function closeGameMediaDialog() {
+  if (!ui.gameMediaDialog) return;
+  ui.gameMediaDialogContent?.replaceChildren();
+  if (ui.gameMediaDialog.open) ui.gameMediaDialog.close();
+}
+
+function openGameMediaDialog(item) {
+  if (!ui.gameMediaDialog || !ui.gameMediaDialogContent) return;
+  ui.gameMediaDialogContent.replaceChildren();
+  if (item.type === "video") {
+    const iframe = document.createElement("iframe");
+    iframe.src = `${item.embedUrl}?autoplay=1&rel=0`;
+    iframe.title = item.caption;
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    ui.gameMediaDialogContent.append(iframe);
+  } else {
+    const image = document.createElement("img");
+    image.src = item.url;
+    image.alt = item.caption;
+    ui.gameMediaDialogContent.append(image);
+  }
+  if (ui.gameMediaDialogCaption) ui.gameMediaDialogCaption.textContent = item.caption;
+  if (!ui.gameMediaDialog.open) ui.gameMediaDialog.showModal();
+}
+
+function renderGameMedia(game) {
+  if (!ui.gameMediaPanel || !ui.gameMediaGallery) return;
+  const media = normalizedGameMedia(game);
+  const available = media.length > 0;
+  ui.gameMediaPanel.hidden = !available;
+  if (ui.gameMediaNav) ui.gameMediaNav.hidden = !available;
+  ui.gameMediaGallery.replaceChildren();
+  if (ui.gameMediaCount) {
+    ui.gameMediaCount.textContent = available
+      ? `${media.length.toLocaleString("it-IT")} ${media.length === 1 ? "contenuto" : "contenuti"}`
+      : "";
+  }
+  closeGameMediaDialog();
+  if (!available) return;
+
+  media.slice(0, 5).forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `game-media-item${index === 0 ? " is-featured" : ""}${item.type === "video" ? " is-video" : ""}`;
+    button.setAttribute("aria-label", item.type === "video" ? `Riproduci ${item.caption}` : `Apri ${item.caption}`);
+    const image = document.createElement("img");
+    image.src = item.thumbnailUrl || item.url;
+    image.alt = "";
+    image.loading = index === 0 ? "eager" : "lazy";
+    image.decoding = "async";
+    image.onerror = () => { image.src = game.image_url || PLACEHOLDER; };
+    button.append(image);
+    const overlay = document.createElement("span");
+    overlay.className = "game-media-item-overlay";
+    overlay.innerHTML = item.type === "video"
+      ? `<i aria-hidden="true">▶</i><b>${escapeHtml(item.caption)}</b>`
+      : `<b>${item.kind === "artwork" ? "Artwork" : "Screenshot"}</b>`;
+    button.append(overlay);
+    if (index === 4 && media.length > 5) {
+      const more = document.createElement("em");
+      more.textContent = `+${media.length - 5}`;
+      button.append(more);
+    }
+    button.onclick = () => openGameMediaDialog(item);
+    ui.gameMediaGallery.append(button);
+  });
+
+  if (ui.gameMediaDialogClose) ui.gameMediaDialogClose.onclick = closeGameMediaDialog;
+  ui.gameMediaDialog.onclick = (event) => {
+    if (event.target === ui.gameMediaDialog) closeGameMediaDialog();
+  };
+  ui.gameMediaDialog.onclose = () => ui.gameMediaDialogContent?.replaceChildren();
+}
+
 function gameDetailArtwork(game) {
   return game?.hero_image_url
     || game?.background_image_url
     || game?.wide_image_url
+    || gameMediaUrl(game?.artworks?.[0]?.url)
+    || gameMediaUrl(game?.screenshots?.[0]?.url)
     || game?.image_url
     || PLACEHOLDER;
 }
@@ -4474,6 +4609,18 @@ async function renderGamePage() {
       console.error("Caricamento scheda gioco fallito", error);
     }
   }
+  if (game && window.VaultCatalog?.configured() && !Object.prototype.hasOwnProperty.call(game, "media_count")) {
+    try {
+      const detailedGame = await window.VaultCatalog.getGame(state.route.params.key, { force: true });
+      if (detailedGame) {
+        game = detailedGame;
+        registerCatalogGame(game);
+      }
+    } catch (error) {
+      console.warn("Caricamento media della scheda fallito", error);
+    }
+  }
+
   if (!game || state.route.name !== "game") {
     updateDocumentTitle("Gioco non trovato");
     ui.gamePageTitle.textContent = "Gioco non trovato";
@@ -4481,6 +4628,8 @@ async function renderGamePage() {
     ui.gamePageImage.src = PLACEHOLDER;
     ui.gamePageMeta.replaceChildren();
     ui.gamePagePromotions.replaceChildren();
+    if (ui.gameMediaPanel) ui.gameMediaPanel.hidden = true;
+    if (ui.gameMediaNav) ui.gameMediaNav.hidden = true;
     ui.gameRelatedSection.hidden = true;
     return;
   }
@@ -4561,6 +4710,7 @@ async function renderGamePage() {
   renderStoreOptions(game);
   renderPromotionTimeline(game);
   renderGameSessions(game);
+  renderGameMedia(game);
   void renderRelatedGames(game);
   void renderGameEditorialMemberships(game);
   void renderGameSocial(game);
