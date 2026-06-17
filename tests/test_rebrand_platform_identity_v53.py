@@ -17,7 +17,7 @@ def test_v53_rebrands_public_pwa_as_ludograph():
     assert '<strong>Ludograph</strong>' in html
     assert '"name": "Ludograph"' in manifest
     assert '`${label} · Ludograph`' in app
-    assert 'const CACHE_NAME = "ludograph-v5-5-6-profile-personalization"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-7-game-page-fidelity"' in worker
     assert (ROOT / "docs/icons/brand/ludograph-mark-64.png").is_file()
     assert (ROOT / "docs/icons/icon-192.png").read_bytes().startswith(b"\x89PNG")
 

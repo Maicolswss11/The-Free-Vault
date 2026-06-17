@@ -140,9 +140,19 @@ const ui = {
   gamePage: $("#game-page"),
   gamePageBackdrop: $("#game-page-backdrop"),
   gameSummaryProgress: $("#game-summary-progress"),
+  gameSummaryProgressRing: $("#game-summary-progress-ring"),
+  gameSummaryProgressStatus: $("#game-summary-progress-status"),
+  gameSummaryLastPlayed: $("#game-summary-last-played"),
+  gameSummarySessionCount: $("#game-summary-session-count"),
   gameSummaryHours: $("#game-summary-hours"),
+  gameSummaryLatestNote: $("#game-summary-latest-note"),
   gameSummaryStatus: $("#game-summary-status"),
+  gameSummaryAdded: $("#game-summary-added"),
+  gameSummaryPlatform: $("#game-summary-platform"),
+  gameSummaryListCount: $("#game-summary-list-count"),
   gameSummaryRating: $("#game-summary-rating"),
+  gameSummaryRatingStars: $("#game-summary-rating-stars"),
+  gameSummaryRatingCopy: $("#game-summary-rating-copy"),
   authPage: $("#auth-page"),
   profilePage: $("#profile-page"),
   profileHeroBackdrop: $("#profile-hero-backdrop"),
@@ -506,6 +516,11 @@ const ui = {
   gamePageSessions: $("#game-page-sessions"),
   gamePagePromotions: $("#game-page-promotions"),
   gamePageStoreOptions: $("#game-page-store-options"),
+  gameCommunityRatingPanel: $("#game-community-rating-panel"),
+  gameCommunityRatingAverage: $("#game-community-rating-average"),
+  gameCommunityRatingStars: $("#game-community-rating-stars"),
+  gameCommunityRatingCount: $("#game-community-rating-count"),
+  gameCommunityRatingDistribution: $("#game-community-rating-distribution"),
   gameRelatedSection: $("#game-related-section"),
   gameRelatedStatus: $("#game-related-status"),
   gameRelatedGrid: $("#game-related-grid"),
@@ -3137,9 +3152,60 @@ function matchingPromotions(game) {
     .sort((a, b) => new Date(b.start_date || 0) - new Date(a.start_date || 0));
 }
 
+function ratingStarsMarkup(value) {
+  const rounded = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
+  return `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
+}
+
+function updatePersonalGameRatingSummary(value) {
+  const rating = Math.max(0, Math.min(5, Number(value) || 0));
+  if (ui.gameSummaryRatingStars) ui.gameSummaryRatingStars.textContent = ratingStarsMarkup(rating);
+  if (ui.gameSummaryRating) ui.gameSummaryRating.textContent = rating ? `${rating}/5` : "—";
+  if (ui.gameSummaryRatingCopy) {
+    ui.gameSummaryRatingCopy.textContent = rating
+      ? rating >= 5 ? "Tra i tuoi giochi imprescindibili."
+        : rating >= 4 ? "Un titolo che consiglieresti."
+          : rating >= 3 ? "Una buona esperienza, con qualche riserva."
+            : "La tua valutazione personale."
+      : "Non hai ancora valutato questo gioco.";
+  }
+}
+
+function renderCommunityGameRating(reviews, unavailableMessage = "") {
+  if (!ui.gameCommunityRatingAverage || !ui.gameCommunityRatingDistribution) return;
+  const values = Array.isArray(reviews)
+    ? reviews.map((review) => Number(review?.rating || 0)).filter((rating) => rating >= 1 && rating <= 5)
+    : [];
+  const count = values.length;
+  const average = count ? values.reduce((sum, rating) => sum + rating, 0) / count : 0;
+  ui.gameCommunityRatingAverage.textContent = count ? average.toFixed(1) : "—";
+  ui.gameCommunityRatingStars.textContent = count ? ratingStarsMarkup(average) : "☆☆☆☆☆";
+  ui.gameCommunityRatingCount.textContent = unavailableMessage || (count
+    ? `Basato su ${count.toLocaleString("it-IT")} ${count === 1 ? "voto pubblico" : "voti pubblici"}`
+    : "Nessun voto pubblico");
+  ui.gameCommunityRatingDistribution.replaceChildren();
+  for (let rating = 5; rating >= 1; rating -= 1) {
+    const ratingCount = values.filter((value) => value === rating).length;
+    const percent = count ? Math.round((ratingCount / count) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "game-rating-distribution-row";
+    row.innerHTML = `<span>${rating} ★</span><i><b style="width:${percent}%"></b></i><em>${percent}%</em>`;
+    ui.gameCommunityRatingDistribution.append(row);
+  }
+}
+
+function gameDetailArtwork(game) {
+  return game?.hero_image_url
+    || game?.background_image_url
+    || game?.wide_image_url
+    || game?.image_url
+    || PLACEHOLDER;
+}
+
 function renderRating(game, entry) {
   ui.gamePageRating.replaceChildren();
   const selected = Number(entry?.rating || 0);
+  updatePersonalGameRatingSummary(selected);
   for (let rating = 1; rating <= 5; rating += 1) {
     const button = document.createElement("button");
     button.type = "button";
@@ -3150,6 +3216,7 @@ function renderRating(game, entry) {
       const nextRating = selected === rating ? 0 : rating;
       const updatedEntry = setLibraryEntry(game, { rating: nextRating });
       renderRating(game, updatedEntry);
+      updatePersonalGameRatingSummary(nextRating);
     };
     ui.gamePageRating.append(button);
   }
@@ -4422,12 +4489,18 @@ async function renderGamePage() {
   const journalProgress = window.VaultJournal?.getProgress(gameKey(game)) || null;
   const journalEntries = window.VaultJournal?.listEntries({ gameKey: gameKey(game) }) || [];
   const sessionMinutes = journalEntries.reduce((sum, item) => sum + Number(item.minutesPlayed || 0), 0);
+  const latestSession = journalEntries[0] || null;
+  const progressPercent = Math.max(0, Math.min(100, Number(journalProgress?.progressPercent ?? entry?.progressPercent ?? (entry?.status === "completed" ? 100 : 0)) || 0));
+  const progressStatus = journalProgress?.status || entry?.status || "saved";
+  const primaryPlatform = journalProgress?.primaryPlatform || entry?.primaryPlatform || "";
+  const aliases = new Set(reviewKeysForGame(game).map(String));
+  const listCount = Object.values(state.lists || {}).filter((list) => (list.games || []).some((key) => aliases.has(String(key)))).length;
   updateDocumentTitle(game.title);
   ui.gamePageImage.src = game.image_url || PLACEHOLDER;
-  ui.gamePageImage.alt = `Immagine di ${game.title}`;
+  ui.gamePageImage.alt = `Copertina di ${game.title}`;
   if (ui.gamePageBackdrop) {
-    const backdrop = game.image_url || PLACEHOLDER;
-    ui.gamePageBackdrop.style.backgroundImage = `linear-gradient(90deg, rgba(4,7,12,.96) 0%, rgba(4,7,12,.73) 46%, rgba(4,7,12,.18) 100%), linear-gradient(0deg, #06090f 0%, transparent 58%), url("${String(backdrop).replaceAll('"', '%22')}")`;
+    const backdrop = gameDetailArtwork(game);
+    ui.gamePageBackdrop.style.backgroundImage = `url("${String(backdrop).replaceAll('"', '%22')}")`;
   }
   ui.gamePageImage.onerror = () => { ui.gamePageImage.src = PLACEHOLDER; };
   ui.gamePageBadge.textContent = badgeText(game);
@@ -4444,12 +4517,12 @@ async function renderGamePage() {
     || escapeHtml(availableStores.map(storeLabel).join(" · "))
     || (game.source_kind === "master" ? "Scheda enciclopedica IGDB" : "Store non disponibile");
   ui.gamePageDescription.textContent = game.description || "Descrizione non disponibile.";
+  const genreMarkup = (game.genres || []).slice(0, 5).map((genre) => `<span class="game-genre-chip">${escapeHtml(genre)}</span>`).join("");
   ui.gamePageMeta.innerHTML = [
-    game.release_date ? `<span><small>USCITA</small>${escapeHtml(formatDate(game.release_date))}</span>` : "",
-    priceText(game) ? `<span><small>PREZZO</small>${escapeHtml(priceText(game))}</span>` : "",
-    game.offer_type ? `<span><small>TIPO</small>${escapeHtml(game.offer_type === "IGDB_MASTER" ? "Gioco enciclopedico" : game.offer_type)}</span>` : "",
-    availableStores.length ? `<span><small>STORE</small>${escapeHtml(availableStores.map(storeLabel).join(" · "))}</span>` : "",
-    game.platforms?.length ? `<span class="game-platform-meta"><small>PIATTAFORME</small><span class="platform-chip-list">${platformBadgesMarkup(game.platforms, { limit: 12 })}</span></span>` : "",
+    game.release_date ? `<span class="game-fact"><small>USCITA</small><b>${escapeHtml(formatDate(game.release_date))}</b></span>` : "",
+    game.offer_type ? `<span class="game-fact"><small>TIPO</small><b>${escapeHtml(game.offer_type === "IGDB_MASTER" ? "Scheda enciclopedica" : game.offer_type)}</b></span>` : "",
+    genreMarkup ? `<span class="game-genre-list">${genreMarkup}</span>` : "",
+    game.platforms?.length ? `<span class="game-platform-meta"><small>PIATTAFORME</small><span class="platform-chip-list">${platformBadgesMarkup(game.platforms, { limit: 8 })}</span></span>` : "",
   ].filter(Boolean).join("");
   configureStoreAction(ui.gamePageStoreLink, game, { detail: true });
   ui.gamePageLibrary.textContent = entry ? "Rimuovi dalla libreria" : "Aggiungi alla libreria";
@@ -4465,10 +4538,19 @@ async function renderGamePage() {
   ui.gamePageDifficulty.value = journalProgress?.difficulty || "";
   const recordedMinutes = sessionMinutes || journalProgress?.manualPlaytimeMinutes || 0;
   ui.gamePageManualPlaytime.textContent = formatMinutes(recordedMinutes);
-  if (ui.gameSummaryProgress) ui.gameSummaryProgress.textContent = `${journalProgress?.progressPercent ?? entry?.progressPercent ?? (entry?.status === "completed" ? 100 : 0)}%`;
+  if (ui.gameSummaryProgress) ui.gameSummaryProgress.textContent = `${progressPercent}%`;
+  if (ui.gameSummaryProgressRing) ui.gameSummaryProgressRing.style.setProperty("--progress", `${progressPercent}%`);
+  if (ui.gameSummaryProgressStatus) ui.gameSummaryProgressStatus.textContent = entry ? statusLabel(progressStatus) : "Non iniziato";
+  if (ui.gameSummaryLastPlayed) ui.gameSummaryLastPlayed.textContent = latestSession ? relativeTime(latestSession.playedAt || latestSession.createdAt) : "Nessuna sessione";
+  if (ui.gameSummarySessionCount) ui.gameSummarySessionCount.textContent = journalEntries.length.toLocaleString("it-IT");
   if (ui.gameSummaryHours) ui.gameSummaryHours.textContent = formatMinutes(recordedMinutes);
-  if (ui.gameSummaryStatus) ui.gameSummaryStatus.textContent = entry ? statusLabel(journalProgress?.status || entry.status) : "Non iniziato";
-  if (ui.gameSummaryRating) ui.gameSummaryRating.textContent = entry?.rating ? `${entry.rating}/5` : "—";
+  if (ui.gameSummaryLatestNote) ui.gameSummaryLatestNote.textContent = latestSession?.note || (latestSession ? `Ultima sessione ${formatDate(latestSession.playedAt)}` : "Nessuna sessione registrata.");
+  if (ui.gameSummaryStatus) ui.gameSummaryStatus.textContent = entry ? statusLabel(progressStatus) : "Non in libreria";
+  if (ui.gameSummaryAdded) ui.gameSummaryAdded.textContent = entry?.addedAt ? formatDate(entry.addedAt) : "—";
+  if (ui.gameSummaryPlatform) ui.gameSummaryPlatform.textContent = primaryPlatform || (game.platforms?.length === 1 ? game.platforms[0] : "Non indicata");
+  if (ui.gameSummaryListCount) ui.gameSummaryListCount.textContent = listCount.toLocaleString("it-IT");
+  updatePersonalGameRatingSummary(entry?.rating || 0);
+  renderCommunityGameRating([], "Caricamento voti…");
   ui.gamePageNotes.value = entry?.notes || "";
   ui.gameSessionDate.value = new Date().toISOString().slice(0, 10);
   ui.gameSessionProgress.value = journalProgress?.progressPercent ?? "";
@@ -4482,6 +4564,12 @@ async function renderGamePage() {
   void renderRelatedGames(game);
   void renderGameEditorialMemberships(game);
   void renderGameSocial(game);
+  ui.gamePage.querySelectorAll("[data-game-scroll]").forEach((control) => {
+    control.onclick = () => {
+      const target = document.getElementById(control.dataset.gameScroll || "");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+  });
 
   ui.gamePageLibrary.onclick = () => {
     if (getLibraryEntry(game)) removeLibraryEntry(game);
@@ -5105,6 +5193,7 @@ async function renderGameSocial(game) {
   if (!window.VaultSocial || !state.auth.configured) {
     ui.publicRatingAverage.textContent = "—";
     ui.publicRatingCount.textContent = "Community non configurata";
+    renderCommunityGameRating([], "Community non configurata");
     ui.publicReviewForm.hidden = true;
     ui.publicReviewSignedOut.hidden = false;
     ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Configura Supabase per abilitare recensioni e voti pubblici.</div>`;
@@ -5125,6 +5214,7 @@ async function renderGameSocial(game) {
     const summary = window.VaultSocial.summarizeRatings(reviews);
     ui.publicRatingAverage.textContent = summary.count ? summary.average.toFixed(1) : "—";
     ui.publicRatingCount.textContent = summary.count === 1 ? "1 voto pubblico" : `${summary.count} voti pubblici`;
+    renderCommunityGameRating(reviews);
 
     const signedIn = Boolean(state.auth.user);
     ui.publicReviewSignedOut.hidden = signedIn;
@@ -5146,6 +5236,7 @@ async function renderGameSocial(game) {
     }
   } catch (error) {
     console.error("Caricamento recensioni fallito", error);
+    renderCommunityGameRating([], "Voti temporaneamente non disponibili");
     ui.publicReviewsList.innerHTML = `<div class="timeline-empty">Recensioni temporaneamente non disponibili. Verifica di aver eseguito le migrazioni sociali v3.3 e v3.4.</div>`;
   }
 }

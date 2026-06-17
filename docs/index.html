@@ -526,7 +526,7 @@
 
         <section id="game-page" class="route-page detail-page" hidden>
           <button class="page-back" data-back type="button">← Indietro</button>
-          <article class="game-detail-shell">
+          <article class="game-detail-shell game-detail-hero">
             <div id="game-page-backdrop" class="game-detail-backdrop" aria-hidden="true"></div>
             <div class="game-detail-visual">
               <img id="game-page-image" alt="">
@@ -536,40 +536,88 @@
               <span id="game-page-badge" class="pill"></span>
               <h1 id="game-page-title"></h1>
               <p id="game-page-byline" class="game-detail-byline"></p>
-              <p id="game-page-description" class="game-detail-description"></p>
               <div id="game-page-meta" class="game-detail-meta"></div>
+              <p id="game-page-description" class="game-detail-description"></p>
               <div class="game-detail-actions">
-                <a id="game-page-store-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri su Epic</a>
+                <a id="game-page-store-link" class="button button-primary" target="_blank" rel="noopener noreferrer">Apri nello store</a>
                 <button id="game-page-library" class="button button-secondary" type="button"></button>
                 <button id="game-page-favorite" class="button button-secondary" type="button"></button>
-                <button id="game-page-list" class="button button-secondary" type="button">Aggiungi a lista</button>
+                <button id="game-page-list" class="button button-secondary game-more-action" type="button" aria-label="Aggiungi a una lista">Aggiungi a lista</button>
               </div>
             </div>
+            <aside id="game-community-rating-panel" class="game-community-rating" aria-label="Valutazione della community">
+              <p class="eyebrow">VALUTAZIONE COMMUNITY</p>
+              <div class="game-community-rating-head">
+                <strong id="game-community-rating-average">—</strong>
+                <span id="game-community-rating-stars" aria-hidden="true">☆☆☆☆☆</span>
+              </div>
+              <p id="game-community-rating-count">Nessun voto pubblico</p>
+              <div id="game-community-rating-distribution" class="game-rating-distribution" aria-label="Distribuzione dei voti"></div>
+            </aside>
           </article>
 
-          <section id="game-editorial-memberships" class="game-editorial-memberships" hidden>
-            <p class="eyebrow">ARCHIVIO EDITORIALE</p>
-            <div id="game-editorial-membership-links" class="game-editorial-membership-links"></div>
+          <section class="game-insight-strip game-summary-dashboard" aria-label="Riepilogo personale">
+            <article class="game-summary-card game-summary-progress-card">
+              <p class="eyebrow">IL TUO PROGRESSO</p>
+              <div class="game-summary-progress-layout">
+                <div id="game-summary-progress-ring" class="game-summary-progress-ring">
+                  <strong id="game-summary-progress">0%</strong>
+                  <small>Completato</small>
+                </div>
+                <div class="game-summary-copy">
+                  <span>Stato</span>
+                  <strong id="game-summary-progress-status">Non iniziato</strong>
+                  <span>Ultimo accesso</span>
+                  <b id="game-summary-last-played">Nessuna sessione</b>
+                </div>
+              </div>
+              <button class="game-summary-link" data-game-scroll="game-progress-panel" type="button">Gestisci progressi <span>→</span></button>
+            </article>
+
+            <article class="game-summary-card game-summary-diary-card">
+              <p class="eyebrow">IL TUO DIARIO</p>
+              <div class="game-summary-metrics">
+                <div><strong id="game-summary-session-count">0</strong><span>Sessioni</span></div>
+                <div><strong id="game-summary-hours">0 min</strong><span>Tempo registrato</span></div>
+              </div>
+              <p id="game-summary-latest-note" class="game-summary-note">Nessuna sessione registrata.</p>
+              <button class="game-summary-link" data-game-scroll="game-session-panel" type="button">Aggiungi una sessione <span>→</span></button>
+            </article>
+
+            <article class="game-summary-card game-summary-collection-card">
+              <p class="eyebrow">COLLEZIONE</p>
+              <div class="game-summary-status-line"><i></i><strong id="game-summary-status">Non in libreria</strong></div>
+              <dl class="game-summary-details">
+                <div><dt>Aggiunto il</dt><dd id="game-summary-added">—</dd></div>
+                <div><dt>Piattaforma</dt><dd id="game-summary-platform">Non indicata</dd></div>
+                <div><dt>Liste</dt><dd id="game-summary-list-count">0</dd></div>
+              </dl>
+              <button class="game-summary-link" data-game-scroll="game-progress-panel" type="button">Gestisci collezione <span>→</span></button>
+            </article>
+
+            <article class="game-summary-card game-summary-rating-card">
+              <p class="eyebrow">LA TUA VALUTAZIONE</p>
+              <div id="game-summary-rating-stars" class="game-summary-rating-stars" aria-hidden="true">☆☆☆☆☆</div>
+              <strong id="game-summary-rating">—</strong>
+              <p id="game-summary-rating-copy">Non hai ancora valutato questo gioco.</p>
+              <button class="game-summary-link" data-game-scroll="game-progress-panel" type="button">Modifica valutazione <span>→</span></button>
+            </article>
           </section>
 
-          <section class="game-insight-strip" aria-label="Riepilogo personale">
-            <article><span>PROGRESSO</span><strong id="game-summary-progress">0%</strong><small>del gioco completato</small></article>
-            <article><span>TEMPO REGISTRATO</span><strong id="game-summary-hours">0 min</strong><small>tra diario e sessioni</small></article>
-            <article><span>STATO</span><strong id="game-summary-status">Non iniziato</strong><small>nel tuo archivio</small></article>
-            <article><span>VALUTAZIONE</span><strong id="game-summary-rating">—</strong><small>voto personale</small></article>
-          </section>
           <nav class="game-subnav" aria-label="Sezioni della scheda">
-            <a href="#game-overview">Panoramica</a>
-            <a href="#game-progress-panel">Progressi</a>
-            <a href="#game-session-panel">Diario</a>
-            <a href="#game-page-availability">Versioni e store</a>
-            <a href="#game-social-panel">Recensioni</a>
+            <button data-game-scroll="game-overview" type="button">Panoramica</button>
+            <button data-game-scroll="game-progress-panel" type="button">Il tuo percorso</button>
+            <button data-game-scroll="game-session-panel" type="button">Diario</button>
+            <button data-game-scroll="game-page-availability" type="button">Disponibilità</button>
+            <button data-game-scroll="game-social-panel" type="button">Recensioni</button>
           </nav>
 
           <div id="game-overview" class="game-detail-grid">
-            <section id="game-progress-panel" class="detail-panel">
-              <p class="eyebrow">PROGRESSI PERSONALI</p>
-              <h2>Il tuo percorso</h2>
+            <section id="game-progress-panel" class="detail-panel game-progress-panel">
+              <div class="game-panel-heading">
+                <div><p class="eyebrow">PROGRESSI PERSONALI</p><h2>Il tuo percorso</h2></div>
+                <span class="game-panel-icon" aria-hidden="true">◴</span>
+              </div>
               <div class="personal-fields progress-form-grid">
                 <label>Stato
                   <select id="game-page-status">
@@ -627,9 +675,11 @@
               </div>
             </section>
 
-            <section id="game-session-panel" class="detail-panel">
-              <p class="eyebrow">SESSIONE DI GIOCO</p>
-              <h2>Aggiungi al diario</h2>
+            <section id="game-session-panel" class="detail-panel game-session-panel">
+              <div class="game-panel-heading">
+                <div><p class="eyebrow">SESSIONE DI GIOCO</p><h2>Aggiungi al diario</h2></div>
+                <span class="game-panel-icon" aria-hidden="true">✎</span>
+              </div>
               <form id="game-session-form" class="session-form">
                 <div class="session-form-grid">
                   <label>Data
@@ -673,12 +723,21 @@
               <div id="game-page-sessions" class="diary-entry-list compact"></div>
             </section>
 
-            <section id="game-page-availability" class="detail-panel game-availability-panel">
-              <p class="eyebrow">LUDOGRAPH</p>
-              <h2>Promozioni e disponibilità</h2>
-              <div id="game-page-store-options" class="store-options"></div>
-              <div id="game-page-promotions" class="promotion-timeline"></div>
-            </section>
+            <aside class="game-detail-side-rail">
+              <section id="game-page-availability" class="detail-panel game-availability-panel">
+                <div class="game-panel-heading">
+                  <div><p class="eyebrow">LUDOGRAPH</p><h2>Disponibilità</h2></div>
+                  <span class="game-panel-icon" aria-hidden="true">↓</span>
+                </div>
+                <div id="game-page-store-options" class="store-options"></div>
+                <div id="game-page-promotions" class="promotion-timeline"></div>
+              </section>
+
+              <section id="game-editorial-memberships" class="game-editorial-memberships detail-panel" hidden>
+                <p class="eyebrow">FA PARTE DI</p>
+                <div id="game-editorial-membership-links" class="game-editorial-membership-links"></div>
+              </section>
+            </aside>
           </div>
 
           <section id="game-related-section" class="game-related-section" hidden>

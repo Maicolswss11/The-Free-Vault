@@ -20,7 +20,7 @@ def test_v55_renders_data_driven_home_library_profile_and_game_views():
 
 def test_v55_pwa_cache_includes_interface_layer():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-6-profile-personalization"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-7-game-page-fidelity"' in worker
     assert '"./interface-rebuild.css"' in worker
 
 def test_v55_keeps_mobile_and_reduced_motion_support():

@@ -43,4 +43,4 @@ def test_profile_dashboard_uses_real_icons_and_responsive_layouts():
 
 
 def test_profile_patch_updates_pwa_cache():
-    assert 'const CACHE_NAME = "ludograph-v5-5-6-profile-personalization"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-5-7-game-page-fidelity"' in WORKER
