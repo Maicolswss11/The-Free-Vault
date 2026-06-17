@@ -75,4 +75,4 @@ def test_v52_public_franchise_page_supports_paths_and_relations():
 
 def test_v52_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-4-profile-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-5-profile-hero-fidelity"' in worker

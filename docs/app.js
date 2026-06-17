@@ -2644,6 +2644,28 @@ function routeGameArtwork(entries = libraryEntryRecords()) {
   return selected ? homeArtwork(selected.game) : "";
 }
 
+function profileWideArtwork(game) {
+  return game?.hero_image_url
+    || game?.background_image_url
+    || game?.wide_image_url
+    || "";
+}
+
+function profileBackdropArtwork(entries = libraryEntryRecords()) {
+  const personal = entries.find((entry) => entry?.favorite && profileWideArtwork(entry.game))
+    || entries.find((entry) => ["playing", "paused", "replay"].includes(entry?.status) && profileWideArtwork(entry.game))
+    || entries.find((entry) => entry?.status === "completed" && profileWideArtwork(entry.game))
+    || entries.find((entry) => profileWideArtwork(entry.game));
+  if (personal) return profileWideArtwork(personal.game);
+
+  const promotion = [...state.current, ...state.upcoming]
+    .map(normalizePromotion)
+    .find((game) => profileWideArtwork(game));
+  if (promotion) return profileWideArtwork(promotion);
+
+  return routeGameArtwork(entries);
+}
+
 function renderHomeDiaryPreview(diaryEntries = []) {
   if (!ui.homeDiaryPreview) return;
   const latest = diaryEntries[0] || null;
@@ -6806,7 +6828,7 @@ function renderProfilePage() {
 
   renderProfileRecentGames();
   renderProfileGenres();
-  const profileArtwork = routeGameArtwork();
+  const profileArtwork = profileBackdropArtwork();
   if (ui.profileHeroBackdrop) {
     ui.profileHeroBackdrop.style.backgroundImage = profileArtwork ? `url("${profileArtwork.replaceAll('"', '%22')}")` : "";
     ui.profileHeroBackdrop.classList.toggle("has-art", Boolean(profileArtwork));
