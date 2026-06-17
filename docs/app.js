@@ -369,6 +369,11 @@ const ui = {
   accountAvatar: $("#account-avatar"),
   accountLabel: $("#account-label"),
   accountLevel: $("#account-level"),
+  accountMenu: $("#account-menu"),
+  accountMenuAvatar: $("#account-menu-avatar"),
+  accountMenuName: $("#account-menu-name"),
+  accountMenuHandle: $("#account-menu-handle"),
+  accountMenuPublic: $("#account-menu-public"),
   authEyebrow: $("#auth-page-eyebrow"),
   authTitle: $("#auth-page-title"),
   authSubtitle: $("#auth-page-subtitle"),
@@ -419,12 +424,22 @@ const ui = {
   profileError: $("#profile-error"),
   profileRecentGames: $("#profile-recent-games"),
   profileVisibilityBadge: $("#profile-visibility-badge"),
+  profileVisibilityText: $("#profile-visibility-text"),
   settingsSignedOut: $("#settings-signed-out"),
   settingsSignedIn: $("#settings-signed-in"),
   settingsAvatarPreview: $("#settings-avatar-preview"),
   avatarFile: $("#avatar-file"),
   avatarUploadButton: $("#avatar-upload-button"),
   avatarRemoveButton: $("#avatar-remove-button"),
+  settingsHeroPreview: $("#settings-hero-preview"),
+  profileHeroGameSelect: $("#profile-hero-game-select"),
+  profileHeroApplyGame: $("#profile-hero-apply-game"),
+  profileHeroFile: $("#profile-hero-file"),
+  profileHeroUpload: $("#profile-hero-upload"),
+  profileHeroReset: $("#profile-hero-reset"),
+  profileHeroUrl: $("#profile-hero-url"),
+  profileHeroApplyUrl: $("#profile-hero-apply-url"),
+  profileHeroMessage: $("#profile-hero-message"),
   changeEmailForm: $("#change-email-form"),
   changeEmailValue: $("#change-email-value"),
   changeEmailMessage: $("#change-email-message"),
@@ -514,6 +529,7 @@ const ui = {
   publicProfileHandle: $("#public-profile-handle"),
   publicProfileBio: $("#public-profile-bio"),
   publicProfileMemberSince: $("#public-profile-member-since"),
+  publicProfileHeroBackdrop: $("#public-profile-hero-backdrop"),
   publicProfileShare: $("#public-profile-share"),
   publicProfileStatReviews: $("#public-profile-stat-reviews"),
   publicProfileStatAverage: $("#public-profile-stat-average"),
@@ -2651,7 +2667,10 @@ function profileWideArtwork(game) {
     || "";
 }
 
-function profileBackdropArtwork(entries = libraryEntryRecords()) {
+function profileBackdropArtwork(entries = libraryEntryRecords(), profile = state.auth.profile) {
+  const customArtwork = String(profile?.hero_image_url || "").trim();
+  if (customArtwork) return customArtwork;
+
   const personal = entries.find((entry) => entry?.favorite && profileWideArtwork(entry.game))
     || entries.find((entry) => ["playing", "paused", "replay"].includes(entry?.status) && profileWideArtwork(entry.game))
     || entries.find((entry) => entry?.status === "completed" && profileWideArtwork(entry.game))
@@ -5166,6 +5185,11 @@ async function renderPublicProfilePage() {
     ui.publicProfileHandle.textContent = `@${profile.username}`;
     ui.publicProfileBio.textContent = profile.bio || "Nessuna bio pubblica.";
     ui.publicProfileMemberSince.textContent = `Su Ludograph dal ${formatDate(profile.created_at)}`;
+    if (ui.publicProfileHeroBackdrop) {
+      const publicArtwork = String(profile.hero_image_url || "").trim();
+      ui.publicProfileHeroBackdrop.style.backgroundImage = publicArtwork ? `url("${publicArtwork.replaceAll('"', '%22')}")` : "";
+      ui.publicProfileHeroBackdrop.classList.toggle("has-art", Boolean(publicArtwork));
+    }
 
     const summary = window.VaultSocial.summarizeRatings(content.reviews);
     ui.publicProfileStatReviews.textContent = content.reviews.length;
@@ -5332,25 +5356,34 @@ function applyAvatar(element, user, profile) {
   element.textContent = url ? "" : initialsForAccount(user, profile);
 }
 
-function accountLevelValue() {
-  const entries = libraryEntryRecords();
-  const journalEntries = window.VaultJournal?.listEntries() || [];
-  const completed = entries.filter((entry) => entry.status === "completed").length;
-  const favorites = entries.filter((entry) => entry.favorite).length;
-  const minutes = journalEntries.reduce((sum, entry) => sum + Math.max(0, Number(entry.minutesPlayed || 0)), 0);
-  const points = entries.length * 28 + completed * 120 + favorites * 45 + journalEntries.length * 36 + Math.floor(minutes / 20);
-  return Math.max(1, Math.floor(points / 150) + 1);
-}
-
 function updateAccountLevelLabel(snapshot = state.auth) {
   if (!ui.accountLevel) return;
   if (!snapshot?.configured) ui.accountLevel.textContent = "Configurazione richiesta";
-  else if (!snapshot?.user) ui.accountLevel.textContent = "Profilo locale";
-  else ui.accountLevel.textContent = `Livello ${accountLevelValue()}`;
+  else if (!snapshot?.user) ui.accountLevel.textContent = "Profilo personale";
+  else ui.accountLevel.textContent = snapshot.profile?.username ? `@${snapshot.profile.username}` : "Profilo personale";
+}
+
+function closeAccountMenu() {
+  if (!ui.accountMenu || !ui.accountButton) return;
+  ui.accountMenu.hidden = true;
+  ui.accountButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleAccountMenu() {
+  if (!state.auth.user) {
+    navigate("#/login");
+    return;
+  }
+  if (!ui.accountMenu || !ui.accountButton) return;
+  const opening = ui.accountMenu.hidden;
+  ui.accountMenu.hidden = !opening;
+  ui.accountButton.setAttribute("aria-expanded", opening ? "true" : "false");
+  if (opening) ui.accountMenu.querySelector('a, button')?.focus({ preventScroll: true });
 }
 
 function updateAccountUI(snapshot) {
   state.auth = snapshot;
+  closeAccountMenu();
   state.admin.loaded = false;
   void refreshAdminContext();
   if (!snapshot.configured) {
@@ -5378,6 +5411,13 @@ function updateAccountUI(snapshot) {
   ui.accountLabel.textContent = snapshot.profile?.display_name || snapshot.profile?.username || "Profilo";
   ui.accountButton.setAttribute("aria-label", `Apri account di ${ui.accountLabel.textContent}`);
   applyAvatar(ui.accountAvatar, snapshot.user, snapshot.profile);
+  applyAvatar(ui.accountMenuAvatar, snapshot.user, snapshot.profile);
+  if (ui.accountMenuName) ui.accountMenuName.textContent = ui.accountLabel.textContent;
+  if (ui.accountMenuHandle) ui.accountMenuHandle.textContent = snapshot.profile?.username ? `@${snapshot.profile.username}` : (snapshot.user.email || "Account Ludograph");
+  if (ui.accountMenuPublic) {
+    ui.accountMenuPublic.hidden = !snapshot.profile?.username || snapshot.profile?.is_public === false;
+    ui.accountMenuPublic.href = snapshot.profile?.username ? profileRoute(snapshot.profile.username) : "#/profile";
+  }
   updateAccountLevelLabel(snapshot);
   ui.sidebarDataNote.textContent = "Libreria, liste e attività sono collegate al tuo account.";
   void refreshNotificationCount();
@@ -6782,25 +6822,21 @@ function renderProfilePage() {
   }
 
   const displayName = profile?.display_name || profile?.username || "Profilo";
-  const level = accountLevelValue();
   applyAvatar(ui.profilePageAvatar, user, profile);
   ui.profilePageName.textContent = displayName;
   ui.profilePageHandle.textContent = profile?.username ? `@${profile.username}` : "";
   ui.profilePageBio.textContent = profile?.bio || "Raccogli, ricorda e racconta la tua storia di gioco.";
   ui.profilePageEmail.textContent = user.email || "";
-  ui.profileVisibilityBadge.textContent = profile?.is_public === false ? "Profilo privato" : "Profilo pubblico";
+  if (ui.profileVisibilityText) ui.profileVisibilityText.textContent = profile?.is_public === false ? "Profilo privato" : "Profilo pubblico";
+  ui.profileVisibilityBadge?.classList.toggle("is-private", profile?.is_public === false);
   ui.viewPublicProfile.hidden = !profile?.username || profile?.is_public === false;
   if (profile?.username) ui.viewPublicProfile.href = profileRoute(profile.username);
   ui.profileUsername.value = profile?.username || "";
   ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
   ui.profileBio.value = profile?.bio || "";
 
-  const levelChip = $("#profile-level-chip");
-  const levelBadge = $("#profile-level-badge");
   const memberSince = $("#profile-member-since-text");
   const verifiedBadge = $("#profile-verified-badge");
-  if (levelChip) levelChip.textContent = level;
-  if (levelBadge) levelBadge.textContent = `Livello ${level}`;
   if (memberSince) memberSince.textContent = profileMemberSince(user, profile);
   if (verifiedBadge) verifiedBadge.hidden = !Boolean(user.email_confirmed_at || user.confirmed_at);
 
@@ -6821,14 +6857,17 @@ function renderProfilePage() {
   $("#profile-hero-hours").textContent = stats.hours;
   $("#profile-hero-library").textContent = stats.library.toLocaleString("it-IT");
   $("#profile-hero-completed").textContent = stats.completed.toLocaleString("it-IT");
-  $("#profile-hero-active").textContent = stats.journalEntries.some((entry) => homeLocalDateKey(entry.playedAt || entry.createdAt) === homeLocalDateKey()) ? "Attivo oggi" : "Archivio sincronizzato";
+  const activeToday = stats.journalEntries.some((entry) => homeLocalDateKey(entry.playedAt || entry.createdAt) === homeLocalDateKey());
+  $("#profile-hero-active").textContent = activeToday
+    ? "Attivo oggi"
+    : (stats.journalEntries.length ? "Attività registrata" : "Nessuna attività registrata");
   $("#profile-hub-library-count").textContent = `${stats.library} gioch${stats.library === 1 ? "o" : "i"}`;
   $("#profile-hub-lists-count").textContent = `${stats.lists} list${stats.lists === 1 ? "a" : "e"}`;
   $("#profile-hub-diary-count").textContent = `${stats.sessions} voc${stats.sessions === 1 ? "e" : "i"}`;
 
   renderProfileRecentGames();
   renderProfileGenres();
-  const profileArtwork = profileBackdropArtwork();
+  const profileArtwork = profileBackdropArtwork(libraryEntryRecords(), profile);
   if (ui.profileHeroBackdrop) {
     ui.profileHeroBackdrop.style.backgroundImage = profileArtwork ? `url("${profileArtwork.replaceAll('"', '%22')}")` : "";
     ui.profileHeroBackdrop.classList.toggle("has-art", Boolean(profileArtwork));
@@ -6952,6 +6991,59 @@ function importSteamLibrary(games) {
   return { imported, unmatched };
 }
 
+function profileHeroChoices() {
+  const seen = new Set();
+  return libraryEntryRecords()
+    .map((entry) => ({
+      title: entry.game?.title || "Gioco",
+      url: profileWideArtwork(entry.game),
+    }))
+    .filter((item) => {
+      if (!item.url || seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    });
+}
+
+function setProfileHeroPreview(url) {
+  if (!ui.settingsHeroPreview) return;
+  const artwork = String(url || "").trim() || profileBackdropArtwork();
+  ui.settingsHeroPreview.style.backgroundImage = artwork ? `url("${artwork.replaceAll('"', '%22')}")` : "";
+  ui.settingsHeroPreview.classList.toggle("has-art", Boolean(artwork));
+}
+
+function renderProfileHeroSettings(profile = state.auth.profile) {
+  if (!ui.profileHeroGameSelect) return;
+  const selectedUrl = String(profile?.hero_image_url || "").trim();
+  const choices = profileHeroChoices();
+  ui.profileHeroGameSelect.innerHTML = '<option value="">Selezione automatica</option>' + choices
+    .map((item) => `<option value="${escapeAttr(item.url)}">${escapeHtml(item.title)}</option>`)
+    .join("");
+  ui.profileHeroGameSelect.value = choices.some((item) => item.url === selectedUrl) ? selectedUrl : "";
+  ui.profileHeroUrl.value = selectedUrl && !choices.some((item) => item.url === selectedUrl) ? selectedUrl : "";
+  ui.profileHeroReset.disabled = !selectedUrl;
+  setProfileHeroPreview(selectedUrl);
+}
+
+function showProfileHeroMessage(message, success = false) {
+  if (!ui.profileHeroMessage) return;
+  ui.profileHeroMessage.textContent = message;
+  ui.profileHeroMessage.classList.toggle("auth-success", success);
+  ui.profileHeroMessage.hidden = !message;
+}
+
+async function saveProfileHero(url, successMessage) {
+  showProfileHeroMessage("");
+  try {
+    await window.VaultAuth.updateProfileHero(url || null);
+    renderProfileHeroSettings(window.VaultAuth.profile);
+    renderProfilePage();
+    showProfileHeroMessage(successMessage, true);
+  } catch (error) {
+    showProfileHeroMessage(error.message || "Aggiornamento hero fallito.");
+  }
+}
+
 function renderSettingsPage() {
   const { user, profile, settings, configured } = state.auth;
   updateDocumentTitle("Impostazioni");
@@ -6973,6 +7065,7 @@ function renderSettingsPage() {
   ui.profileUsername.value = profile?.username || "";
   ui.profileDisplayName.value = profile?.display_name || profile?.username || "";
   ui.profileBio.value = profile?.bio || "";
+  renderProfileHeroSettings(profile);
   ui.changeEmailValue.value = user.email || "";
   ui.privacyPublic.checked = profile?.is_public !== false;
   ui.privacyLibrary.checked = settings?.show_library !== false;
@@ -7877,7 +7970,21 @@ ui.homeEditorialFeature?.addEventListener("mouseleave", startHomeCatalogRotation
 ui.homeEditorialFeature?.addEventListener("focusin", stopHomeCatalogRotation);
 ui.homeEditorialFeature?.addEventListener("focusout", startHomeCatalogRotation);
 
-ui.accountButton.addEventListener("click", () => navigate(state.auth.user ? "#/profile" : "#/login"));
+ui.accountButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleAccountMenu();
+});
+ui.accountMenu?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (event.target.closest("a")) closeAccountMenu();
+});
+document.addEventListener("click", closeAccountMenu);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeAccountMenu();
+    ui.accountButton?.focus({ preventScroll: true });
+  }
+});
 ui.notificationButton.addEventListener("click", () => navigate(state.auth.user ? "#/notifications" : "#/login"));
 
 ui.feedFollowingTab.addEventListener("click", () => {
@@ -8115,6 +8222,56 @@ ui.avatarRemoveButton.addEventListener("click", async () => {
   } catch (error) {
     showToast(error.message || "Rimozione fallita.");
   }
+});
+
+ui.profileHeroGameSelect?.addEventListener("change", () => {
+  const selected = ui.profileHeroGameSelect.value;
+  setProfileHeroPreview(selected || state.auth.profile?.hero_image_url || "");
+});
+ui.profileHeroApplyGame?.addEventListener("click", async () => {
+  const selected = ui.profileHeroGameSelect.value;
+  if (!selected) {
+    showProfileHeroMessage("Seleziona prima un gioco con artwork panoramico.");
+    return;
+  }
+  await saveProfileHero(selected, "Hero aggiornata con l’artwork selezionato.");
+});
+ui.profileHeroUpload?.addEventListener("click", () => ui.profileHeroFile?.click());
+ui.profileHeroFile?.addEventListener("change", async () => {
+  const file = ui.profileHeroFile.files?.[0];
+  if (!file) return;
+  ui.profileHeroUpload.disabled = true;
+  showProfileHeroMessage("");
+  try {
+    await window.VaultAuth.uploadProfileHero(file);
+    renderProfileHeroSettings(window.VaultAuth.profile);
+    renderProfilePage();
+    showProfileHeroMessage("Hero caricata.", true);
+  } catch (error) {
+    showProfileHeroMessage(error.message || "Caricamento hero fallito.");
+  } finally {
+    ui.profileHeroFile.value = "";
+    ui.profileHeroUpload.disabled = false;
+  }
+});
+ui.profileHeroReset?.addEventListener("click", async () => {
+  showProfileHeroMessage("");
+  try {
+    await window.VaultAuth.removeProfileHero();
+    renderProfileHeroSettings(window.VaultAuth.profile);
+    renderProfilePage();
+    showProfileHeroMessage("Selezione automatica ripristinata.", true);
+  } catch (error) {
+    showProfileHeroMessage(error.message || "Ripristino hero fallito.");
+  }
+});
+ui.profileHeroApplyUrl?.addEventListener("click", async () => {
+  const value = ui.profileHeroUrl.value.trim();
+  if (!/^https?:\/\//i.test(value)) {
+    showProfileHeroMessage("Inserisci un URL HTTPS valido.");
+    return;
+  }
+  await saveProfileHero(value, "Hero aggiornata dall’URL indicato.");
 });
 
 ui.changeEmailForm.addEventListener("submit", async (event) => {

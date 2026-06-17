@@ -16,7 +16,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-5-5-profile-hero-fidelity";
+const CACHE_NAME = "ludograph-v5-5-6-profile-personalization";
 const APP_SHELL = [
   "./",
   "./index.html",

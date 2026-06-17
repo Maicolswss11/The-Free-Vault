@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   display_name text not null check (char_length(display_name) between 1 and 60),
   bio text check (char_length(bio) <= 500),
   avatar_url text,
+  hero_image_url text check (hero_image_url is null or char_length(hero_image_url) <= 2048),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -114,6 +115,15 @@ for each row execute procedure public.handle_new_user();
 alter table public.profiles
   add column if not exists is_public boolean not null default true;
 
+alter table public.profiles
+  add column if not exists hero_image_url text;
+
+alter table public.profiles
+  drop constraint if exists profiles_hero_image_url_length_check;
+alter table public.profiles
+  add constraint profiles_hero_image_url_length_check
+  check (hero_image_url is null or char_length(hero_image_url) <= 2048);
+
 create table if not exists public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
   show_library boolean not null default true,
@@ -148,7 +158,7 @@ values (
   'avatars',
   'avatars',
   true,
-  2097152,
+  5242880,
   array['image/png', 'image/jpeg', 'image/webp']
 )
 on conflict (id) do update set

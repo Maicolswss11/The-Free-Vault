@@ -134,7 +134,7 @@
     const [profileResult, settingsResult] = await Promise.all([
       client
         .from('profiles')
-        .select('id, username, display_name, bio, avatar_url, is_public, created_at, updated_at')
+        .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
         .eq('id', session.user.id)
         .maybeSingle(),
       client
@@ -326,7 +326,7 @@
     const { data, error } = await client
       .from('profiles')
       .upsert(payload)
-      .select('id, username, display_name, bio, avatar_url, is_public, created_at, updated_at')
+      .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
       .single();
     if (error) {
       if (error.code === '23505') throw new Error('Questo username è già utilizzato.');
@@ -346,7 +346,7 @@
         .from('profiles')
         .update({ is_public: Boolean(patch.is_public), updated_at: new Date().toISOString() })
         .eq('id', session.user.id)
-        .select('id, username, display_name, bio, avatar_url, is_public, created_at, updated_at')
+        .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
         .single(),
       client
         .from('user_settings')
@@ -388,10 +388,11 @@
 
     const folder = session.user.id;
     const storage = client.storage.from('avatars');
-    const { data: existing } = await storage.list(folder, { limit: 20 });
-    if (existing?.length) {
-      await storage.remove(existing.map((item) => `${folder}/${item.name}`));
-    }
+    const { data: existing } = await storage.list(folder, { limit: 50 });
+    const oldAvatars = (existing || [])
+      .filter((item) => item.name.startsWith('avatar-'))
+      .map((item) => `${folder}/${item.name}`);
+    if (oldAvatars.length) await storage.remove(oldAvatars);
 
     const path = `${folder}/avatar-${Date.now()}.${extension}`;
     const { error: uploadError } = await storage.upload(path, file, {
@@ -407,7 +408,7 @@
       .from('profiles')
       .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
       .eq('id', session.user.id)
-      .select('id, username, display_name, bio, avatar_url, is_public, created_at, updated_at')
+      .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
       .single();
     if (error) throw error;
     profile = data;
@@ -419,22 +420,100 @@
     if (!client || !session?.user) throw new Error('Utente non autenticato.');
     const folder = session.user.id;
     const storage = client.storage.from('avatars');
-    const { data: existing, error: listError } = await storage.list(folder, { limit: 20 });
+    const { data: existing, error: listError } = await storage.list(folder, { limit: 50 });
     if (listError) throw listError;
-    if (existing?.length) {
-      const { error: removeError } = await storage.remove(existing.map((item) => `${folder}/${item.name}`));
+    const oldAvatars = (existing || [])
+      .filter((item) => item.name.startsWith('avatar-'))
+      .map((item) => `${folder}/${item.name}`);
+    if (oldAvatars.length) {
+      const { error: removeError } = await storage.remove(oldAvatars);
       if (removeError) throw removeError;
     }
     const { data, error } = await client
       .from('profiles')
       .update({ avatar_url: null, updated_at: new Date().toISOString() })
       .eq('id', session.user.id)
-      .select('id, username, display_name, bio, avatar_url, is_public, created_at, updated_at')
+      .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
       .single();
     if (error) throw error;
     profile = data;
     emit();
     return data;
+  }
+
+  async function updateProfileHero(heroImageUrl) {
+    if (!client || !session?.user) throw new Error('Utente non autenticato.');
+    const normalized = heroImageUrl ? String(heroImageUrl).trim() : null;
+    if (normalized && !/^https?:\/\//i.test(normalized)) {
+      throw new Error('La hero deve usare un URL HTTP o HTTPS valido.');
+    }
+    if (normalized && normalized.length > 2048) throw new Error('URL hero troppo lungo.');
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({ hero_image_url: normalized, updated_at: new Date().toISOString() })
+      .eq('id', session.user.id)
+      .select('id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at')
+      .single();
+    if (error) throw error;
+    profile = data;
+    emit();
+    return data;
+  }
+
+  async function uploadProfileHero(file) {
+    if (!client || !session?.user) throw new Error('Utente non autenticato.');
+    if (!(file instanceof File) || !file.type.startsWith('image/')) {
+      throw new Error('Seleziona un’immagine PNG, JPG o WebP.');
+    }
+    if (file.size > 5 * 1024 * 1024) throw new Error('La hero non può superare 5 MB.');
+
+    const mimeExtensions = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const extension = mimeExtensions[file.type];
+    if (!extension) throw new Error('Formato non supportato. Usa PNG, JPG o WebP.');
+
+    const folder = session.user.id;
+    const storage = client.storage.from('avatars');
+    const { data: existing, error: listError } = await storage.list(folder, { limit: 50 });
+    if (listError) throw listError;
+    const oldHeroes = (existing || [])
+      .filter((item) => item.name.startsWith('hero-'))
+      .map((item) => `${folder}/${item.name}`);
+    if (oldHeroes.length) {
+      const { error: removeError } = await storage.remove(oldHeroes);
+      if (removeError) throw removeError;
+    }
+
+    const path = `${folder}/hero-${Date.now()}.${extension}`;
+    const { error: uploadError } = await storage.upload(path, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: false,
+    });
+    if (uploadError) throw uploadError;
+
+    const { data: publicData } = storage.getPublicUrl(path);
+    return updateProfileHero(`${publicData.publicUrl}?v=${Date.now()}`);
+  }
+
+  async function removeProfileHero() {
+    if (!client || !session?.user) throw new Error('Utente non autenticato.');
+    const folder = session.user.id;
+    const storage = client.storage.from('avatars');
+    const { data: existing, error: listError } = await storage.list(folder, { limit: 50 });
+    if (listError) throw listError;
+    const oldHeroes = (existing || [])
+      .filter((item) => item.name.startsWith('hero-'))
+      .map((item) => `${folder}/${item.name}`);
+    if (oldHeroes.length) {
+      const { error: removeError } = await storage.remove(oldHeroes);
+      if (removeError) throw removeError;
+    }
+    return updateProfileHero(null);
   }
 
   async function deleteAccount() {
@@ -472,6 +551,9 @@
     updatePrivacy,
     uploadAvatar,
     removeAvatar,
+    updateProfileHero,
+    uploadProfileHero,
+    removeProfileHero,
     deleteAccount,
     confirmationRedirectUrl,
     passwordRecoveryRedirectUrl,

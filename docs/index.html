@@ -171,11 +171,23 @@
             <svg class="topbar-icon" aria-hidden="true"><use href="#icon-bell"></use></svg>
             <span id="notification-badge" class="notification-badge" hidden>0</span>
           </button>
-          <button id="account-button" class="account-button" type="button" aria-label="Apri account">
-            <span id="account-avatar" class="account-avatar">?</span>
-            <span class="account-copy"><strong id="account-label">Accedi</strong><small id="account-level">Profilo personale</small></span>
-            <svg class="account-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
-          </button>
+          <div class="account-menu-shell">
+            <button id="account-button" class="account-button" type="button" aria-label="Apri account" aria-haspopup="menu" aria-controls="account-menu" aria-expanded="false">
+              <span id="account-avatar" class="account-avatar">?</span>
+              <span class="account-copy"><strong id="account-label">Accedi</strong><small id="account-level">Profilo personale</small></span>
+              <svg class="account-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </button>
+            <div id="account-menu" class="account-menu" role="menu" hidden>
+              <div class="account-menu-header">
+                <span id="account-menu-avatar" class="account-avatar">?</span>
+                <span><strong id="account-menu-name">Profilo</strong><small id="account-menu-handle">Account Ludograph</small></span>
+              </div>
+              <a id="account-menu-profile" href="#/profile" role="menuitem"><svg aria-hidden="true"><use href="#icon-user"></use></svg><span>Il mio profilo</span></a>
+              <a id="account-menu-public" href="#/profile" role="menuitem"><svg aria-hidden="true"><use href="#icon-external"></use></svg><span>Profilo pubblico</span></a>
+              <a href="#/settings/profile" role="menuitem"><svg aria-hidden="true"><use href="#icon-settings"></use></svg><span>Impostazioni</span></a>
+              <button id="logout-button" type="button" role="menuitem"><svg aria-hidden="true"><use href="#icon-logout"></use></svg><span>Esci</span></button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -918,7 +930,6 @@
 
               <div class="profile-avatar-shell">
                 <span id="profile-page-avatar" class="account-avatar account-avatar-xl">?</span>
-                <span id="profile-level-chip" class="profile-level-chip">1</span>
               </div>
 
               <div class="profile-identity">
@@ -930,10 +941,9 @@
                 <p id="profile-page-handle" class="profile-handle"></p>
                 <p id="profile-page-bio" class="profile-bio"></p>
                 <div class="profile-badges">
-                  <span class="profile-badge profile-badge-blue"><svg aria-hidden="true"><use href="#icon-check"></use></svg><b id="profile-level-badge">Livello 1</b></span>
-                  <span class="profile-badge profile-badge-purple"><svg aria-hidden="true"><use href="#icon-box"></use></svg>Collezionista</span>
-                  <span class="profile-badge profile-badge-green"><svg aria-hidden="true"><use href="#icon-shield-check"></use></svg><b id="cloud-status">Sincronizzazione pronta</b></span>
-                  <span id="profile-member-since" class="profile-badge"><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b id="profile-member-since-text">Membro Ludograph</b></span><span id="profile-visibility-badge" hidden>Profilo pubblico</span>
+                  <span id="profile-member-since" class="profile-badge"><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b id="profile-member-since-text">Membro Ludograph</b></span>
+                  <span id="profile-visibility-badge" class="profile-badge"><svg aria-hidden="true"><use href="#icon-user"></use></svg><b id="profile-visibility-text">Profilo pubblico</b></span>
+                  <span id="cloud-status" hidden>Sincronizzazione pronta</span>
                 </div>
                 <p id="profile-page-email" class="profile-private-email" hidden></p>
               </div>
@@ -948,7 +958,6 @@
               <div class="profile-hero-actions">
                 <a id="view-public-profile" class="button button-primary" href="#/profile"><span>Vedi profilo pubblico</span><svg aria-hidden="true"><use href="#icon-external"></use></svg></a>
                 <a class="button button-secondary" href="#/settings/profile"><span>Modifica profilo</span><svg aria-hidden="true"><use href="#icon-edit"></use></svg></a>
-                <button id="logout-button" class="button button-ghost profile-logout-button" type="button" aria-label="Esci dall’account" title="Esci dall’account"><svg aria-hidden="true"><use href="#icon-logout"></use></svg></button>
               </div>
             </section>
 
@@ -1024,7 +1033,8 @@
             <a class="button button-primary" href="#/home">Torna alla Home</a>
           </div>
           <div id="public-profile-content" hidden>
-            <section class="profile-hero">
+            <section class="profile-hero public-profile-hero">
+              <div id="public-profile-hero-backdrop" class="profile-hero-backdrop" aria-hidden="true"></div>
               <span id="public-profile-avatar" class="account-avatar account-avatar-xl">?</span>
               <div>
                 <p class="eyebrow">PROFILO PUBBLICO</p>
@@ -1199,6 +1209,33 @@
                       <button id="avatar-upload-button" class="button button-primary" type="button">Carica immagine</button>
                       <button id="avatar-remove-button" class="button button-secondary" type="button">Rimuovi</button>
                       <p>PNG, JPG o WebP. Massimo 2 MB.</p>
+                    </div>
+                  </div>
+                  <div class="profile-hero-editor">
+                    <div id="settings-hero-preview" class="profile-hero-preview" aria-label="Anteprima hero profilo"></div>
+                    <div class="profile-hero-editor-controls">
+                      <div>
+                        <strong>Hero del profilo</strong>
+                        <p>Scegli un artwork dalla tua libreria, carica un’immagine panoramica oppure torna alla selezione automatica.</p>
+                      </div>
+                      <label>Artwork dalla libreria
+                        <select id="profile-hero-game-select">
+                          <option value="">Selezione automatica</option>
+                        </select>
+                      </label>
+                      <div class="profile-hero-editor-actions">
+                        <button id="profile-hero-apply-game" class="button button-secondary" type="button">Usa artwork selezionato</button>
+                        <input id="profile-hero-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                        <button id="profile-hero-upload" class="button button-primary" type="button">Carica hero</button>
+                        <button id="profile-hero-reset" class="button button-secondary" type="button">Ripristina automatica</button>
+                      </div>
+                      <label>Oppure usa un URL immagine
+                        <div class="profile-hero-url-row">
+                          <input id="profile-hero-url" type="url" inputmode="url" placeholder="https://…">
+                          <button id="profile-hero-apply-url" class="button button-secondary" type="button">Usa URL</button>
+                        </div>
+                      </label>
+                      <p id="profile-hero-message" class="auth-error" hidden></p>
                     </div>
                   </div>
                   <form id="profile-form" class="auth-form page-form">

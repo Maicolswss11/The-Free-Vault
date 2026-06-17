@@ -46,8 +46,10 @@ def test_v552_rebuilds_account_presentation_and_updates_cache():
 
     assert 'class="account-copy"' in html
     assert 'id="account-level"' in html
-    assert "accountLevelValue" in app
+    assert "accountLevelValue" not in app
     assert "updateAccountLevelLabel" in app
+    assert 'id="account-menu"' in html
+    assert "toggleAccountMenu" in app
     assert ".account-copy small" in css
     assert ".topbar #refresh-button" in css
-    assert 'const CACHE_NAME = "ludograph-v5-5-5-profile-hero-fidelity"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-6-profile-personalization"' in worker

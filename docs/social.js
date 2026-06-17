@@ -281,7 +281,7 @@
     const normalized = decodeURIComponent(username || "").trim();
     const { data, error } = await db
       .from("profiles")
-      .select("id, username, display_name, bio, avatar_url, is_public, created_at, updated_at")
+      .select("id, username, display_name, bio, avatar_url, hero_image_url, is_public, created_at, updated_at")
       .eq("username", normalized)
       .maybeSingle();
     if (error) throw error;
