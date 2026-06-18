@@ -67,4 +67,4 @@ def test_game_page_has_real_media_gallery_and_lightbox():
 
 
 def test_v558_cache_name_is_updated():
-    assert 'const CACHE_NAME = "ludograph-v5-5-9-franchise-fidelity"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-5-10-franchise-polish"' in WORKER

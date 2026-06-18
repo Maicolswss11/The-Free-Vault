@@ -98,6 +98,10 @@ let homeHeroTimer = null;
 let homeCatalogSlides = [];
 let homeCatalogIndex = 0;
 let homeCatalogTimer = null;
+let editorialFeaturedSlides = [];
+let editorialFeaturedIndex = 0;
+let editorialFeaturedTimer = null;
+const EDITORIAL_FEATURED_ROTATION_MS = 10000;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -4081,8 +4085,8 @@ function editorialCard({ title, description, imageUrl, count, href, badge, kind 
       <p>${escapeHtml(description || "Descrizione editoriale in preparazione.")}</p>
       <div class="franchise-index-card-meta" aria-label="Metadati">
         <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${numericCount.toLocaleString("it-IT")}</b><small>${kind === "collection" ? "articoli" : "giochi"}</small></span>
-        ${kind === "franchise" ? `<span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>—</b><small>percorsi</small></span>` : `<span><svg aria-hidden="true"><use href="#icon-star"></use></svg><b>Curata</b><small>Ludograph</small></span>`}
-        <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${kind === "collection" ? "Editoriale" : "Cronologia"}</b><small>${kind === "collection" ? "selezione" : "nel dettaglio"}</small></span>
+        ${kind === "franchise" ? `<span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Apri</b><small>percorsi</small></span>` : `<span><svg aria-hidden="true"><use href="#icon-star"></use></svg><b>Curata</b><small>Ludograph</small></span>`}
+        <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${kind === "collection" ? "Set" : "Anni"}</b><small>${kind === "collection" ? "editoriale" : "timeline"}</small></span>
       </div>
       <div class="franchise-index-card-footer"><span><i></i>${kind === "collection" ? "Pubblicata" : "Attiva"}</span><a href="${escapeAttr(href)}">Apri →</a></div>
     </div>`;
@@ -4091,23 +4095,19 @@ function editorialCard({ title, description, imageUrl, count, href, badge, kind 
   return article;
 }
 
-function renderEditorialFeaturedHero(directory = {}) {
+function stopEditorialFeaturedCarousel() {
+  if (editorialFeaturedTimer) window.clearInterval(editorialFeaturedTimer);
+  editorialFeaturedTimer = null;
+}
+
+function renderEditorialFeaturedSlide() {
   const hero = document.getElementById("franchise-featured-hero");
   if (!hero) return;
-  const franchises = [...(directory.franchises || [])]
-    .filter((item) => item && item.slug)
-    .sort((a, b) => Number(b.game_count || 0) - Number(a.game_count || 0));
-  const featured = franchises.find((item) => item.hero_image_url) || franchises[0];
-  if (!featured) {
-    hero.innerHTML = `
-      <div class="franchise-featured-empty">
-        <p class="eyebrow">FRANCHISE UFFICIALE</p>
-        <h2>Archivio in preparazione</h2>
-        <p>Le saghe pubblicate dagli amministratori appariranno qui.</p>
-      </div>`;
-    return;
-  }
+  const featured = editorialFeaturedSlides[editorialFeaturedIndex];
+  if (!featured) return;
   const count = Number(featured.game_count || 0);
+  const slideCount = editorialFeaturedSlides.length;
+  const route = franchiseRoute(featured.slug);
   hero.innerHTML = `
     <img src="${escapeAttr(featured.hero_image_url || PLACEHOLDER)}" alt="" loading="lazy">
     <span class="franchise-featured-scrim"></span>
@@ -4117,16 +4117,58 @@ function renderEditorialFeaturedHero(directory = {}) {
       <p>${escapeHtml(featured.description || `Ripercorri ${featured.name}: uscite, cronologia, spin-off e percorsi editoriali.`)}</p>
       <div class="franchise-featured-stats">
         <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${count.toLocaleString("it-IT")}</b><small>Giochi totali</small></span>
-        <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Dettaglio</b><small>Percorsi narrativi</small></span>
+        <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Apri</b><small>Percorsi narrativi</small></span>
       </div>
       <div class="franchise-featured-actions">
-        <a class="button button-primary" href="${escapeAttr(franchiseRoute(featured.slug))}">Apri franchise <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
-        <a class="button button-secondary" href="${escapeAttr(franchiseRoute(featured.slug))}">Esplora percorsi</a>
+        <a class="button button-primary" href="${escapeAttr(route)}">Apri franchise <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
+        <a class="button button-secondary" href="${escapeAttr(`${route}?tab=paths`)}">Esplora percorsi</a>
       </div>
     </div>
-    <div class="franchise-featured-dots" aria-hidden="true"><span></span><span></span><span></span></div>`;
+    ${slideCount > 1 ? `<div class="franchise-featured-dots" aria-label="Franchise in evidenza">${editorialFeaturedSlides.map((_, index) => `<button class="${index === editorialFeaturedIndex ? "is-active" : ""}" type="button" data-featured-index="${index}" aria-label="Mostra franchise ${index + 1}"></button>`).join("")}</div>` : ""}`;
   const image = hero.querySelector("img");
   image.onerror = () => { image.src = PLACEHOLDER; };
+  hero.querySelectorAll("[data-featured-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      editorialFeaturedIndex = Number(button.dataset.featuredIndex || 0);
+      renderEditorialFeaturedSlide();
+      startEditorialFeaturedCarousel();
+    });
+  });
+}
+
+function startEditorialFeaturedCarousel() {
+  stopEditorialFeaturedCarousel();
+  if (editorialFeaturedSlides.length <= 1) return;
+  editorialFeaturedTimer = window.setInterval(() => {
+    editorialFeaturedIndex = (editorialFeaturedIndex + 1) % editorialFeaturedSlides.length;
+    renderEditorialFeaturedSlide();
+  }, EDITORIAL_FEATURED_ROTATION_MS);
+}
+
+function renderEditorialFeaturedHero(directory = {}) {
+  const hero = document.getElementById("franchise-featured-hero");
+  if (!hero) return;
+  stopEditorialFeaturedCarousel();
+  const franchises = [...(directory.franchises || [])]
+    .filter((item) => item && item.slug)
+    .sort((a, b) => Number(b.game_count || 0) - Number(a.game_count || 0));
+  editorialFeaturedSlides = [...franchises.filter((item) => item.hero_image_url), ...franchises.filter((item) => !item.hero_image_url)].slice(0, 5);
+  editorialFeaturedIndex = 0;
+  if (!editorialFeaturedSlides.length) {
+    hero.innerHTML = `
+      <div class="franchise-featured-empty">
+        <p class="eyebrow">FRANCHISE UFFICIALE</p>
+        <h2>Archivio in preparazione</h2>
+        <p>Le saghe pubblicate dagli amministratori appariranno qui.</p>
+      </div>`;
+    return;
+  }
+  hero.onmouseenter = stopEditorialFeaturedCarousel;
+  hero.onmouseleave = startEditorialFeaturedCarousel;
+  hero.onfocusin = stopEditorialFeaturedCarousel;
+  hero.onfocusout = startEditorialFeaturedCarousel;
+  renderEditorialFeaturedSlide();
+  startEditorialFeaturedCarousel();
 }
 
 function bindEditorialDirectoryFilters() {
@@ -4603,10 +4645,10 @@ function renderFranchiseOverview(data) {
   const relations = data?.relations || [];
   const continuities = tracks.filter((track) => ["continuity", "timeline"].includes(track.track_type)).length;
   ui.franchiseOverview.innerHTML = `
-    <article><span class="franchise-overview-icon">◆</span><div><strong>${games.length.toLocaleString("it-IT")}</strong><small>Titoli collegati</small></div></article>
-    <article><span class="franchise-overview-icon">⑂</span><div><strong>${tracks.length.toLocaleString("it-IT")}</strong><small>Percorsi editoriali</small></div></article>
-    <article><span class="franchise-overview-icon">↗</span><div><strong>${relations.length.toLocaleString("it-IT")}</strong><small>Relazioni mappate</small></div></article>
-    <article><span class="franchise-overview-icon">◷</span><div><strong>${escapeHtml(franchiseYearRange(games))}</strong><small>${continuities ? `${continuities} continuità/timeline` : "Arco di pubblicazione"}</small></div></article>`;
+    <article><span class="franchise-overview-icon"><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg></span><div><strong>${games.length.toLocaleString("it-IT")}</strong><small>Titoli collegati</small></div></article>
+    <article><span class="franchise-overview-icon"><svg aria-hidden="true"><use href="#icon-franchise"></use></svg></span><div><strong>${tracks.length.toLocaleString("it-IT")}</strong><small>Percorsi editoriali</small></div></article>
+    <article><span class="franchise-overview-icon"><svg aria-hidden="true"><use href="#icon-chart"></use></svg></span><div><strong>${relations.length.toLocaleString("it-IT")}</strong><small>Relazioni mappate</small></div></article>
+    <article><span class="franchise-overview-icon"><svg aria-hidden="true"><use href="#icon-clock"></use></svg></span><div><strong>${escapeHtml(franchiseYearRange(games))}</strong><small>${continuities ? `${continuities} continuità/timeline` : "Arco di pubblicazione"}</small></div></article>`;
   ui.franchiseOverview.hidden = false;
 }
 

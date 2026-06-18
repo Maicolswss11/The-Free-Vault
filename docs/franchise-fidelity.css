@@ -487,3 +487,180 @@
   .franchise-timeline-strip { margin-inline: -4px; padding-left: 2px; }
   .franchise-timeline-strip::before { display: none; }
 }
+
+/* Ludograph v5.5.10 — Franchise polish fixes */
+.editorial-section-heading {
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 26px 0 16px;
+  padding: 16px 18px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(72, 136, 255, .16);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(41, 142, 255, .16), transparent 34%),
+    linear-gradient(135deg, rgba(11, 24, 42, .78), rgba(6, 12, 22, .54));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.editorial-section-heading::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #19a9ff, #2a55ff);
+  box-shadow: 0 0 26px rgba(35, 131, 255, .68);
+}
+.editorial-section-heading .eyebrow {
+  margin: 0 0 7px;
+  color: #58adff;
+  font-size: .76rem;
+  letter-spacing: .22em;
+}
+.editorial-section-heading h2 {
+  margin: 0;
+  color: #f8fbff;
+  font-size: clamp(1.28rem, 1.45vw, 1.8rem);
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+.editorial-section-heading .official-badge {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-color: rgba(90, 161, 255, .25);
+  background: rgba(31, 113, 255, .13);
+  color: #d9ecff;
+}
+.franchise-index-section { margin-top: 4px; }
+.franchise-featured-dots {
+  z-index: 4;
+  padding: 4px;
+  border: 1px solid rgba(148,163,184,.12);
+  border-radius: 999px;
+  background: rgba(4, 10, 18, .46);
+  backdrop-filter: blur(12px);
+}
+.franchise-featured-dots button {
+  width: 42px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .22);
+  cursor: pointer;
+}
+.franchise-featured-dots button.is-active {
+  background: linear-gradient(90deg, #1ca5ff, #2b55ff);
+  box-shadow: 0 0 16px rgba(36, 139, 255, .55);
+}
+.franchise-featured-hero img,
+.franchise-featured-copy h2,
+.franchise-featured-copy p {
+  transition: opacity .18s ease, transform .18s ease;
+}
+.franchise-index-card {
+  display: flex;
+  min-height: 455px !important;
+  flex-direction: column;
+}
+.franchise-index-card .editorial-card-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.franchise-index-card .editorial-card-copy p {
+  display: -webkit-box;
+  height: 4.45em;
+  min-height: 0 !important;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.franchise-index-card-meta {
+  margin-top: auto;
+}
+.franchise-index-card-meta span {
+  min-height: 54px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  padding: 9px 8px;
+}
+.franchise-index-card-meta svg {
+  width: 17px;
+  height: 17px;
+}
+.franchise-index-card-meta b {
+  max-width: 100%;
+  font-size: .86rem;
+  line-height: 1.05;
+}
+.franchise-index-card-meta small {
+  max-width: 100%;
+  font-size: .66rem;
+  line-height: 1.05;
+  text-transform: lowercase;
+}
+.franchise-index-card-footer {
+  margin-top: 2px;
+}
+.franchise-cinematic-layout {
+  margin-bottom: 26px !important;
+}
+.franchise-page .franchise-overview-strip {
+  margin-top: 0 !important;
+  margin-bottom: 20px !important;
+}
+.franchise-overview-icon svg,
+.franchise-hero-actions .button svg,
+.franchise-detail-tabs .button svg,
+.franchise-featured-actions .button svg {
+  color: currentColor;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.9;
+}
+.franchise-overview-icon svg {
+  width: 19px;
+  height: 19px;
+  color: #4ba8ff;
+}
+.franchise-hero-actions .button,
+.franchise-featured-actions .button,
+.franchise-detail-tabs .button {
+  color: #f3f8ff;
+}
+.franchise-hero-actions .button-primary,
+.franchise-featured-actions .button-primary {
+  color: #fff;
+}
+.franchise-hero-actions .button-secondary,
+.franchise-featured-actions .button-secondary,
+.franchise-detail-tabs .button-secondary {
+  color: #dce8f8;
+}
+
+@media (max-width: 860px) {
+  .editorial-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-top: 18px;
+  }
+  .franchise-featured-dots {
+    right: 18px;
+    bottom: 18px;
+  }
+  .franchise-featured-dots button {
+    width: 30px;
+  }
+  .franchise-index-card { min-height: 0 !important; }
+}
+
+@media (min-width: 1320px) {
+  .franchise-index-grid {
+    grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  }
+}
