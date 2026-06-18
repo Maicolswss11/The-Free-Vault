@@ -4070,10 +4070,18 @@ const FRANCHISE_RELATION_TYPE_LABELS = {
   related_to: "Collegato a",
 };
 
-function editorialCard({ title, description, imageUrl, count, href, badge, kind = "franchise" }) {
+function editorialCard({ title, description, imageUrl, count, href, badge, kind = "franchise", paths = null, yearLabel = "Cronologia" }) {
   const article = document.createElement("article");
   article.className = `editorial-directory-card franchise-index-card ${kind === "collection" ? "is-collection" : "is-franchise"}`;
   const numericCount = Number(count || 0);
+  const numericPaths = Number(paths || 0);
+  const primaryLabel = kind === "collection"
+    ? `${numericCount.toLocaleString("it-IT")} articoli`
+    : `${numericCount.toLocaleString("it-IT")} giochi`;
+  const secondaryLabel = kind === "collection"
+    ? "Curata"
+    : (numericPaths > 0 ? `${numericPaths.toLocaleString("it-IT")} percorsi` : "Percorsi");
+  const tertiaryLabel = kind === "collection" ? "Set editoriale" : yearLabel;
   article.innerHTML = `
     <a class="editorial-card-cover" href="${escapeAttr(href)}">
       <img src="${escapeAttr(imageUrl || PLACEHOLDER)}" alt="" loading="lazy">
@@ -4084,9 +4092,9 @@ function editorialCard({ title, description, imageUrl, count, href, badge, kind 
       <h3><a href="${escapeAttr(href)}">${escapeHtml(title)}</a></h3>
       <p>${escapeHtml(description || "Descrizione editoriale in preparazione.")}</p>
       <div class="franchise-index-card-meta" aria-label="Metadati">
-        <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${numericCount.toLocaleString("it-IT")}</b><small>${kind === "collection" ? "articoli" : "giochi"}</small></span>
-        ${kind === "franchise" ? `<span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Apri</b><small>percorsi</small></span>` : `<span><svg aria-hidden="true"><use href="#icon-star"></use></svg><b>Curata</b><small>Ludograph</small></span>`}
-        <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${kind === "collection" ? "Set" : "Anni"}</b><small>${kind === "collection" ? "editoriale" : "timeline"}</small></span>
+        <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${escapeHtml(primaryLabel)}</b></span>
+        <span><svg aria-hidden="true"><use href="${kind === "collection" ? "#icon-star" : "#icon-franchise"}"></use></svg><b>${escapeHtml(secondaryLabel)}</b></span>
+        <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${escapeHtml(tertiaryLabel)}</b></span>
       </div>
       <div class="franchise-index-card-footer"><span><i></i>${kind === "collection" ? "Pubblicata" : "Attiva"}</span><a href="${escapeAttr(href)}">Apri →</a></div>
     </div>`;
@@ -4117,7 +4125,7 @@ function renderEditorialFeaturedSlide() {
       <p>${escapeHtml(featured.description || `Ripercorri ${featured.name}: uscite, cronologia, spin-off e percorsi editoriali.`)}</p>
       <div class="franchise-featured-stats">
         <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${count.toLocaleString("it-IT")}</b><small>Giochi totali</small></span>
-        <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Apri</b><small>Percorsi narrativi</small></span>
+        <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Percorsi</b><small>Narrativi</small></span>
       </div>
       <div class="franchise-featured-actions">
         <a class="button button-primary" href="${escapeAttr(route)}">Apri franchise <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
@@ -4214,6 +4222,7 @@ async function renderEditorialDirectory() {
         href: franchiseRoute(franchise.slug),
         badge: "FRANCHISE",
         kind: "franchise",
+        paths: franchise.track_count || franchise.path_count || franchise.narrative_path_count || franchise.paths_count || null,
       }));
     }
     for (const collection of state.editorialDirectory.collections || []) {

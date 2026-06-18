@@ -664,3 +664,138 @@
     grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
   }
 }
+
+/* Ludograph v5.5.11 — Franchise final polish */
+.franchise-directory-tools {
+  display: none !important;
+}
+
+.franchise-index-section {
+  margin-top: clamp(14px, 1.8vw, 24px);
+}
+
+.franchise-index-card .editorial-card-copy {
+  min-height: 0;
+}
+
+.franchise-index-card-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 9px;
+}
+
+.franchise-index-card-meta span {
+  display: inline-flex !important;
+  min-width: 0;
+  min-height: 42px !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 9px !important;
+  border-radius: 12px;
+}
+
+.franchise-index-card-meta svg {
+  flex: 0 0 17px;
+  width: 17px !important;
+  height: 17px !important;
+  color: #48a9ff;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.9;
+}
+
+.franchise-index-card-meta b {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #dce8f8;
+  font-size: .74rem !important;
+  font-weight: 850;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.franchise-index-card-meta small {
+  display: none !important;
+}
+
+.franchise-index-card-footer {
+  padding-top: 2px;
+}
+
+.franchise-featured-stats span b,
+.franchise-featured-stats span small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.franchise-cinematic-layout {
+  margin-bottom: clamp(36px, 3.2vw, 52px) !important;
+}
+
+.franchise-page .franchise-overview-strip {
+  position: relative;
+  z-index: 0;
+  margin-top: 0 !important;
+  margin-bottom: 24px !important;
+}
+
+.franchise-hero-actions .button,
+.franchise-featured-actions .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.franchise-hero-actions .button svg,
+.franchise-hero-actions .button svg *,
+.franchise-featured-actions .button svg,
+.franchise-featured-actions .button svg *,
+.franchise-detail-tabs .button svg,
+.franchise-detail-tabs .button svg * {
+  color: currentColor;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.franchise-hero-actions .button svg,
+.franchise-featured-actions .button svg,
+.franchise-detail-tabs .button svg {
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.franchise-side-rail .saga-progress-panel {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 1320px) {
+  .franchise-index-card-meta b {
+    font-size: .78rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .franchise-index-card-meta {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .franchise-index-card-meta span:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 420px) {
+  .franchise-index-card-meta {
+    grid-template-columns: 1fr !important;
+  }
+  .franchise-cinematic-layout {
+    margin-bottom: 28px !important;
+  }
+}
