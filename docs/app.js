@@ -753,6 +753,8 @@ function gameAliases(game) {
   if (!game || typeof game !== "object") return [];
   return [
     game.match_key,
+    game.canonical_route_key,
+    game.requested_key,
     game.canonical_id,
     game.internal_id,
     game.listing_id,
@@ -813,7 +815,10 @@ function snapshotGame(game) {
 }
 
 function getLibraryEntry(game) {
-  return state.library[gameKey(game)] || null;
+  for (const key of [gameKey(game), ...gameAliases(game)]) {
+    if (key && state.library[key]) return state.library[key];
+  }
+  return null;
 }
 
 function setLibraryEntry(game, patch = {}) {
@@ -1947,6 +1952,12 @@ function handleRoute() {
 
 
 function allSearchText(game) {
+  const canonicalRouteKey = game?.canonical_route_key || gameKey(game);
+  if (canonicalRouteKey && state.route.params.key !== canonicalRouteKey) {
+    state.route.params.key = canonicalRouteKey;
+    window.history.replaceState(null, "", gameRoute(game));
+  }
+
   const entry = getLibraryEntry(game);
   return [
     game.title,
@@ -5875,10 +5886,17 @@ function toggleAccountMenu() {
 }
 
 function updateAccountUI(snapshot) {
+  const previousUserId = state.auth.user?.id || null;
+  const nextUserId = snapshot.user?.id || null;
+  const accountChanged = previousUserId !== nextUserId;
   state.auth = snapshot;
   closeAccountMenu();
-  state.admin.loaded = false;
-  void refreshAdminContext();
+  if (accountChanged || !state.admin.loaded) {
+    state.admin.loaded = false;
+    void refreshAdminContext();
+  } else {
+    updateAdminNavigation();
+  }
   if (!snapshot.configured) {
     ui.accountLabel.textContent = "Configura account";
     ui.accountAvatar.textContent = "!";
@@ -7598,7 +7616,7 @@ async function synchronizeSignedInUser(snapshot) {
   }
 
   if (synchronizedAccountId === nextUserId) {
-    refreshCurrentPersonalView();
+    refreshCurrentPersonalView({ skipAdmin: true });
     return;
   }
 
@@ -7647,7 +7665,8 @@ async function synchronizeSignedInUser(snapshot) {
   }
 }
 
-function refreshCurrentPersonalView() {
+function refreshCurrentPersonalView(options = {}) {
+  const skipAdmin = Boolean(options.skipAdmin);
   if (state.route.name === "profile") renderProfilePage();
   if (state.route.name === "settings") renderSettingsPage();
   if (state.route.name === "game") void renderGamePage();
@@ -7659,7 +7678,7 @@ function refreshCurrentPersonalView() {
 
   if (state.route.name === "diary") renderDiaryPage();
   if (state.route.name === "stats") void renderStatsPage();
-  if (state.route.name === "admin") void renderAdminPage();
+  if (state.route.name === "admin" && !skipAdmin) void renderAdminPage();
   if (state.route.name === "discover") void renderDiscoveryPage({ force: true });
   if (routeToDashboardView(state.route.name)) renderDashboard();
 }

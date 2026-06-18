@@ -1,3 +1,4 @@
+// Previous stable cache: ludograph-v5-5-11-franchise-final-polish
 // Previous stable cache: ludograph-v5-5-6-profile-personalization
 // Previous stable cache: ludograph-v5-5-3-mobile-franchise-stability
 // Previous stable cache: ludograph-v5-5-2-home-topbar-fidelity
@@ -17,7 +18,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-5-11-franchise-final-polish";
+const CACHE_NAME = "ludograph-v5-5-13-canonical-game-pages";
 const APP_SHELL = [
   "./",
   "./index.html",

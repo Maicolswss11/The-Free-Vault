@@ -2,6 +2,7 @@
   const PAGE_CACHE_TTL = 5 * 60 * 1000;
   const pageCache = new Map();
   const gameCache = new Map();
+  const gameRequestCache = new Map();
   let statsCache = null;
   let discoveryCache = null;
   let recommendationsCache = null;
@@ -29,6 +30,8 @@
       listing_id: item?.listing_id || primary.listing_id,
       source_kind: item?.source_kind || "catalog",
       master_game_id: item?.master_game_id || null,
+      canonical_route_key: item?.canonical_route_key || item?.match_key || null,
+      requested_key: item?.requested_key || null,
       store: item?.store || primary.store || null,
       stores: Array.isArray(item?.stores) ? item.stores : listings.map((entry) => entry.store),
       store_listings: listings,
@@ -40,6 +43,62 @@
       fmt_original_price: item?.fmt_original_price || primary.fmt_original_price || null,
       fmt_discount_price: item?.fmt_discount_price || primary.fmt_discount_price || null,
     };
+  }
+
+
+
+  function normalizeDuplicateText(value) {
+    return String(value || "")
+      .toLocaleLowerCase("it")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[™®©]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function catalogDuplicateMaker(item) {
+    return normalizeDuplicateText(item?.developer || item?.publisher || "");
+  }
+
+  function catalogDuplicateScore(item) {
+    const stores = Array.isArray(item?.stores) ? item.stores.filter(Boolean).length : 0;
+    const listings = Array.isArray(item?.store_listings) ? item.store_listings.filter(Boolean).length : 0;
+    return (item?.source_kind === "hybrid" ? 50 : item?.source_kind === "catalog" ? 30 : 10)
+      + Math.min(40, Math.max(stores, listings) * 10)
+      + (item?.description ? 6 : 0)
+      + (item?.image_url ? 4 : 0)
+      + (item?.release_date ? 2 : 0);
+  }
+
+  function looksLikeTechnicalDuplicate(a, b) {
+    const titleA = normalizeDuplicateText(a?.canonical_title || a?.title);
+    const titleB = normalizeDuplicateText(b?.canonical_title || b?.title);
+    if (!titleA || titleA !== titleB) return false;
+    if (a?.master_game_id && b?.master_game_id && a.master_game_id === b.master_game_id) return true;
+    const makerA = catalogDuplicateMaker(a);
+    const makerB = catalogDuplicateMaker(b);
+    const sameMaker = makerA && makerB && makerA === makerB;
+    const yearA = Number(a?.release_year || (a?.release_date || "").slice(0, 4));
+    const yearB = Number(b?.release_year || (b?.release_date || "").slice(0, 4));
+    const yearsClose = !yearA || !yearB || Math.abs(yearA - yearB) <= 2;
+    const hasStoreRecord = [a, b].some((item) => Array.isArray(item?.stores) && item.stores.length);
+    return sameMaker && yearsClose && hasStoreRecord;
+  }
+
+  function dedupeCatalogItems(items) {
+    const output = [];
+    for (const item of items || []) {
+      const existingIndex = output.findIndex((candidate) => looksLikeTechnicalDuplicate(candidate, item));
+      if (existingIndex === -1) {
+        output.push(item);
+        continue;
+      }
+      if (catalogDuplicateScore(item) > catalogDuplicateScore(output[existingIndex])) {
+        output[existingIndex] = item;
+      }
+    }
+    return output;
   }
 
   async function getStats({ force = false } = {}) {
@@ -92,7 +151,7 @@
     });
     if (error) throw error;
     const value = {
-      items: (data?.items || []).map(normalizeItem),
+      items: dedupeCatalogItems((data?.items || []).map(normalizeItem)),
       total: Number(data?.total || 0),
       limit: Number(data?.limit || normalized.limit),
       offset: Number(data?.offset || normalized.offset),
@@ -126,20 +185,40 @@
     return unique.map((key) => gameCache.get(key)).filter(Boolean);
   }
 
-  async function getGame(key, { force = false } = {}) {
-    if (!configured()) throw new Error("Supabase non configurato.");
-    if (!force && gameCache.has(key)) return gameCache.get(key);
-    const { data, error } = await client().rpc("get_catalog_game", { p_key: key });
-    if (error) throw error;
-    if (!data) return null;
-    const value = normalizeItem(data);
-    gameCache.set(key, value);
+  function cacheResolvedGame(requestedKey, raw) {
+    if (!raw) return null;
+    const value = normalizeItem(raw);
+    if (requestedKey) gameCache.set(requestedKey, value);
     gameCache.set(value.canonical_id, value);
     if (value.match_key) gameCache.set(value.match_key, value);
+    if (value.master_game_id) gameCache.set(value.master_game_id, value);
     for (const listing of value.store_listings || []) {
       if (listing.listing_id) gameCache.set(listing.listing_id, value);
     }
     return value;
+  }
+
+  async function getGame(key, { force = false } = {}) {
+    if (!configured()) throw new Error("Supabase non configurato.");
+    const normalizedKey = String(key || "").trim();
+    if (!normalizedKey) return null;
+    if (!force && gameCache.has(normalizedKey)) return gameCache.get(normalizedKey);
+
+    const requestKey = `${normalizedKey}:${force ? "force" : "normal"}`;
+    if (gameRequestCache.has(requestKey)) return gameRequestCache.get(requestKey);
+
+    const request = client()
+      .rpc("get_catalog_game", { p_key: normalizedKey })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return cacheResolvedGame(normalizedKey, data);
+      })
+      .finally(() => {
+        gameRequestCache.delete(requestKey);
+      });
+
+    gameRequestCache.set(requestKey, request);
+    return request;
   }
 
 
@@ -184,7 +263,7 @@
       mode: data?.mode || "cold_start",
       generatedAt: data?.generated_at || null,
       profile: data?.profile || { positive_signals: 0, negative_signals: 0, similar_users: 0, top_genres: [], top_developers: [] },
-      items: (data?.items || []).map(normalizeItem),
+      items: dedupeCatalogItems((data?.items || []).map(normalizeItem)),
     };
     for (const item of value.items) {
       gameCache.set(item.canonical_id, item);
@@ -216,7 +295,7 @@
       kind: data?.kind || normalizedKind,
       name: data?.name || normalizedName,
       total: Number(data?.total || 0),
-      items: (data?.items || []).map(normalizeItem),
+      items: dedupeCatalogItems((data?.items || []).map(normalizeItem)),
       limit: Number(data?.limit || limit),
       offset: Number(data?.offset || offset),
     };
