@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./visual-overhaul.css">
   <link rel="stylesheet" href="./interface-rebuild.css">
+  <link rel="stylesheet" href="./franchise-fidelity.css">
   <title>Ludograph</title>
 </head>
 <body>
@@ -432,23 +433,39 @@
         </section>
 
         <section id="editorial-directory-page" class="route-page editorial-directory-page" hidden>
-          <header class="page-heading editorial-directory-heading">
-            <div>
-              <p class="eyebrow">ARCHIVIO EDITORIALE</p>
-              <h1>Franchise, saghe e collezioni</h1>
-              <p>Ordini di uscita e narrativi, spin-off, remake, DLC e selezioni ufficiali curate da Ludograph.</p>
-            </div>
-            <a class="button button-secondary" href="#/lists">Apri le tue liste personali</a>
-          </header>
           <div id="editorial-directory-status" class="notice" hidden></div>
-          <section class="editorial-directory-section">
-            <div class="editorial-section-heading"><div><p class="eyebrow">SAGHE</p><h2>Franchise</h2></div><span class="official-badge">UFFICIALI</span></div>
-            <div id="franchise-directory-grid" class="editorial-card-grid"></div>
+          <section class="franchise-index-hero-shell" aria-labelledby="franchise-index-title">
+            <div class="franchise-index-intro">
+              <p class="eyebrow">FRANCHISE E COLLEZIONI</p>
+              <h1 id="franchise-index-title">Franchise e collezioni</h1>
+              <p>Esplora saghe videoludiche, percorsi narrativi, spin-off, remake, remaster e raccolte curate per attraversare ogni universo con ordine.</p>
+            </div>
+            <article id="franchise-featured-hero" class="franchise-featured-hero" aria-label="Franchise in evidenza"></article>
           </section>
-          <section class="editorial-directory-section">
-            <div class="editorial-section-heading"><div><p class="eyebrow">SELEZIONI CURATE</p><h2>Collezioni editoriali</h2></div><span class="official-badge">LUDOGRAPH</span></div>
-            <p class="muted editorial-distinction">Le collezioni editoriali sono pubblicate dagli amministratori. Le liste personali restano separate e appartengono agli utenti.</p>
-            <div id="collection-directory-grid" class="editorial-card-grid"></div>
+
+          <div class="franchise-directory-tools" aria-label="Filtri archivio editoriale">
+            <div class="franchise-directory-filters" role="group" aria-label="Categorie">
+              <button class="is-active" type="button" data-editorial-filter="all"><svg aria-hidden="true"><use href="#icon-grid"></use></svg>Tutte</button>
+              <button type="button" data-editorial-filter="franchise"><svg aria-hidden="true"><use href="#icon-shield-check"></use></svg>Ufficiali</button>
+              <button type="button" data-editorial-filter="paths"><svg aria-hidden="true"><use href="#icon-franchise"></use></svg>Percorsi narrativi</button>
+              <button type="button" data-editorial-filter="remakes"><svg aria-hidden="true"><use href="#icon-refresh"></use></svg>Remake e remaster</button>
+              <button type="button" data-editorial-filter="collections"><svg aria-hidden="true"><use href="#icon-library"></use></svg>Collezioni editoriali</button>
+            </div>
+            <div class="franchise-directory-sort">
+              <span>Ordina per</span>
+              <strong>Popolarità</strong>
+              <svg aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+            </div>
+          </div>
+
+          <section class="editorial-directory-section franchise-index-section" data-editorial-block="franchises">
+            <div class="editorial-section-heading"><div><p class="eyebrow">SAGHE</p><h2>Franchise ufficiali</h2></div><span id="franchise-directory-count" class="official-badge">UFFICIALI</span></div>
+            <div id="franchise-directory-grid" class="editorial-card-grid franchise-index-grid"></div>
+          </section>
+          <section class="editorial-directory-section franchise-index-section" data-editorial-block="collections">
+            <div class="editorial-section-heading"><div><p class="eyebrow">COLLEZIONI CURATE</p><h2>Selezioni editoriali</h2></div><a class="editorial-see-all" href="#/franchises">Vedi tutte le collezioni →</a></div>
+            <p class="muted editorial-distinction">Raccolte pensate per scoprire, recuperare e conservare il meglio del medium. Le liste personali restano separate e appartengono agli utenti.</p>
+            <div id="collection-directory-grid" class="editorial-card-grid franchise-collection-strip"></div>
           </section>
         </section>
 
@@ -463,6 +480,7 @@
                 <h1 id="franchise-title">Franchise</h1>
                 <p id="franchise-description"></p>
                 <div id="franchise-meta" class="editorial-detail-meta"></div>
+                <div id="franchise-hero-actions" class="franchise-hero-actions"></div>
               </div>
             </header>
             <aside class="franchise-side-rail">
@@ -480,13 +498,15 @@
           </div>
           <div id="franchise-status" class="notice" hidden></div>
           <section id="franchise-overview" class="franchise-overview-strip" aria-label="Panoramica del franchise" hidden></section>
-          <div class="franchise-order-toolbar" role="group" aria-label="Ordinamento saga">
-            <span>Ordina per</span>
-            <button class="button button-secondary is-active" data-franchise-order="release" type="button">Uscita</button>
-            <button class="button button-secondary" data-franchise-order="narrative" type="button">Narrativa</button>
-            <button class="button button-secondary" data-franchise-order="paths" type="button">Percorsi</button>
+          <div class="franchise-order-toolbar franchise-detail-tabs" role="group" aria-label="Navigazione franchise">
+            <button class="button button-secondary is-active" data-franchise-order="paths" type="button"><svg aria-hidden="true"><use href="#icon-franchise"></use></svg>Percorsi narrativi</button>
+            <button class="button button-secondary" data-franchise-order="release" type="button"><svg aria-hidden="true"><use href="#icon-calendar"></use></svg>Ordine di uscita</button>
+            <button class="button button-secondary" data-franchise-order="narrative" type="button"><svg aria-hidden="true"><use href="#icon-history"></use></svg>Ordine narrativo</button>
           </div>
-          <div id="franchise-sections" class="franchise-sections"></div>
+          <div class="franchise-detail-content">
+            <div id="franchise-sections" class="franchise-sections"></div>
+            <aside id="franchise-context-rail" class="franchise-context-rail" aria-label="Approfondimenti franchise" hidden></aside>
+          </div>
         </section>
 
         <section id="editorial-collection-page" class="route-page editorial-collection-page" hidden>

@@ -39,4 +39,4 @@ def test_game_page_has_dedicated_desktop_and_mobile_layouts():
 
 
 def test_v557_cache_name_is_updated():
-    assert 'const CACHE_NAME = "ludograph-v5-5-8-game-media-gallery"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-5-9-franchise-fidelity"' in WORKER

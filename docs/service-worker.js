@@ -17,13 +17,14 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-5-8-game-media-gallery";
+const CACHE_NAME = "ludograph-v5-5-9-franchise-fidelity";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./visual-overhaul.css",
   "./interface-rebuild.css",
+  "./franchise-fidelity.css",
   "./app.js",
   "./cloud-sync.js",
   "./social.js",

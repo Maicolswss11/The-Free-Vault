@@ -4066,9 +4066,10 @@ const FRANCHISE_RELATION_TYPE_LABELS = {
   related_to: "Collegato a",
 };
 
-function editorialCard({ title, description, imageUrl, count, href, badge }) {
+function editorialCard({ title, description, imageUrl, count, href, badge, kind = "franchise" }) {
   const article = document.createElement("article");
-  article.className = "editorial-directory-card";
+  article.className = `editorial-directory-card franchise-index-card ${kind === "collection" ? "is-collection" : "is-franchise"}`;
+  const numericCount = Number(count || 0);
   article.innerHTML = `
     <a class="editorial-card-cover" href="${escapeAttr(href)}">
       <img src="${escapeAttr(imageUrl || PLACEHOLDER)}" alt="" loading="lazy">
@@ -4078,11 +4079,70 @@ function editorialCard({ title, description, imageUrl, count, href, badge }) {
     <div class="editorial-card-copy">
       <h3><a href="${escapeAttr(href)}">${escapeHtml(title)}</a></h3>
       <p>${escapeHtml(description || "Descrizione editoriale in preparazione.")}</p>
-      <div><span>${Number(count || 0).toLocaleString("it-IT")} giochi</span><a href="${escapeAttr(href)}">Apri →</a></div>
+      <div class="franchise-index-card-meta" aria-label="Metadati">
+        <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${numericCount.toLocaleString("it-IT")}</b><small>${kind === "collection" ? "articoli" : "giochi"}</small></span>
+        ${kind === "franchise" ? `<span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>—</b><small>percorsi</small></span>` : `<span><svg aria-hidden="true"><use href="#icon-star"></use></svg><b>Curata</b><small>Ludograph</small></span>`}
+        <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${kind === "collection" ? "Editoriale" : "Cronologia"}</b><small>${kind === "collection" ? "selezione" : "nel dettaglio"}</small></span>
+      </div>
+      <div class="franchise-index-card-footer"><span><i></i>${kind === "collection" ? "Pubblicata" : "Attiva"}</span><a href="${escapeAttr(href)}">Apri →</a></div>
     </div>`;
   const image = article.querySelector("img");
   image.onerror = () => { image.src = PLACEHOLDER; };
   return article;
+}
+
+function renderEditorialFeaturedHero(directory = {}) {
+  const hero = document.getElementById("franchise-featured-hero");
+  if (!hero) return;
+  const franchises = [...(directory.franchises || [])]
+    .filter((item) => item && item.slug)
+    .sort((a, b) => Number(b.game_count || 0) - Number(a.game_count || 0));
+  const featured = franchises.find((item) => item.hero_image_url) || franchises[0];
+  if (!featured) {
+    hero.innerHTML = `
+      <div class="franchise-featured-empty">
+        <p class="eyebrow">FRANCHISE UFFICIALE</p>
+        <h2>Archivio in preparazione</h2>
+        <p>Le saghe pubblicate dagli amministratori appariranno qui.</p>
+      </div>`;
+    return;
+  }
+  const count = Number(featured.game_count || 0);
+  hero.innerHTML = `
+    <img src="${escapeAttr(featured.hero_image_url || PLACEHOLDER)}" alt="" loading="lazy">
+    <span class="franchise-featured-scrim"></span>
+    <div class="franchise-featured-copy">
+      <span class="official-badge">FRANCHISE UFFICIALE</span>
+      <h2>${escapeHtml(featured.name)}</h2>
+      <p>${escapeHtml(featured.description || `Ripercorri ${featured.name}: uscite, cronologia, spin-off e percorsi editoriali.`)}</p>
+      <div class="franchise-featured-stats">
+        <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${count.toLocaleString("it-IT")}</b><small>Giochi totali</small></span>
+        <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>Dettaglio</b><small>Percorsi narrativi</small></span>
+      </div>
+      <div class="franchise-featured-actions">
+        <a class="button button-primary" href="${escapeAttr(franchiseRoute(featured.slug))}">Apri franchise <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></a>
+        <a class="button button-secondary" href="${escapeAttr(franchiseRoute(featured.slug))}">Esplora percorsi</a>
+      </div>
+    </div>
+    <div class="franchise-featured-dots" aria-hidden="true"><span></span><span></span><span></span></div>`;
+  const image = hero.querySelector("img");
+  image.onerror = () => { image.src = PLACEHOLDER; };
+}
+
+function bindEditorialDirectoryFilters() {
+  const buttons = $$("[data-editorial-filter]");
+  if (!buttons.length) return;
+  const franchiseBlock = document.querySelector('[data-editorial-block="franchises"]');
+  const collectionBlock = document.querySelector('[data-editorial-block="collections"]');
+  for (const button of buttons) {
+    button.onclick = () => {
+      const filter = button.dataset.editorialFilter || "all";
+      buttons.forEach((item) => item.classList.toggle("is-active", item === button));
+      if (franchiseBlock) franchiseBlock.hidden = filter === "collections";
+      if (collectionBlock) collectionBlock.hidden = !["all", "collections", "remakes"].includes(filter);
+      if (["paths", "franchise", "remakes"].includes(filter) && franchiseBlock) franchiseBlock.hidden = false;
+    };
+  }
 }
 
 async function renderEditorialDirectory() {
@@ -4096,8 +4156,12 @@ async function renderEditorialDirectory() {
     const directory = await window.VaultFranchises.getDirectory();
     if (requestId !== state.editorialRequestId || state.route.name !== "editorial-directory") return;
     state.editorialDirectory = directory || { franchises: [], collections: [] };
+    renderEditorialFeaturedHero(state.editorialDirectory);
+    bindEditorialDirectoryFilters();
     ui.franchiseDirectoryGrid.replaceChildren();
     ui.collectionDirectoryGrid.replaceChildren();
+    const franchiseCountLabel = document.getElementById("franchise-directory-count");
+    if (franchiseCountLabel) franchiseCountLabel.textContent = `${Number((state.editorialDirectory.franchises || []).length || 0).toLocaleString("it-IT")} ufficiali`;
 
     for (const franchise of state.editorialDirectory.franchises || []) {
       ui.franchiseDirectoryGrid.append(editorialCard({
@@ -4107,6 +4171,7 @@ async function renderEditorialDirectory() {
         count: franchise.game_count,
         href: franchiseRoute(franchise.slug),
         badge: "FRANCHISE",
+        kind: "franchise",
       }));
     }
     for (const collection of state.editorialDirectory.collections || []) {
@@ -4116,7 +4181,8 @@ async function renderEditorialDirectory() {
         imageUrl: collection.cover_image_url,
         count: collection.game_count,
         href: editorialCollectionRoute(collection.slug),
-        badge: "COLLEZIONE UFFICIALE",
+        badge: "COLLEZIONE CURATA",
+        kind: "collection",
       }));
     }
 
@@ -4310,7 +4376,7 @@ function franchiseGameByKeyMap() {
   return map;
 }
 
-function renderFranchiseTrackSection(track, gameMap) {
+function franchiseTrackGames(track) {
   const memberships = [];
   for (const game of state.franchiseData?.games || []) {
     const membership = (game.track_memberships || []).find((item) => item.track_key === track.track_key);
@@ -4319,41 +4385,75 @@ function renderFranchiseTrackSection(track, gameMap) {
   memberships.sort((a, b) => Number(a.membership.narrative_order || 100000) - Number(b.membership.narrative_order || 100000)
     || Number(a.game.release_order || 100000) - Number(b.game.release_order || 100000)
     || String(a.game.title || "").localeCompare(String(b.game.title || ""), "it"));
+  return memberships;
+}
 
+function franchiseTrackCompletion(memberships = []) {
+  if (!memberships.length) return { completed: 0, total: 0, percent: 0 };
+  let completed = 0;
+  let totalPercent = 0;
+  for (const { game } of memberships) {
+    const progress = franchiseGameProgress(game);
+    const done = progress.status === "completed";
+    if (done) completed += 1;
+    totalPercent += done ? 100 : Math.max(0, Math.min(100, progress.percent || 0));
+  }
+  return { completed, total: memberships.length, percent: Math.round(totalPercent / memberships.length) };
+}
+
+function franchiseTrackBadges(track, memberships = []) {
+  const statuses = new Set(memberships.map(({ membership }) => membership.canon_status || "unknown"));
+  const labels = [];
+  if (track.track_type) labels.push(FRANCHISE_TRACK_TYPE_LABELS[track.track_type] || "Percorso");
+  if (statuses.has("canon")) labels.push("Canonico");
+  if (statuses.has("alternate_canon") || statuses.has("reimagining")) labels.push("Alternativo");
+  if (!labels.length) labels.push("Editoriale");
+  return labels.slice(0, 3).map((label) => `<span>${escapeHtml(label)}</span>`).join("");
+}
+
+function renderFranchiseTimelineItem(game, membership = {}) {
+  const progress = franchiseGameProgress(game);
+  const percent = Math.max(0, Math.min(100, progress.percent || (progress.status === "completed" ? 100 : 0)));
+  const item = document.createElement("article");
+  item.className = "franchise-timeline-item";
+  item.innerHTML = `
+    <a class="franchise-timeline-cover" href="${escapeAttr(gameRoute(game))}"><img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="" loading="lazy"></a>
+    <div class="franchise-timeline-copy">
+      <strong><a href="${escapeAttr(gameRoute(game))}">${escapeHtml(game.title || "Titolo")}</a></strong>
+      <span>${escapeHtml(releaseYearOf(game) || game.release_year || "Anno n/d")}</span>
+      <small>Ordine ${escapeHtml(membership.narrative_order || game.narrative_order || game.release_order || "—")}</small>
+      ${percent ? `<i style="--item-progress:${percent}%"></i>` : ""}
+    </div>`;
+  const image = item.querySelector("img");
+  image.onerror = () => { image.src = PLACEHOLDER; };
+  return item;
+}
+
+function renderFranchiseTrackSection(track, gameMap) {
+  void gameMap;
+  const memberships = franchiseTrackGames(track);
+  const completion = franchiseTrackCompletion(memberships);
   const section = document.createElement("section");
-  section.className = "franchise-group franchise-track-group";
+  section.className = "franchise-group franchise-track-group franchise-path-lane";
   const parent = track.parent_track_key ? (state.franchiseData?.tracks || []).find((item) => item.track_key === track.parent_track_key) : null;
   section.innerHTML = `
-    <header>
-      <div>
-        <div class="franchise-track-kicker"><span class="track-type-badge track-${escapeAttr(track.track_type || "other")}">${escapeHtml(FRANCHISE_TRACK_TYPE_LABELS[track.track_type] || "PERCORSO")}</span>${parent ? `<span class="track-parent">Dentro ${escapeHtml(parent.name)}</span>` : ""}</div>
-        <h2>${escapeHtml(track.name || track.track_key)}</h2>
-        ${track.description ? `<p>${escapeHtml(track.description)}</p>` : ""}
+    <div class="franchise-path-summary">
+      <div class="franchise-path-number">${escapeHtml(track.sort_order || "•")}</div>
+      <div class="franchise-path-copy">
+        <div class="franchise-track-kicker">${franchiseTrackBadges(track, memberships)}${parent ? `<span>Dentro ${escapeHtml(parent.name)}</span>` : ""}</div>
+        <h2>${escapeHtml(track.name || "Percorso narrativo")}</h2>
+        ${track.description ? `<p>${escapeHtml(track.description)}</p>` : `<p>Linea editoriale ordinata per attraversare questo arco della saga.</p>`}
+        <div class="franchise-path-progress"><strong>${completion.percent}%</strong><span><i style="width:${completion.percent}%"></i></span><small>${completion.completed}/${completion.total} completati</small></div>
       </div>
-      <span>${memberships.length}</span>
-    </header>`;
-
-  const list = document.createElement("div");
-  list.className = "franchise-game-list";
+    </div>`;
+  const timeline = document.createElement("div");
+  timeline.className = "franchise-timeline-strip";
   if (!memberships.length) {
-    list.innerHTML = `<div class="timeline-empty">Nessun gioco assegnato a questo percorso.</div>`;
+    timeline.innerHTML = `<div class="timeline-empty">Nessun gioco assegnato a questo percorso.</div>`;
   } else {
-    for (const { game, membership } of memberships) {
-      const row = renderFranchiseGameRow({
-        ...game,
-        narrative_order: membership.narrative_order ?? game.narrative_order,
-        franchise_note: membership.note || game.franchise_note,
-      });
-      const meta = document.createElement("div");
-      meta.className = "franchise-track-meta";
-      meta.innerHTML = `
-        <span>${escapeHtml(FRANCHISE_CANON_LABELS[membership.canon_status] || FRANCHISE_CANON_LABELS.unknown)}</span>
-        ${membership.narrative_order ? `<span>Percorso #${Number(membership.narrative_order)}</span>` : ""}`;
-      row.querySelector(".franchise-game-copy")?.append(meta);
-      list.append(row);
-    }
+    for (const { game, membership } of memberships) timeline.append(renderFranchiseTimelineItem(game, membership));
   }
-  section.append(list);
+  section.append(timeline);
   return section;
 }
 
@@ -4380,6 +4480,72 @@ function renderFranchiseRelations(gameMap) {
   }
   section.append(list);
   return section;
+}
+
+function franchisePrimaryGames(games = []) {
+  return [...games].filter((game) => (game.relation_type || "main") === "main")
+    .sort((a, b) => Number(a.release_order || 100000) - Number(b.release_order || 100000)
+      || String(a.title || "").localeCompare(String(b.title || ""), "it"));
+}
+
+function renderFranchiseContextRail(data = {}) {
+  const rail = document.getElementById("franchise-context-rail");
+  if (!rail) return;
+  const games = data.games || [];
+  const tracks = data.tracks || [];
+  const mainGames = franchisePrimaryGames(games);
+  const firstMain = mainGames[0] || games[0];
+  const firstTrack = tracks[0];
+  const modernStart = [...mainGames].reverse().find((game) => releaseYearOf(game) && Number(releaseYearOf(game)) >= 2015) || mainGames[mainGames.length - 1] || firstMain;
+  const collections = (state.editorialDirectory?.collections || []).slice(0, 3);
+  rail.innerHTML = `
+    <section class="franchise-rail-panel franchise-main-games-panel">
+      <header><div><p class="eyebrow">GIOCHI PRINCIPALI</p><h2>Sequenza centrale</h2></div><a href="#" data-franchise-show-release>Visualizza tutti →</a></header>
+      <div class="franchise-main-games-list">
+        ${mainGames.slice(0, 6).map((game) => {
+          const progress = franchiseGameProgress(game);
+          const percent = Math.max(0, Math.min(100, progress.status === "completed" ? 100 : progress.percent || 0));
+          return `<a href="${escapeAttr(gameRoute(game))}" class="franchise-main-game-link">
+            <img src="${escapeAttr(game.image_url || PLACEHOLDER)}" alt="" loading="lazy">
+            <span><strong>${escapeHtml(game.title || "Titolo")}</strong><small>${escapeHtml(releaseYearOf(game) || game.release_year || "Anno n/d")}</small></span>
+            <em>${escapeHtml(FRANCHISE_RELATION_LABELS[game.relation_type || "main"] || "Titolo")}</em>
+            <i style="--rail-progress:${percent}%"></i>
+          </a>`;
+        }).join("") || `<p class="muted">Nessun gioco principale pubblicato.</p>`}
+      </div>
+    </section>
+
+    <section class="franchise-rail-panel">
+      <header><div><p class="eyebrow">COLLEZIONI EDITORIALI</p><h2>Raccolte correlate</h2></div></header>
+      <div class="franchise-linked-collections">
+        ${collections.length ? collections.map((collection) => `<a href="${escapeAttr(editorialCollectionRoute(collection.slug))}"><img src="${escapeAttr(collection.cover_image_url || PLACEHOLDER)}" alt="" loading="lazy"><span><strong>${escapeHtml(collection.title)}</strong><small>${Number(collection.game_count || 0).toLocaleString("it-IT")} giochi</small></span></a>`).join("") : `<p class="muted">Le collezioni editoriali collegate appariranno qui quando saranno pubblicate.</p>`}
+      </div>
+    </section>
+
+    <section class="franchise-rail-panel franchise-start-guide">
+      <header><div><p class="eyebrow">DA DOVE INIZIARE</p><h2>Guida rapida</h2></div></header>
+      <a href="${escapeAttr(firstMain ? gameRoute(firstMain) : "#/franchises")}"><svg aria-hidden="true"><use href="#icon-star"></use></svg><span><small>Miglior punto di partenza</small><strong>${escapeHtml(firstMain?.title || "Scegli un titolo principale")}</strong></span></a>
+      <button type="button" data-franchise-show-release><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><span><small>Esperienza completa</small><strong>Ordine di uscita</strong></span></button>
+      <button type="button" data-franchise-show-paths><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><span><small>Percorso editoriale</small><strong>${escapeHtml(firstTrack?.name || "Percorsi narrativi")}</strong></span></button>
+      <a href="${escapeAttr(modernStart ? gameRoute(modernStart) : "#/franchises")}"><svg aria-hidden="true"><use href="#icon-sparkles"></use></svg><span><small>Approccio moderno</small><strong>${escapeHtml(modernStart?.title || "Titolo recente")}</strong></span></a>
+    </section>`;
+  rail.querySelectorAll("img").forEach((image) => { image.onerror = () => { image.src = PLACEHOLDER; }; });
+  rail.querySelectorAll("[data-franchise-show-release]").forEach((control) => {
+    control.addEventListener("click", (event) => {
+      event.preventDefault();
+      state.franchiseOrder = "release";
+      $$('[data-franchise-order]').forEach((item) => item.classList.toggle("is-active", item.dataset.franchiseOrder === "release"));
+      renderFranchiseSections();
+    });
+  });
+  rail.querySelectorAll("[data-franchise-show-paths]").forEach((control) => {
+    control.addEventListener("click", () => {
+      state.franchiseOrder = "paths";
+      $$('[data-franchise-order]').forEach((item) => item.classList.toggle("is-active", item.dataset.franchiseOrder === "paths"));
+      renderFranchiseSections();
+    });
+  });
+  rail.hidden = false;
 }
 
 function renderFranchiseSections() {
@@ -4448,8 +4614,8 @@ async function renderFranchisePage() {
   const requestId = ++state.editorialRequestId;
   const slug = state.route.params.slug;
   state.franchiseData = null;
-  state.franchiseOrder = "release";
-  $$('[data-franchise-order]').forEach((button) => button.classList.toggle("is-active", button.dataset.franchiseOrder === "release"));
+  state.franchiseOrder = "paths";
+  $$('[data-franchise-order]').forEach((button) => button.classList.toggle("is-active", button.dataset.franchiseOrder === "paths"));
   updateDocumentTitle("Caricamento franchise");
   ui.franchiseTitle.textContent = "Caricamento…";
   ui.franchiseDescription.textContent = "Recupero la cronologia della saga.";
@@ -4464,6 +4630,13 @@ async function renderFranchisePage() {
   ui.franchiseOverview.replaceChildren();
   ui.franchiseOverview.hidden = true;
   ui.franchiseProgress.hidden = true;
+  const franchiseContextRail = document.getElementById("franchise-context-rail");
+  if (franchiseContextRail) {
+    franchiseContextRail.replaceChildren();
+    franchiseContextRail.hidden = true;
+  }
+  const franchiseHeroActions = document.getElementById("franchise-hero-actions");
+  if (franchiseHeroActions) franchiseHeroActions.replaceChildren();
   try {
     const data = await window.VaultFranchises.getFranchise(slug);
     if (requestId !== state.editorialRequestId || state.route.name !== "franchise" || state.route.params.slug !== slug) return;
@@ -4476,7 +4649,25 @@ async function renderFranchisePage() {
     ui.franchiseDescription.textContent = franchise.description || "Descrizione editoriale in preparazione.";
     const trackCount = Number((data.tracks || []).length);
     const relationCount = Number((data.relations || []).length);
-    ui.franchiseMeta.innerHTML = `<span>${Number((data.games || []).length).toLocaleString("it-IT")} titoli</span><span>${trackCount ? `${trackCount} percorsi` : "Cronologia editoriale"}</span>${relationCount ? `<span>${relationCount} relazioni</span>` : ""}`;
+    const spinOffCount = (data.games || []).filter((game) => ["spin_off", "other"].includes(game.relation_type || "")).length;
+    ui.franchiseMeta.innerHTML = `
+      <span><svg aria-hidden="true"><use href="#icon-gamepad"></use></svg><b>${Number((data.games || []).length).toLocaleString("it-IT")}</b><small>Giochi totali</small></span>
+      <span><svg aria-hidden="true"><use href="#icon-franchise"></use></svg><b>${trackCount || "—"}</b><small>Percorsi narrativi</small></span>
+      <span><svg aria-hidden="true"><use href="#icon-sparkles"></use></svg><b>${spinOffCount}</b><small>Spin-off e diramazioni</small></span>
+      <span><svg aria-hidden="true"><use href="#icon-calendar"></use></svg><b>${escapeHtml(franchiseYearRange(data.games || []))}</b><small>Anni coperti</small></span>`;
+    if (franchiseHeroActions) {
+      franchiseHeroActions.innerHTML = `
+        <button class="button button-primary" type="button" data-franchise-follow><span>Segui franchise</span><svg aria-hidden="true"><use href="#icon-star"></use></svg></button>
+        <button class="button button-secondary" type="button" data-franchise-share><span>Condividi</span><svg aria-hidden="true"><use href="#icon-external"></use></svg></button>
+        <a class="button button-secondary" href="#/library"><span>Apri nella libreria</span><svg aria-hidden="true"><use href="#icon-library"></use></svg></a>`;
+      franchiseHeroActions.querySelector("[data-franchise-share]")?.addEventListener("click", async () => {
+        const shareUrl = `${location.origin}${location.pathname}${franchiseRoute(franchise.slug)}`;
+        try {
+          if (navigator.share) await navigator.share({ title: franchise.name, url: shareUrl });
+          else await navigator.clipboard?.writeText(shareUrl);
+        } catch (_) {}
+      });
+    }
     const fallbackHero = [...(data.games || [])]
       .sort((a, b) => Number(a.release_order || 100000) - Number(b.release_order || 100000))
       .find((game) => game.image_url)?.image_url || "";
@@ -4488,8 +4679,11 @@ async function renderFranchisePage() {
       ui.franchiseHeroImage.alt = franchise.name;
       ui.franchiseHeroImage.onerror = () => { ui.franchiseHeroImage.hidden = true; };
     }
+    state.franchiseOrder = (data.tracks || []).length ? "paths" : "release";
+    $$('[data-franchise-order]').forEach((button) => button.classList.toggle("is-active", button.dataset.franchiseOrder === state.franchiseOrder));
     renderFranchiseOverview(data);
     renderFranchiseProgress(data.games || []);
+    renderFranchiseContextRail(data);
     renderFranchiseSections();
   } catch (error) {
     console.error("Franchise non disponibile", error);
@@ -4509,6 +4703,13 @@ async function renderFranchisePage() {
     ui.franchiseOverview.replaceChildren();
     ui.franchiseOverview.hidden = true;
     ui.franchiseProgress.hidden = true;
+    const franchiseContextRail = document.getElementById("franchise-context-rail");
+    if (franchiseContextRail) {
+      franchiseContextRail.replaceChildren();
+      franchiseContextRail.hidden = true;
+    }
+    const franchiseHeroActions = document.getElementById("franchise-hero-actions");
+    if (franchiseHeroActions) franchiseHeroActions.replaceChildren();
     ui.franchiseSections.replaceChildren();
   }
 }
