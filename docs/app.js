@@ -751,6 +751,7 @@ function gameKey(game) {
 
 function gameAliases(game) {
   if (!game || typeof game !== "object") return [];
+  const canonicalAliases = Array.isArray(game.canonical_aliases) ? game.canonical_aliases : [];
   return [
     game.match_key,
     game.canonical_route_key,
@@ -761,6 +762,10 @@ function gameAliases(game) {
     game.epic_id,
     game.promotion_key,
     game.external_id,
+    ...canonicalAliases,
+    ...((Array.isArray(game.store_listings) ? game.store_listings : [])
+      .map((listing) => listing?.listing_id || listing?.external_id)
+      .filter(Boolean)),
     game.namespace && (game.external_id || game.epic_id)
       ? `epic:${game.namespace}:${game.external_id || game.epic_id}`
       : null,
