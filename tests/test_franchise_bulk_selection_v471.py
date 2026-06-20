@@ -21,7 +21,7 @@ def test_admin_franchise_has_true_bulk_selection_controls():
     assert "franchiseSearchResults" in app
     assert "setAdminFranchiseGameSelection" in app
     assert "renderAdminFranchiseSelectedList" in app
-    assert "Seleziona tutte le opere" in app
+    assert "Seleziona opere canoniche" in app
     assert "searchAdminFranchiseCandidates(query, 50)" in app
     assert "admin-result-checkbox" in styles
     assert "admin-selected-game" in styles

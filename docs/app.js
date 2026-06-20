@@ -1316,6 +1316,44 @@ function groupGameVariants(games, { limit = Infinity } = {}) {
     .slice(0, limit);
 }
 
+function normalizeAdminFranchiseCandidateGroups(games) {
+  const source = (games || []).filter((game) => game && typeof game === "object");
+  if (!source.length) return [];
+
+  const alreadyCanonical = source.some((game) =>
+    game.editorial_work_key
+    || game.editorial_identity
+    || game.canonical_route_key
+    || Array.isArray(game.variants)
+    || Number(game.variant_count || 0) > 1
+  );
+
+  const groups = alreadyCanonical ? source : groupGameVariants(source);
+  return groups.map((game) => {
+    const variants = flattenedUniqueVariants([game]);
+    const variantKeys = [...new Set([
+      ...(Array.isArray(game.variant_keys) ? game.variant_keys : []),
+      ...variants.map((item) => gameKey(item)),
+      gameKey(game),
+    ].filter(Boolean))];
+    const variantCount = Math.max(
+      Number(game.variant_count || 0),
+      variants.length || 0,
+      variantKeys.length || 0,
+      1
+    );
+
+    return {
+      ...game,
+      editorial_identity: editorialIdentityForGame(game),
+      editorial_work_key: editorialIdentityForGame(game),
+      variants: variants.length ? variants : [game],
+      variant_keys: variantKeys,
+      variant_count: variantCount,
+    };
+  });
+}
+
 function gameDisambiguationMarkup(game, { includeDeveloper = true } = {}) {
   const parts = [];
   const year = Number(game?.release_year || releaseYearOf(game) || 0);
@@ -6342,11 +6380,11 @@ function updateAdminFranchiseSearchActions() {
   if (ui.adminFranchiseSearchActions) ui.adminFranchiseSearchActions.hidden = available.length === 0;
   if (ui.adminFranchiseSelectAll) {
     ui.adminFranchiseSelectAll.disabled = !available.length || selectedHere === available.length;
-    ui.adminFranchiseSelectAll.textContent = `Seleziona tutte le opere (${available.length})`;
+    ui.adminFranchiseSelectAll.textContent = `Seleziona opere canoniche (${available.length})`;
   }
   if (ui.adminFranchiseDeselectResults) {
     ui.adminFranchiseDeselectResults.disabled = selectedHere === 0;
-    ui.adminFranchiseDeselectResults.textContent = `Deseleziona queste opere (${selectedHere})`;
+    ui.adminFranchiseDeselectResults.textContent = `Deseleziona opere visibili (${selectedHere})`;
   }
 }
 
@@ -6852,7 +6890,7 @@ function renderAdminEditorialSearchResults(container, games, kind) {
   const existingFranchiseKeys = currentFranchiseGameKeys();
   const existingFranchiseIdentities = currentFranchiseEditorialIdentities();
   const franchiseGroups = kind === "franchise"
-    ? groupGameVariants(games)
+    ? normalizeAdminFranchiseCandidateGroups(games)
     : games;
   if (kind === "franchise") state.admin.franchiseSearchResults = franchiseGroups;
 
@@ -6882,7 +6920,7 @@ function renderAdminEditorialSearchResults(container, games, kind) {
           <strong>${escapeHtml(game.title)}</strong>
           <small>${escapeHtml(gameDisambiguationMarkup(game))}</small>
           <span class="platform-chip-list admin-result-platforms">${platformBadgesMarkup(game.platforms, { limit: 4, compact: true })}</span>
-          ${variantCount > 1 ? `<small class="admin-result-variant-summary">${variantCount} record uniti in una sola opera</small>` : ""}
+          ${variantCount > 1 ? `<small class="admin-result-variant-summary">${variantCount} varianti catalogo unite in un’opera canonica</small>` : ""}
         </span>
         <b data-selection-label>${alreadyLinked ? "Già presente" : "Seleziona"}</b>`;
       row.querySelector("img").onerror = (event) => { event.currentTarget.src = PLACEHOLDER; };
@@ -6900,7 +6938,7 @@ function renderAdminEditorialSearchResults(container, games, kind) {
         toggle.type = "button";
         toggle.className = "admin-variant-toggle";
         toggle.setAttribute("aria-expanded", "false");
-        toggle.innerHTML = `<span>Mostra le ${variantCount} versioni</span><b aria-hidden="true">⌄</b>`;
+        toggle.innerHTML = `<span>Mostra ${variantCount} varianti</span><b aria-hidden="true">⌄</b>`;
 
         const details = document.createElement("div");
         details.className = "admin-variant-list";
@@ -6919,8 +6957,8 @@ function renderAdminEditorialSearchResults(container, games, kind) {
           const expanded = toggle.getAttribute("aria-expanded") === "true";
           toggle.setAttribute("aria-expanded", String(!expanded));
           toggle.querySelector("span").textContent = expanded
-            ? `Mostra le ${variantCount} versioni`
-            : `Nascondi le ${variantCount} versioni`;
+            ? `Mostra ${variantCount} varianti`
+            : `Nascondi ${variantCount} varianti`;
           details.hidden = expanded;
         };
         group.append(toggle, details);

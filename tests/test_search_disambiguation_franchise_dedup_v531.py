@@ -41,8 +41,8 @@ def test_v531_frontend_groups_variants_and_expands_franchise_candidates():
     assert "groupGameVariants" in app
     assert "editorialIdentityForGame" in app
     assert "gameDisambiguationMarkup" in app
-    assert "record uniti in una sola opera" in app
-    assert "Mostra le ${variantCount} versioni" in app
+    assert "varianti catalogo unite in un’opera canonica" in app
+    assert "Mostra ${variantCount} varianti" in app
     assert "searchAdminFranchiseCandidates(query, 50)" in app
     assert "consolidateAdminFranchiseVariants" in app
     assert 'rpc("admin_search_franchise_candidates"' in franchise
@@ -53,4 +53,4 @@ def test_v531_frontend_groups_variants_and_expands_franchise_candidates():
 
 def test_v531_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-5-14-canonical-quality-score"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-15-canonical-franchise-editor-selection"' in worker
