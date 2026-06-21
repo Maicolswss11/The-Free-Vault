@@ -1177,6 +1177,20 @@ function hasPortOrStoreVariantSignal(game) {
   return /\b(port|ports|ported|version|versions|conversion|release for|released for|bundle containing|containing ports|contains ports|includes? .*expansion|undead nightmare|riedizion|store listing|store version)\b/.test(text);
 }
 
+function containsStandaloneOfferSignal(game) {
+  const text = catalogTextForVariantSignals(game);
+  return /(bundle|bundle\]|pack|collection|offer|edition|store listing|store version|free to play|include|includes|including|containing|contains)/.test(text);
+}
+
+function strongestBaseTitleContainedInOffer(game, titleKeys) {
+  const ownTitle = normalizedEditorialTitle(game?.title);
+  if (!ownTitle || !containsStandaloneOfferSignal(game)) return "";
+  const candidates = [...titleKeys]
+    .filter((title) => title && title !== ownTitle && title.length >= 8 && ownTitle.includes(title))
+    .sort((a, b) => b.length - a.length);
+  return candidates[0] || "";
+}
+
 function isBundleOrStoreOffer(game) {
   const type = normalizedGameType(game);
   const category = String(game?.category_group || "").toLowerCase();
@@ -1383,29 +1397,33 @@ function groupGameVariants(games, { limit = Infinity } = {}) {
       if (!primaryCoverGroups.has(cover)) primaryCoverGroups.set(cover, []);
       primaryCoverGroups.get(cover).push(primary);
     }
-    if (primaryCoverGroups.size === 1 && primaries.length) {
+    const hasSubordinateRows = bucket.some((item) => isSubordinateVariant(item) || isBundleOrStoreOffer(item));
+    if (primaries.length && (primaryCoverGroups.size === 1 || hasSubordinateRows)) {
       titleAnchors.set(title, primaries[0]);
     }
   }
+  const knownTitleKeys = new Set(titleBuckets.keys());
 
   const grouped = new Map();
   flatGames.forEach((game, index) => {
     const title = normalizedEditorialTitle(game?.title);
+    const offerBaseTitle = strongestBaseTitleContainedInOffer(game, knownTitleKeys);
+    const groupingTitle = offerBaseTitle || title;
     const parent = variantParentIdentity(game);
     const master = masterIdentityForGame(game);
-    const anchor = titleAnchors.get(title);
+    const anchor = titleAnchors.get(groupingTitle);
     const anchorMaster = masterIdentityForGame(anchor);
-    const hasSubordinates = (titleBuckets.get(title) || []).some(isSubordinateVariant);
+    const hasSubordinates = (titleBuckets.get(groupingTitle) || []).some((item) => isSubordinateVariant(item) || isBundleOrStoreOffer(item));
 
     let identity = "";
     if (parent) {
       identity = `work:${parent}`;
     } else if (master && referencedParents.has(master)) {
       identity = `work:${master}`;
-    } else if (anchor && anchorMaster && hasSubordinates && (isSubordinateVariant(game) || isPrimaryWorkCandidate(game))) {
+    } else if (anchor && anchorMaster && (hasSubordinates || offerBaseTitle) && (isSubordinateVariant(game) || isPrimaryWorkCandidate(game) || isBundleOrStoreOffer(game))) {
       identity = `work:${anchorMaster}`;
-    } else if (hasPortOrStoreVariantSignal(game) && title) {
-      identity = `title-variant:${title}`;
+    } else if ((hasPortOrStoreVariantSignal(game) || isBundleOrStoreOffer(game) || offerBaseTitle) && groupingTitle) {
+      identity = `title-variant:${groupingTitle}`;
     } else {
       identity = editorialIdentityForGame(game);
     }

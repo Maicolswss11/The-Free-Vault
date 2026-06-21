@@ -47,4 +47,4 @@ def test_v539_frontend_loads_variants_lazily():
 
 def test_v539_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-5-catalog-list-and-offer-polish"' in worker

@@ -68,7 +68,7 @@ def test_navigation_uses_svg_icons_and_account_is_improved():
 
 def test_v51_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-5-catalog-list-and-offer-polish"' in worker
 
 
 def test_v511_franchise_header_does_not_overlap_desktop_rows():

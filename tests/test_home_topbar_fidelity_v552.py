@@ -52,4 +52,4 @@ def test_v552_rebuilds_account_presentation_and_updates_cache():
     assert "toggleAccountMenu" in app
     assert ".account-copy small" in css
     assert ".topbar #refresh-button" in css
-    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-5-catalog-list-and-offer-polish"' in worker

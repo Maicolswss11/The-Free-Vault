@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_v564_updates_cache_name():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-5-catalog-list-and-offer-polish"' in worker
 
 
 def test_v564_catalog_view_toggle_and_compact_grid():

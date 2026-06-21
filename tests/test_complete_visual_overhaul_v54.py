@@ -29,7 +29,7 @@ def test_v54_tracks_current_route_for_route_level_presentation():
 
 def test_v54_pwa_caches_visual_layer():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-5-catalog-list-and-offer-polish"' in worker
     assert '"./visual-overhaul.css"' in worker
 
 
