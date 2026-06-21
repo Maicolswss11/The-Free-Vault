@@ -25,4 +25,4 @@ def test_v5517_frontend_merges_same_title_when_one_group_has_no_year():
 
 def test_v5517_cache_name_is_updated():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-5-17-editorial-canonical-variants"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation"' in worker

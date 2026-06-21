@@ -745,7 +745,7 @@ function escapeAttr(value) {
 
 function gameKey(game) {
   if (!game || typeof game !== "object") return "";
-  return game.match_key || game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
+  return game.canonical_route_key || game.match_key || game.canonical_id || game.internal_id || game.listing_id || game.epic_id || game.promotion_key ||
     `${game.store || "epic"}:${game.namespace || "unknown"}:${game.external_id || game.title}`;
 }
 
@@ -753,8 +753,9 @@ function gameAliases(game) {
   if (!game || typeof game !== "object") return [];
   const canonicalAliases = Array.isArray(game.canonical_aliases) ? game.canonical_aliases : [];
   return [
-    game.match_key,
     game.canonical_route_key,
+    game.match_key,
+    game.canonical_work_key,
     game.requested_key,
     game.canonical_id,
     game.internal_id,
@@ -781,6 +782,8 @@ function snapshotGame(game) {
     canonical_id: game.canonical_id,
     canonical_title: game.canonical_title,
     match_key: game.match_key,
+    canonical_route_key: game.canonical_route_key,
+    canonical_work_key: game.canonical_work_key,
     listing_id: game.listing_id || game.internal_id,
     internal_id: game.internal_id || game.listing_id,
     store: game.store || null,
@@ -1538,6 +1541,10 @@ function normalizeCatalog(game) {
   return {
     ...game,
     listing_id: game.listing_id || game.internal_id,
+    canonical_route_key: game.canonical_route_key || game.match_key || game.canonical_id,
+    canonical_work_key: game.canonical_work_key || null,
+    canonical_source: game.canonical_source || null,
+    is_canonical: game.is_canonical === true,
     source_kind: game.source_kind || "catalog",
     store,
     stores: game.stores || (store ? [store] : []),
@@ -1581,7 +1588,7 @@ function registerCatalogGame(game) {
 function personalCatalogKeys({ favorite = false } = {}) {
   return [...new Set(Object.entries(state.library)
     .filter(([, entry]) => !favorite || entry?.favorite)
-    .map(([key, entry]) => entry?.game?.match_key || entry?.game?.canonical_id || (/^(?:title|game):/.test(key) ? key : null))
+    .map(([key, entry]) => entry?.game?.canonical_route_key || entry?.game?.match_key || entry?.game?.canonical_id || (/^(?:title|game):/.test(key) ? key : null))
     .filter(Boolean))];
 }
 

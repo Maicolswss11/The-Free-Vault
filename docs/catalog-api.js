@@ -31,6 +31,9 @@
       source_kind: item?.source_kind || "catalog",
       master_game_id: item?.master_game_id || null,
       canonical_route_key: item?.canonical_route_key || item?.match_key || null,
+      canonical_work_key: item?.canonical_work_key || null,
+      canonical_source: item?.canonical_source || null,
+      is_canonical: item?.is_canonical === true,
       requested_key: item?.requested_key || null,
       store: item?.store || primary.store || null,
       stores: Array.isArray(item?.stores) ? item.stores : listings.map((entry) => entry.store),
@@ -64,14 +67,26 @@
   function catalogDuplicateScore(item) {
     const stores = Array.isArray(item?.stores) ? item.stores.filter(Boolean).length : 0;
     const listings = Array.isArray(item?.store_listings) ? item.store_listings.filter(Boolean).length : 0;
-    return (item?.source_kind === "hybrid" ? 50 : item?.source_kind === "catalog" ? 30 : 10)
-      + Math.min(40, Math.max(stores, listings) * 10)
-      + (item?.description ? 6 : 0)
-      + (item?.image_url ? 4 : 0)
-      + (item?.release_date ? 2 : 0);
+    const media = Number(item?.media_count || 0);
+    const aliasCount = Array.isArray(item?.canonical_aliases) ? item.canonical_aliases.length : 0;
+    return (item?.is_canonical ? 90 : 0)
+      + (item?.source_kind === "master" ? 80 : item?.source_kind === "hybrid" ? 50 : item?.source_kind === "catalog" ? 30 : 10)
+      + Math.min(50, Math.max(stores, listings) * 10)
+      + Math.min(30, media)
+      + Math.min(20, aliasCount)
+      + (item?.description ? 8 : 0)
+      + (item?.image_url ? 5 : 0)
+      + (item?.release_date ? 3 : 0);
+  }
+
+  function canonicalDuplicateGroupKey(item) {
+    return item?.canonical_route_key || item?.canonical_work_key || item?.match_key || item?.canonical_id || item?.listing_id || "";
   }
 
   function looksLikeTechnicalDuplicate(a, b) {
+    const groupA = canonicalDuplicateGroupKey(a);
+    const groupB = canonicalDuplicateGroupKey(b);
+    if (groupA && groupB && groupA === groupB) return true;
     const titleA = normalizeDuplicateText(a?.canonical_title || a?.title);
     const titleB = normalizeDuplicateText(b?.canonical_title || b?.title);
     if (!titleA || titleA !== titleB) return false;
@@ -88,14 +103,22 @@
 
   function dedupeCatalogItems(items) {
     const output = [];
+    const byCanonical = new Map();
     for (const item of items || []) {
-      const existingIndex = output.findIndex((candidate) => looksLikeTechnicalDuplicate(candidate, item));
-      if (existingIndex === -1) {
+      const directKey = canonicalDuplicateGroupKey(item);
+      let existingIndex = directKey ? byCanonical.get(directKey) : undefined;
+      if (existingIndex === undefined) {
+        existingIndex = output.findIndex((candidate) => looksLikeTechnicalDuplicate(candidate, item));
+      }
+      if (existingIndex === -1 || existingIndex === undefined) {
+        const nextIndex = output.length;
         output.push(item);
+        if (directKey) byCanonical.set(directKey, nextIndex);
         continue;
       }
       if (catalogDuplicateScore(item) > catalogDuplicateScore(output[existingIndex])) {
         output[existingIndex] = item;
+        if (directKey) byCanonical.set(directKey, existingIndex);
       }
     }
     return output;
@@ -152,7 +175,8 @@
     if (error) throw error;
     const value = {
       items: dedupeCatalogItems((data?.items || []).map(normalizeItem)),
-      total: Number(data?.total || 0),
+      total: Number(data?.canonical_total || data?.total || 0),
+      canonicalized: data?.canonicalized === true,
       limit: Number(data?.limit || normalized.limit),
       offset: Number(data?.offset || normalized.offset),
     };
@@ -294,7 +318,8 @@
     const value = {
       kind: data?.kind || normalizedKind,
       name: data?.name || normalizedName,
-      total: Number(data?.total || 0),
+      total: Number(data?.canonical_total || data?.total || 0),
+      canonicalized: data?.canonicalized === true,
       items: dedupeCatalogItems((data?.items || []).map(normalizeItem)),
       limit: Number(data?.limit || limit),
       offset: Number(data?.offset || offset),
