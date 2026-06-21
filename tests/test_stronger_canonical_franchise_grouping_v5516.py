@@ -29,4 +29,4 @@ def test_v5516_frontend_second_pass_merges_backend_canonical_groups():
 
 def test_v5516_cache_name_is_updated():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-5-16-stronger-franchise-grouping"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-5-17-editorial-canonical-variants"' in worker

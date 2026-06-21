@@ -892,12 +892,19 @@ function countdownText(game) {
 
 
 function releaseYearOf(game) {
-  const explicit = Number(game.release_year);
+  const explicit = Number(game?.release_year);
   if (Number.isInteger(explicit) && explicit > 1900) return explicit;
-  const value = game.release_date || game.start_date;
-  if (!value) return null;
-  const year = new Date(value).getFullYear();
-  return Number.isInteger(year) ? year : null;
+  const value = game?.release_date || game?.start_date;
+  if (value) {
+    const year = new Date(value).getFullYear();
+    if (Number.isInteger(year) && year > 1900) return year;
+  }
+  const titleHint = String(game?.title || game?.canonical_title || "").match(/(?:^|[^0-9])((?:19|20)\d{2})(?:[^0-9]|$)/);
+  if (titleHint) {
+    const year = Number(titleHint[1]);
+    if (Number.isInteger(year) && year > 1900) return year;
+  }
+  return null;
 }
 
 function inferCategoryGroup(game) {
@@ -1109,6 +1116,8 @@ function normalizedEditorialTitle(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[™®©]/g, "")
+    .replace(/\s*[\[(](?:19|20)\d{2}[\])]\s*$/g, "")
+    .replace(/\s+(?:19|20)\d{2}\s*$/g, "")
     .replace(/[^a-z0-9]+/g, "")
     .trim();
 }
@@ -1259,11 +1268,22 @@ function candidateGroupYears(group) {
   return [...new Set(years)].sort((a, b) => a - b);
 }
 
+function candidateGroupHasSeparateEditorialMarker(group) {
+  const variants = flattenedUniqueVariants([group]);
+  return variants.some((variant) => {
+    if (SEPARATE_GAME_TYPES.has(normalizedGameType(variant))) return true;
+    const title = String(variant?.title || variant?.canonical_title || "").toLowerCase();
+    return /\b(remake|remaster|collection|bundle|pack|demo|trial|deluxe|gold|complete|ultimate|director'?s\s+cut|cloud|dlc|expansion)\b/.test(title);
+  });
+}
+
 function candidateGroupsYearCompatible(left, right) {
   const leftYears = candidateGroupYears(left);
   const rightYears = candidateGroupYears(right);
-  if (!leftYears.length || !rightYears.length) return false;
-  return leftYears.some((leftYear) => rightYears.some((rightYear) => Math.abs(leftYear - rightYear) <= 2));
+  if (leftYears.length && rightYears.length) {
+    return leftYears.some((leftYear) => rightYears.some((rightYear) => Math.abs(leftYear - rightYear) <= 2));
+  }
+  return !candidateGroupHasSeparateEditorialMarker(left) && !candidateGroupHasSeparateEditorialMarker(right);
 }
 
 function mergeAdminFranchiseCanonicalGroups(groups) {

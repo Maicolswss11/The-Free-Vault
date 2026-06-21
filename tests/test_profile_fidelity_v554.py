@@ -43,4 +43,4 @@ def test_profile_dashboard_uses_real_icons_and_responsive_layouts():
 
 
 def test_profile_patch_updates_pwa_cache():
-    assert 'const CACHE_NAME = "ludograph-v5-5-15-canonical-franchise-editor-selection"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-5-17-editorial-canonical-variants"' in WORKER

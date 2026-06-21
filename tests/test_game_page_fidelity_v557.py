@@ -39,4 +39,4 @@ def test_game_page_has_dedicated_desktop_and_mobile_layouts():
 
 
 def test_v557_cache_name_is_updated():
-    assert 'const CACHE_NAME = "ludograph-v5-5-15-canonical-franchise-editor-selection"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-5-17-editorial-canonical-variants"' in WORKER
