@@ -1245,6 +1245,69 @@ function flattenedUniqueVariants(games) {
   return output;
 }
 
+function candidateGroupTitleKey(game) {
+  return normalizedEditorialTitle(game?.canonical_title || game?.title);
+}
+
+function candidateGroupYears(group) {
+  const variants = flattenedUniqueVariants([group]);
+  const years = variants
+    .map((variant) => releaseYearOf(variant))
+    .filter((year) => Number.isInteger(year) && year > 1900);
+  const representativeYear = releaseYearOf(group);
+  if (Number.isInteger(representativeYear) && representativeYear > 1900) years.push(representativeYear);
+  return [...new Set(years)].sort((a, b) => a - b);
+}
+
+function candidateGroupsYearCompatible(left, right) {
+  const leftYears = candidateGroupYears(left);
+  const rightYears = candidateGroupYears(right);
+  if (!leftYears.length || !rightYears.length) return false;
+  return leftYears.some((leftYear) => rightYears.some((rightYear) => Math.abs(leftYear - rightYear) <= 2));
+}
+
+function mergeAdminFranchiseCanonicalGroups(groups) {
+  const merged = [];
+  for (const group of groups || []) {
+    const titleKey = candidateGroupTitleKey(group);
+    let target = null;
+
+    if (titleKey) {
+      target = merged.find((candidate) =>
+        candidateGroupTitleKey(candidate) === titleKey
+        && candidateGroupsYearCompatible(candidate, group)
+      );
+    }
+
+    if (!target) {
+      merged.push({ ...group });
+      continue;
+    }
+
+    const variants = flattenedUniqueVariants([target, group]).sort(compareVariantRepresentatives);
+    const representative = variants[0] || target;
+    Object.assign(target, {
+      ...representative,
+      editorial_identity: target.editorial_identity || group.editorial_identity || `canonical:${titleKey}:${candidateGroupYears(representative)[0] || "unknown"}`,
+      editorial_work_key: target.editorial_work_key || group.editorial_work_key || target.editorial_identity,
+      variants,
+      variant_keys: [...new Set([
+        ...(Array.isArray(target.variant_keys) ? target.variant_keys : []),
+        ...(Array.isArray(group.variant_keys) ? group.variant_keys : []),
+        ...variants.map((item) => gameKey(item)),
+      ].filter(Boolean))],
+      variant_count: Math.max(
+        Number(target.variant_count || 0),
+        Number(group.variant_count || 0),
+        variants.length
+      ),
+      platforms: uniqueMergedValues(variants, "platforms"),
+      stores: uniqueMergedValues(variants, "stores"),
+    });
+  }
+  return merged;
+}
+
 function groupGameVariants(games, { limit = Infinity } = {}) {
   const flatGames = flattenedUniqueVariants(games);
   const titleBuckets = new Map();
@@ -1328,8 +1391,8 @@ function normalizeAdminFranchiseCandidateGroups(games) {
     || Number(game.variant_count || 0) > 1
   );
 
-  const groups = alreadyCanonical ? source : groupGameVariants(source);
-  return groups.map((game) => {
+  const baseGroups = alreadyCanonical ? source : groupGameVariants(source);
+  const normalizedGroups = baseGroups.map((game) => {
     const variants = flattenedUniqueVariants([game]);
     const variantKeys = [...new Set([
       ...(Array.isArray(game.variant_keys) ? game.variant_keys : []),
@@ -1342,16 +1405,19 @@ function normalizeAdminFranchiseCandidateGroups(games) {
       variantKeys.length || 0,
       1
     );
+    const identity = editorialIdentityForGame(game);
 
     return {
       ...game,
-      editorial_identity: editorialIdentityForGame(game),
-      editorial_work_key: editorialIdentityForGame(game),
+      editorial_identity: identity,
+      editorial_work_key: identity,
       variants: variants.length ? variants : [game],
       variant_keys: variantKeys,
       variant_count: variantCount,
     };
   });
+
+  return mergeAdminFranchiseCanonicalGroups(normalizedGroups);
 }
 
 function gameDisambiguationMarkup(game, { includeDeveloper = true } = {}) {

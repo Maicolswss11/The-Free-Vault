@@ -18,7 +18,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-5-15-canonical-franchise-editor-selection";
+const CACHE_NAME = "ludograph-v5-5-16-stronger-franchise-grouping";
 const APP_SHELL = [
   "./",
   "./index.html",
