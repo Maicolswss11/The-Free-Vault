@@ -4386,3 +4386,197 @@ select { height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--border); 
   .franchise-variant-actions { grid-column: 1 / -1; justify-content: stretch; }
   .franchise-variant-actions .button { flex: 1; text-align: center; }
 }
+
+/* v5.6.4 — Catalog density, view switch and filter polish */
+.catalog-meta {
+  margin: 0 0 24px;
+  padding: 14px 18px;
+  border: 1px solid rgba(74, 168, 255, .18);
+  border-radius: 16px;
+  color: var(--muted);
+  background: linear-gradient(135deg, rgba(13, 21, 33, .88), rgba(7, 10, 16, .72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+body[data-route="catalog"] .content-toolbar {
+  align-items: flex-start;
+  gap: 28px;
+  margin-bottom: 22px;
+}
+
+body[data-route="catalog"] .toolbar-controls:not([hidden]) {
+  align-items: end;
+  justify-content: flex-end;
+  gap: 10px;
+  max-width: min(980px, 62vw);
+  padding: 14px;
+  border: 1px solid rgba(74, 168, 255, .14);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(12, 18, 28, .94), rgba(7, 10, 16, .78));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+body[data-route="catalog"] .filter-field {
+  min-width: 148px;
+}
+
+body[data-route="catalog"] .filter-field > span,
+.catalog-view-toggle > span {
+  color: #7ea6d9;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+body[data-route="catalog"] .filter-field select {
+  height: 42px;
+  border-color: rgba(128, 167, 219, .2);
+  border-radius: 13px;
+  color: var(--text);
+  background: rgba(5, 9, 15, .86);
+}
+
+.catalog-view-toggle {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  gap: 5px 7px;
+  align-items: end;
+  min-width: 104px;
+}
+
+.catalog-view-toggle[hidden] { display: none !important; }
+.catalog-view-toggle > span { grid-column: 1 / -1; padding-left: 2px; text-transform: uppercase; }
+.catalog-view-toggle button {
+  display: grid;
+  width: 44px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(128, 167, 219, .2);
+  border-radius: 13px;
+  color: var(--muted);
+  background: rgba(5, 9, 15, .86);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.catalog-view-toggle button.is-active {
+  border-color: rgba(74, 168, 255, .65);
+  color: #fff;
+  background: linear-gradient(135deg, #1f9bff, #255cff);
+  box-shadow: 0 10px 28px rgba(37, 92, 255, .24);
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog {
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 16px;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .game-card {
+  border-radius: 18px;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .card-cover {
+  aspect-ratio: 4 / 3;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .game-content {
+  gap: 10px;
+  padding: 13px;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .game-title {
+  font-size: .92rem;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .game-description {
+  min-height: 3.1em;
+  font-size: .7rem;
+  line-height: 1.45;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+body[data-route="catalog"] .games-grid.is-compact-catalog .card-actions {
+  grid-template-columns: 1fr auto;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view .game-card {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  min-height: 186px;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view .card-cover {
+  height: 100%;
+  min-height: 186px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view .game-content {
+  align-content: center;
+  gap: 11px;
+  padding: 16px 18px;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view .game-description {
+  min-height: 0;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+body[data-route="catalog"] .games-grid.is-list-view .card-actions {
+  max-width: 460px;
+}
+
+@media (min-width: 1800px) {
+  body[data-route="catalog"] .games-grid.is-compact-catalog {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  body[data-route="catalog"] .content-toolbar { flex-direction: column; }
+  body[data-route="catalog"] .toolbar-controls:not([hidden]) { max-width: none; width: 100%; justify-content: flex-start; }
+}
+
+@media (max-width: 720px) {
+  body[data-route="catalog"] .games-grid.is-list-view .game-card {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 156px;
+  }
+
+  body[data-route="catalog"] .games-grid.is-list-view .card-cover {
+    min-height: 156px;
+  }
+
+  body[data-route="catalog"] .games-grid.is-list-view .game-content {
+    padding: 12px;
+  }
+
+  body[data-route="catalog"] .games-grid.is-list-view .game-description,
+  body[data-route="catalog"] .games-grid.is-list-view .platform-chip-list {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  body[data-route="catalog"] .toolbar-controls:not([hidden]) {
+    border-radius: 22px 22px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+  .catalog-view-toggle {
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
+  .catalog-view-toggle button {
+    width: 100%;
+  }
+}

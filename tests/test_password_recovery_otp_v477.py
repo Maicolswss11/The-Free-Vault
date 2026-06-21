@@ -55,6 +55,6 @@ def test_recovery_email_template_contains_otp_but_no_auth_link():
 
 def test_current_cache_name_is_universal_game_database():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
     assert 'the-free-vault-v4-7-9-self-hosted-cutover' in worker
     assert 'the-free-vault-v4-7-6-auth-callback-recovery' in worker

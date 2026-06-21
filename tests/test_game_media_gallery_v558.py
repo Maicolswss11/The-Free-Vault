@@ -67,4 +67,4 @@ def test_game_page_has_real_media_gallery_and_lightbox():
 
 
 def test_v558_cache_name_is_updated():
-    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in WORKER
+    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in WORKER

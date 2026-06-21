@@ -39,5 +39,5 @@ def test_v563_frontend_has_search_group_fallback_deduplication():
 
 def test_v563_cache_name_updated_for_frontend_dedupe_change():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker
     assert 'ludograph-v5-6-0-canonical-catalog-foundation' in worker

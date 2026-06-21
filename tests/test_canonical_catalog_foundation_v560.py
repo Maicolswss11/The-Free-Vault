@@ -46,4 +46,4 @@ def test_v560_frontend_prefers_canonical_route_and_groups():
 
 def test_v560_cache_name_is_updated():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers"' in worker

@@ -10,6 +10,7 @@ const LEGACY_LIBRARY_KEYS = [
   "the-free-vault-library-v2",
 ];
 const LEGACY_LIST_KEYS = ["the-free-vault-lists-v1"];
+const CATALOG_VIEW_KEY = "tfv:catalog:view:v1";
 
 let activeStorageUserId = null;
 let personalStorageGeneration = 0;
@@ -25,6 +26,7 @@ const state = {
   catalogTotal: 0,
   catalogOffset: 0,
   catalogLimit: 36,
+  catalogView: localStorage.getItem(CATALOG_VIEW_KEY) === "list" ? "list" : "grid",
   catalogLoading: false,
   catalogHasMore: false,
   catalogRequestId: 0,
@@ -340,6 +342,9 @@ const ui = {
   priceFilter: $("#price-filter"),
   yearFilter: $("#year-filter"),
   sort: $("#sort-select"),
+  catalogViewToggle: $("#catalog-view-toggle"),
+  catalogViewGrid: $("#catalog-view-grid"),
+  catalogViewList: $("#catalog-view-list"),
   refresh: $("#refresh-button"),
   status: $("#status-message"),
   title: $("#view-title"),
@@ -1157,8 +1162,32 @@ function normalizedGameType(game) {
   return String(game?.game_type || "unknown").toLowerCase();
 }
 
+function catalogTextForVariantSignals(game) {
+  return [
+    game?.title,
+    game?.canonical_title,
+    game?.description,
+    game?.category_group,
+    game?.market_segment,
+  ].filter(Boolean).join(" ").toLocaleLowerCase("it");
+}
+
+function hasPortOrStoreVariantSignal(game) {
+  const text = catalogTextForVariantSignals(game);
+  return /\b(port|ports|ported|version|versions|conversion|release for|released for|bundle containing|containing ports|contains ports|includes? .*expansion|undead nightmare|riedizion|store listing|store version)\b/.test(text);
+}
+
+function isBundleOrStoreOffer(game) {
+  const type = normalizedGameType(game);
+  const category = String(game?.category_group || "").toLowerCase();
+  const text = catalogTextForVariantSignals(game);
+  return ["bundle", "pack"].includes(type)
+    || ["bundle", "edition"].includes(category)
+    || /\b(bundle|bundle\]|collection|pack)\b/.test(text);
+}
+
 function isSubordinateVariant(game) {
-  return SUBORDINATE_GAME_TYPES.has(normalizedGameType(game));
+  return SUBORDINATE_GAME_TYPES.has(normalizedGameType(game)) || hasPortOrStoreVariantSignal(game);
 }
 
 function isPrimaryWorkCandidate(game) {
@@ -1274,9 +1303,10 @@ function candidateGroupYears(group) {
 function candidateGroupHasSeparateEditorialMarker(group) {
   const variants = flattenedUniqueVariants([group]);
   return variants.some((variant) => {
+    if (hasPortOrStoreVariantSignal(variant)) return false;
     if (SEPARATE_GAME_TYPES.has(normalizedGameType(variant))) return true;
     const title = String(variant?.title || variant?.canonical_title || "").toLowerCase();
-    return /\b(remake|remaster|collection|bundle|pack|demo|trial|deluxe|gold|complete|ultimate|director'?s\s+cut|cloud|dlc|expansion)\b/.test(title);
+    return /\b(remake|remaster|collection|demo|trial|deluxe|gold|complete|ultimate|director'?s\s+cut|cloud|dlc|expansion)\b/.test(title);
   });
 }
 
@@ -1374,6 +1404,8 @@ function groupGameVariants(games, { limit = Infinity } = {}) {
       identity = `work:${master}`;
     } else if (anchor && anchorMaster && hasSubordinates && (isSubordinateVariant(game) || isPrimaryWorkCandidate(game))) {
       identity = `work:${anchorMaster}`;
+    } else if (hasPortOrStoreVariantSignal(game) && title) {
+      identity = `title-variant:${title}`;
     } else {
       identity = editorialIdentityForGame(game);
     }
@@ -1637,7 +1669,8 @@ async function loadCatalogPage({ reset = true, force = false } = {}) {
     });
     if (requestId !== state.catalogRequestId || state.route.name !== "catalog") return;
 
-    const incoming = response.items.map(normalizeCatalog);
+    const normalizedIncoming = response.items.map(normalizeCatalog);
+    const incoming = state.route.name === "catalog" ? groupGameVariants(normalizedIncoming) : normalizedIncoming;
     if (reset) {
       state.catalog = incoming;
     } else {
@@ -2614,6 +2647,9 @@ function renderCard(game) {
 
 function renderGames() {
   const games = gamesForDashboard();
+  const catalogListView = state.route.name === "catalog" && state.catalogView === "list";
+  ui.grid.classList.toggle("is-list-view", catalogListView);
+  ui.grid.classList.toggle("is-compact-catalog", state.route.name === "catalog");
   ui.grid.replaceChildren();
   if (!games.length) {
     const empty = document.createElement("div");
@@ -2681,6 +2717,7 @@ function configureContextualFilters() {
   const controlsVisible = ["catalog", "library", "history"].includes(route);
   ui.toolbarControls.hidden = !controlsVisible;
   ui.mobileFilterToggle.hidden = !controlsVisible;
+  if (ui.catalogViewToggle) ui.catalogViewToggle.hidden = route !== "catalog";
   if (!controlsVisible) closeMobileFilters({ restoreFocus: false, clearHistory: true });
 
   const visibility = {
@@ -2732,6 +2769,23 @@ function configureContextualFilters() {
   updateMobileFilterSummary();
 }
 
+function updateCatalogViewControls() {
+  if (!ui.catalogViewGrid || !ui.catalogViewList) return;
+  const isCatalog = state.route.name === "catalog";
+  ui.catalogViewToggle.hidden = !isCatalog;
+  ui.catalogViewGrid.classList.toggle("is-active", state.catalogView === "grid");
+  ui.catalogViewList.classList.toggle("is-active", state.catalogView === "list");
+  ui.catalogViewGrid.setAttribute("aria-pressed", String(state.catalogView === "grid"));
+  ui.catalogViewList.setAttribute("aria-pressed", String(state.catalogView === "list"));
+}
+
+function setCatalogView(view) {
+  state.catalogView = view === "list" ? "list" : "grid";
+  localStorage.setItem(CATALOG_VIEW_KEY, state.catalogView);
+  updateCatalogViewControls();
+  renderGames();
+}
+
 function renderDashboardHeader() {
   const labels = {
     home: ["LUDOGRAPH", "Scopri i giochi gratuiti"],
@@ -2751,6 +2805,7 @@ function renderDashboardHeader() {
   ui.toolbar.hidden = state.route.name === "lists";
   ui.catalogMeta.hidden = state.route.name !== "catalog";
   configureContextualFilters();
+  updateCatalogViewControls();
 
   if (state.route.name === "catalog") {
     const stores = state.catalogMeta?.stores || {};
@@ -8571,6 +8626,8 @@ function applyDashboardFilter(update) {
   else renderDashboard();
 }
 
+ui.catalogViewGrid?.addEventListener("click", () => setCatalogView("grid"));
+ui.catalogViewList?.addEventListener("click", () => setCatalogView("list"));
 ui.filter.addEventListener("change", () => applyDashboardFilter(() => { state.statusFilter = ui.filter.value; }));
 ui.storeFilter.addEventListener("change", () => applyDashboardFilter(() => { state.storeFilter = ui.storeFilter.value; }));
 ui.categoryFilter.addEventListener("change", () => applyDashboardFilter(() => { state.categoryFilter = ui.categoryFilter.value; }));

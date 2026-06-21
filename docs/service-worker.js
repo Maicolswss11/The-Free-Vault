@@ -19,7 +19,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results";
+const CACHE_NAME = "ludograph-v5-6-4-catalog-density-and-canonical-offers";
 const APP_SHELL = [
   "./",
   "./index.html",
