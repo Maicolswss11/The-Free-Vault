@@ -1,3 +1,4 @@
+// Previous stable cache: ludograph-v5-6-0-canonical-catalog-foundation
 // Previous stable cache: ludograph-v5-5-11-franchise-final-polish
 // Previous stable cache: ludograph-v5-5-6-profile-personalization
 // Previous stable cache: ludograph-v5-5-3-mobile-franchise-stability
@@ -18,7 +19,7 @@
 // Earlier stable cache: the-free-vault-v4-6-franchises-editorial
 // Earlier stable cache: the-free-vault-v4-5-1-progress-rating-hotfix
 // Previous stable cache: the-free-vault-v4-7-9-self-hosted-cutover
-const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation";
+const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results";
 const APP_SHELL = [
   "./",
   "./index.html",

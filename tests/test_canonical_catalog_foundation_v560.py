@@ -38,7 +38,7 @@ def test_v560_frontend_prefers_canonical_route_and_groups():
     catalog_api = CATALOG_API.read_text(encoding="utf-8")
     app = APP.read_text(encoding="utf-8")
     assert "canonicalDuplicateGroupKey" in catalog_api
-    assert "item?.canonical_route_key || item?.canonical_work_key" in catalog_api
+    assert "item?.search_group_key || item?.canonical_work_key" in catalog_api
     assert "total: Number(data?.canonical_total || data?.total || 0)" in catalog_api
     assert "return game.canonical_route_key || game.match_key" in app
     assert "canonical_work_key: game.canonical_work_key || null" in app
@@ -46,4 +46,4 @@ def test_v560_frontend_prefers_canonical_route_and_groups():
 
 def test_v560_cache_name_is_updated():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker

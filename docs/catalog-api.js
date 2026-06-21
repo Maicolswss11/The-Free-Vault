@@ -80,7 +80,24 @@
   }
 
   function canonicalDuplicateGroupKey(item) {
-    return item?.canonical_route_key || item?.canonical_work_key || item?.match_key || item?.canonical_id || item?.listing_id || "";
+    return item?.search_group_key || item?.canonical_work_key || item?.canonical_route_key || item?.match_key || item?.canonical_id || item?.listing_id || "";
+  }
+
+  function catalogDuplicateYear(item) {
+    const raw = Number(item?.release_year || (item?.release_date || "").slice(0, 4));
+    return Number.isFinite(raw) && raw > 0 ? raw : null;
+  }
+
+  function hasCatalogStoreFootprint(item) {
+    return (Array.isArray(item?.stores) && item.stores.filter(Boolean).length > 0)
+      || (Array.isArray(item?.store_listings) && item.store_listings.filter(Boolean).length > 0)
+      || item?.source_kind === "catalog"
+      || item?.source_kind === "hybrid";
+  }
+
+  function hasPortingOrEditionSignal(item) {
+    const text = normalizeDuplicateText(`${item?.title || ""} ${item?.description || ""} ${item?.offer_type || ""} ${item?.category_group || ""}`);
+    return /\b(port|ports|ported|version|versions|edition|bundle|collection|pack|complete|definitive|ultimate|gold|deluxe|director|goty|game of the year)\b/.test(text);
   }
 
   function looksLikeTechnicalDuplicate(a, b) {
@@ -93,12 +110,13 @@
     if (a?.master_game_id && b?.master_game_id && a.master_game_id === b.master_game_id) return true;
     const makerA = catalogDuplicateMaker(a);
     const makerB = catalogDuplicateMaker(b);
-    const sameMaker = makerA && makerB && makerA === makerB;
-    const yearA = Number(a?.release_year || (a?.release_date || "").slice(0, 4));
-    const yearB = Number(b?.release_year || (b?.release_date || "").slice(0, 4));
+    const sameMaker = !makerA || !makerB || makerA === makerB;
+    const yearA = catalogDuplicateYear(a);
+    const yearB = catalogDuplicateYear(b);
     const yearsClose = !yearA || !yearB || Math.abs(yearA - yearB) <= 2;
-    const hasStoreRecord = [a, b].some((item) => Array.isArray(item?.stores) && item.stores.length);
-    return sameMaker && yearsClose && hasStoreRecord;
+    const hasStoreRecord = [a, b].some(hasCatalogStoreFootprint);
+    const hasVariantSignal = [a, b].some(hasPortingOrEditionSignal);
+    return sameMaker && (yearsClose || hasVariantSignal) && (hasStoreRecord || hasVariantSignal);
   }
 
   function dedupeCatalogItems(items) {

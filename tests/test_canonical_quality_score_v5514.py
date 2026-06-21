@@ -35,4 +35,4 @@ def test_v5514_frontend_uses_canonical_aliases_for_local_data():
 
 def test_v5514_cache_name_is_updated():
     worker = WORKER.read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker

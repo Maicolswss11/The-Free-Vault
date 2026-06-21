@@ -56,4 +56,4 @@ def test_v532_cloud_sync_only_pushes_deltas_in_bounded_rpc_batches():
 
 def test_v532_cache_name_is_updated():
     worker = (ROOT / "docs" / "service-worker.js").read_text(encoding="utf-8")
-    assert 'const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker

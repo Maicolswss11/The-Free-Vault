@@ -53,4 +53,4 @@ def test_v531_frontend_groups_variants_and_expands_franchise_candidates():
 
 def test_v531_cache_name_is_current():
     worker = read("docs/service-worker.js")
-    assert 'const CACHE_NAME = "ludograph-v5-6-0-canonical-catalog-foundation"' in worker
+    assert 'const CACHE_NAME = "ludograph-v5-6-3-fast-canonical-search-results"' in worker
