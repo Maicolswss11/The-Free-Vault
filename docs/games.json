@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-01T04:53:55.012673+00:00",
+  "generated_at": "2026-07-01T10:14:07.504747+00:00",
   "current": [
     {
       "epic_id": "4ec50a302f1449b3bf706a199c333ab8",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Night Dive Studios, Inc."
+    },
+    {
+      "epic_id": "e5da2c017d4d4afab9f4c56525b66100",
+      "namespace": "740ba4a6fbed4062a9c43d52c5996b0b",
+      "title": "Nova Lands",
+      "description": "Nova Lands è un gioco di costruzione di fabbriche e gestione di isole. Affronta le sfide di combattimento, esplorazione ed efficienza. Esplora questo nuovo pianeta, svela i suoi misteri e rendilo la tua nuova casa.",
+      "image_url": "./assets/covers/c3bc971e3dd7a2b11d80bbfe.png",
+      "store_url": "https://store.epicgames.com/it/p/nova-lands-4d1788",
+      "original_price": 1999,
+      "discount_price": 1999,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "19,99 €",
+      "start_date": "2026-07-09T15:00:00+00:00",
+      "end_date": "2026-07-16T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Hypetrain Digital"
     }
   ]
 }
