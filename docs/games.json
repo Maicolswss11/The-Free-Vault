@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-02T09:32:06.017338+00:00",
+  "generated_at": "2026-07-02T14:29:19.730133+00:00",
   "current": [
     {
       "epic_id": "4ec50a302f1449b3bf706a199c333ab8",
@@ -112,6 +112,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Hypetrain Digital"
+    },
+    {
+      "epic_id": "f247e0af293645bda266fa9957d82d62",
+      "namespace": "b0a2eaef9e8e4fca9d8f9d4aa26fed4d",
+      "title": "Tattoo Tycoon",
+      "description": "Diventa un artista del tatuaggio e gestisci il tuo centro tatuaggi. Progetta tatuaggi perfetti per clienti eccentrici e trasforma vaghe idee in spettacolare body art. Espandi il tuo studio personale in un'attività fiorente con filiali nei vari quartieri di Tattuga Bay.",
+      "image_url": "./assets/covers/9c4d73ad028bdb59326741da.jpg",
+      "store_url": "https://store.epicgames.com/it/p/tattoo-tycoon-b4352c",
+      "original_price": 2999,
+      "discount_price": 2999,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "29,99 €",
+      "start_date": "2026-07-09T15:00:00+00:00",
+      "end_date": "2026-07-16T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Handy Games"
     }
   ]
 }
