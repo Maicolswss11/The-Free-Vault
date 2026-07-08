@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-08T11:17:23.488865+00:00",
+  "generated_at": "2026-07-08T14:40:37.323564+00:00",
   "current": [
     {
       "epic_id": "9bf3d3188d1e498095bc23c0955538d9",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Handy Games"
+    },
+    {
+      "epic_id": "371545146a944478ad5a87f9b581ac29",
+      "namespace": "2c198b4055e64df698944727dbb561ea",
+      "title": "Echo Generation: Midnight Edition",
+      "description": "Lead a gang of kids to uncover spooky mysteries, battle creatures, and explore the supernatural side of your hometown in Echo Generation, a turn-based adventure set in the 90s.",
+      "image_url": "./assets/covers/86a0098156296c485a0b7a6e.jpg",
+      "store_url": "https://store.epicgames.com/it/p/echo-generation-midnight-edition-069026",
+      "original_price": 2239,
+      "discount_price": 2239,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "22,39 €",
+      "start_date": "2026-07-16T15:00:00+00:00",
+      "end_date": "2026-07-23T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Cococucumber Inc"
     }
   ]
 }
