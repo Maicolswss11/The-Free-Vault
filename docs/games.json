@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-15T08:35:34.038062+00:00",
+  "generated_at": "2026-07-15T11:01:34.054808+00:00",
   "current": [
     {
       "epic_id": "e5da2c017d4d4afab9f4c56525b66100",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Cococucumber Inc"
+    },
+    {
+      "epic_id": "223c59e227e74e079a1bbe5a234b896f",
+      "namespace": "c5730ad3d7004a65a472a7699b88008a",
+      "title": "Foretales",
+      "description": "Decidi le sorti del mondo in questo ingegnoso gioco di carte.\n\nForetales propone un'angolatura unica sul genere dei giochi d'avventura, con una serie di stili di gioco e di linee narrative tramite cui salvare il mondo... o condurlo alla sua fine.",
+      "image_url": "./assets/covers/0be2d50823cba2953f22a786.jpg",
+      "store_url": "https://store.epicgames.com/it/p/foretales-d6c5bd",
+      "original_price": 1999,
+      "discount_price": 1999,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "19,99 €",
+      "start_date": "2026-07-23T15:00:00+00:00",
+      "end_date": "2026-07-30T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Plug In Digital SAS"
     }
   ]
 }
