@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-16T14:22:57.252292+00:00",
+  "updated_at": "2026-07-16T16:41:06.553632+00:00",
   "games": [
     {
       "epic_id": "223c59e227e74e079a1bbe5a234b896f",
@@ -9,7 +9,7 @@
       "image_url": "./assets/covers/0be2d50823cba2953f22a786.jpg",
       "store_url": "https://store.epicgames.com/it/p/foretales-d6c5bd",
       "original_price": 1999,
-      "discount_price": 1999,
+      "discount_price": 299,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "19,99 €",
@@ -24,7 +24,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "223c59e227e74e079a1bbe5a234b896f|2026-07-23T15:00:00+00:00|2026-07-30T15:00:00+00:00",
       "first_seen_at": "2026-07-15T11:01:34.054808+00:00",
-      "last_seen_at": "2026-07-16T14:22:57.252292+00:00"
+      "last_seen_at": "2026-07-16T16:41:06.553632+00:00"
     },
     {
       "epic_id": "371545146a944478ad5a87f9b581ac29",
@@ -34,22 +34,22 @@
       "image_url": "./assets/covers/86a0098156296c485a0b7a6e.jpg",
       "store_url": "https://store.epicgames.com/it/p/echo-generation-midnight-edition-069026",
       "original_price": 2239,
-      "discount_price": 2239,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "22,39 €",
       "start_date": "2026-07-16T15:00:00+00:00",
       "end_date": "2026-07-23T15:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Cococucumber Inc",
       "promotion_key": "371545146a944478ad5a87f9b581ac29|2026-07-16T15:00:00+00:00|2026-07-23T15:00:00+00:00",
       "first_seen_at": "2026-07-08T14:40:37.323564+00:00",
-      "last_seen_at": "2026-07-16T14:22:57.252292+00:00"
+      "last_seen_at": "2026-07-16T16:41:06.553632+00:00"
     },
     {
       "epic_id": "c27f2bb0dd9b4c4ca4973e653ab8a5be",
@@ -59,22 +59,22 @@
       "image_url": "./assets/covers/134c8a82b1eadcf624603d77.png",
       "store_url": "https://store.epicgames.com/it/p/luto-0a4ab3",
       "original_price": 1999,
-      "discount_price": 1999,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "19,99 €",
       "start_date": "2026-07-16T15:00:00+00:00",
       "end_date": "2026-07-23T15:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Broken Bird Games",
       "promotion_key": "c27f2bb0dd9b4c4ca4973e653ab8a5be|2026-07-16T15:00:00+00:00|2026-07-23T15:00:00+00:00",
       "first_seen_at": "2026-07-09T15:33:42.130505+00:00",
-      "last_seen_at": "2026-07-16T14:22:57.252292+00:00"
+      "last_seen_at": "2026-07-16T16:41:06.553632+00:00"
     },
     {
       "epic_id": "e5da2c017d4d4afab9f4c56525b66100",
