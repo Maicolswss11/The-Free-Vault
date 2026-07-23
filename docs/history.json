@@ -1,6 +1,56 @@
 {
-  "updated_at": "2026-07-23T11:19:52.359502+00:00",
+  "updated_at": "2026-07-23T14:32:00.852143+00:00",
   "games": [
+    {
+      "epic_id": "fb86769d4908427986ca9f7d94b581c2",
+      "namespace": "dfe95c9009f548b0b167b3d65cc91979",
+      "title": "OTXO",
+      "description": "Entra in una magione inesplicabile e astratta per salvare la tua persona amata in questo roguelite frenetico, brutale e oscuro, ricco di sparatorie precise ma feroci e un'interessante modalità slow motion.",
+      "image_url": "./assets/covers/2a30489b365d10e1d3888e4b.jpg",
+      "store_url": "https://store.epicgames.com/it/p/otxo-396b8b",
+      "original_price": 1349,
+      "discount_price": 607,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "13,49 €",
+      "start_date": "2026-07-30T15:00:00+00:00",
+      "end_date": "2026-08-06T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Super Rare Games",
+      "promotion_key": "fb86769d4908427986ca9f7d94b581c2|2026-07-30T15:00:00+00:00|2026-08-06T15:00:00+00:00",
+      "first_seen_at": "2026-07-23T14:32:00.852143+00:00",
+      "last_seen_at": "2026-07-23T14:32:00.852143+00:00"
+    },
+    {
+      "epic_id": "c71375f1ac9444fcae1ca584a53ba6f0",
+      "namespace": "ce5d3cf74f36450cb7136952dc5b520f",
+      "title": "Sol Cesto",
+      "description": "Sol Cesto is a tactical and frantic roguelite where mastering your luck is key. Choose a hero, upgrade them using cursed teeth and magical items, and descend to the bottom of an ever-changing dungeon. In this dark world, every action has consequences…",
+      "image_url": "./assets/covers/b4658d1abf73a799262c72e7.png",
+      "store_url": "https://store.epicgames.com/it/p/sol-cesto-e9b803",
+      "original_price": 1399,
+      "discount_price": 1399,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "13,99 €",
+      "start_date": "2026-07-30T15:00:00+00:00",
+      "end_date": "2026-08-06T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Goblinz Studio SAS",
+      "promotion_key": "c71375f1ac9444fcae1ca584a53ba6f0|2026-07-30T15:00:00+00:00|2026-08-06T15:00:00+00:00",
+      "first_seen_at": "2026-07-23T14:32:00.852143+00:00",
+      "last_seen_at": "2026-07-23T14:32:00.852143+00:00"
+    },
     {
       "epic_id": "223c59e227e74e079a1bbe5a234b896f",
       "namespace": "c5730ad3d7004a65a472a7699b88008a",
@@ -24,7 +74,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "223c59e227e74e079a1bbe5a234b896f|2026-07-23T15:00:00+00:00|2026-07-30T15:00:00+00:00",
       "first_seen_at": "2026-07-15T11:01:34.054808+00:00",
-      "last_seen_at": "2026-07-23T11:19:52.359502+00:00"
+      "last_seen_at": "2026-07-23T14:32:00.852143+00:00"
     },
     {
       "epic_id": "371545146a944478ad5a87f9b581ac29",
@@ -49,7 +99,7 @@
       "publisher": "Cococucumber Inc",
       "promotion_key": "371545146a944478ad5a87f9b581ac29|2026-07-16T15:00:00+00:00|2026-07-23T15:00:00+00:00",
       "first_seen_at": "2026-07-08T14:40:37.323564+00:00",
-      "last_seen_at": "2026-07-23T11:19:52.359502+00:00"
+      "last_seen_at": "2026-07-23T14:32:00.852143+00:00"
     },
     {
       "epic_id": "c27f2bb0dd9b4c4ca4973e653ab8a5be",
@@ -74,7 +124,7 @@
       "publisher": "Broken Bird Games",
       "promotion_key": "c27f2bb0dd9b4c4ca4973e653ab8a5be|2026-07-16T15:00:00+00:00|2026-07-23T15:00:00+00:00",
       "first_seen_at": "2026-07-09T15:33:42.130505+00:00",
-      "last_seen_at": "2026-07-23T11:19:52.359502+00:00"
+      "last_seen_at": "2026-07-23T14:32:00.852143+00:00"
     },
     {
       "epic_id": "e5da2c017d4d4afab9f4c56525b66100",
