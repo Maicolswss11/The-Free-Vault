@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-29T09:08:12.496536+00:00",
+  "generated_at": "2026-07-29T11:33:47.070699+00:00",
   "current": [
     {
       "epic_id": "223c59e227e74e079a1bbe5a234b896f",
@@ -68,6 +68,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Goblinz Studio SAS"
+    },
+    {
+      "epic_id": "871cc4ff18444059890a4d28653a62d5",
+      "namespace": "1c83ea77e736438f9852b31aeb4f7a20",
+      "title": "Beacon Pines",
+      "description": "Beacon Pines is a cute and creepy adventure game. Sneak out late, make new friends, uncover hidden truths, and collect words that will change the course of fate!",
+      "image_url": "./assets/covers/501a556bebec86b6f92edc33.jpg",
+      "store_url": "https://store.epicgames.com/it/p/beacon-pines-629fc3",
+      "original_price": 1799,
+      "discount_price": 1799,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "17,99 €",
+      "start_date": "2026-08-06T15:00:00+00:00",
+      "end_date": "2026-08-13T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games"
     }
   ]
 }
