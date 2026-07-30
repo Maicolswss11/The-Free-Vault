@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-30T11:20:42.129781+00:00",
+  "updated_at": "2026-07-30T14:31:27.178061+00:00",
   "games": [
     {
       "epic_id": "871cc4ff18444059890a4d28653a62d5",
@@ -24,7 +24,32 @@
       "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games",
       "promotion_key": "871cc4ff18444059890a4d28653a62d5|2026-08-06T15:00:00+00:00|2026-08-13T15:00:00+00:00",
       "first_seen_at": "2026-07-29T11:33:47.070699+00:00",
-      "last_seen_at": "2026-07-30T11:20:42.129781+00:00"
+      "last_seen_at": "2026-07-30T14:31:27.178061+00:00"
+    },
+    {
+      "epic_id": "231e8f6d250a453f9c44c0adf3a34656",
+      "namespace": "c5f6069e7dd644dab009294f0fddc7a7",
+      "title": "We Were Here Together",
+      "description": "Imbarcati in un'avventura ricca di rompicapi in cui tu e il tuo compagno dovrete dimostrare di saper comunicare e collaborare per scappare dal castello infestato di Castle Rock.",
+      "image_url": "./assets/covers/91df7b792b5bbd14ebffa2ce.png",
+      "store_url": "https://store.epicgames.com/it/p/we-were-here-together-6a6d66",
+      "original_price": 1169,
+      "discount_price": 1169,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "11,69 €",
+      "start_date": "2026-08-06T15:00:00+00:00",
+      "end_date": "2026-08-13T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "TMG Studios B.V.",
+      "promotion_key": "231e8f6d250a453f9c44c0adf3a34656|2026-08-06T15:00:00+00:00|2026-08-13T15:00:00+00:00",
+      "first_seen_at": "2026-07-30T14:31:27.178061+00:00",
+      "last_seen_at": "2026-07-30T14:31:27.178061+00:00"
     },
     {
       "epic_id": "fb86769d4908427986ca9f7d94b581c2",
@@ -49,7 +74,7 @@
       "publisher": "Super Rare Games",
       "promotion_key": "fb86769d4908427986ca9f7d94b581c2|2026-07-30T15:00:00+00:00|2026-08-06T15:00:00+00:00",
       "first_seen_at": "2026-07-23T14:32:00.852143+00:00",
-      "last_seen_at": "2026-07-30T11:20:42.129781+00:00"
+      "last_seen_at": "2026-07-30T14:31:27.178061+00:00"
     },
     {
       "epic_id": "c71375f1ac9444fcae1ca584a53ba6f0",
@@ -74,7 +99,7 @@
       "publisher": "Goblinz Studio SAS",
       "promotion_key": "c71375f1ac9444fcae1ca584a53ba6f0|2026-07-30T15:00:00+00:00|2026-08-06T15:00:00+00:00",
       "first_seen_at": "2026-07-23T14:32:00.852143+00:00",
-      "last_seen_at": "2026-07-30T11:20:42.129781+00:00"
+      "last_seen_at": "2026-07-30T14:31:27.178061+00:00"
     },
     {
       "epic_id": "223c59e227e74e079a1bbe5a234b896f",
@@ -99,7 +124,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "223c59e227e74e079a1bbe5a234b896f|2026-07-23T15:00:00+00:00|2026-07-30T15:00:00+00:00",
       "first_seen_at": "2026-07-15T11:01:34.054808+00:00",
-      "last_seen_at": "2026-07-30T11:20:42.129781+00:00"
+      "last_seen_at": "2026-07-30T14:31:27.178061+00:00"
     },
     {
       "epic_id": "371545146a944478ad5a87f9b581ac29",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-30T11:20:42.129781+00:00",
+  "generated_at": "2026-07-30T14:31:27.178061+00:00",
   "current": [
     {
       "epic_id": "223c59e227e74e079a1bbe5a234b896f",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games"
+    },
+    {
+      "epic_id": "231e8f6d250a453f9c44c0adf3a34656",
+      "namespace": "c5f6069e7dd644dab009294f0fddc7a7",
+      "title": "We Were Here Together",
+      "description": "Imbarcati in un'avventura ricca di rompicapi in cui tu e il tuo compagno dovrete dimostrare di saper comunicare e collaborare per scappare dal castello infestato di Castle Rock.",
+      "image_url": "./assets/covers/91df7b792b5bbd14ebffa2ce.png",
+      "store_url": "https://store.epicgames.com/it/p/we-were-here-together-6a6d66",
+      "original_price": 1169,
+      "discount_price": 1169,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "11,69 €",
+      "start_date": "2026-08-06T15:00:00+00:00",
+      "end_date": "2026-08-13T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "TMG Studios B.V."
     }
   ]
 }
