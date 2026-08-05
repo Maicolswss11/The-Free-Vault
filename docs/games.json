@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T09:05:01.496217+00:00",
+  "generated_at": "2026-08-05T11:29:09.692426+00:00",
   "current": [
     {
       "epic_id": "fb86769d4908427986ca9f7d94b581c2",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "TMG Studios B.V."
+    },
+    {
+      "epic_id": "0e44600a079e419abbb291ccf5af9ee7",
+      "namespace": "45b137b2ecd14e01a54b52e575f1632d",
+      "title": "Caravan SandWitch",
+      "description": "Intraprendi un viaggio attraverso immensi paesaggi in Caravan SandWitch, un’entusiasmante avventura esplorativa incentrata sulla trama.",
+      "image_url": "./assets/covers/efc535f552ddd4674e84ad9e.jpg",
+      "store_url": "https://store.epicgames.com/it/p/caravan-sandwitch-05ff58",
+      "original_price": 2499,
+      "discount_price": 2499,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "24,99 €",
+      "start_date": "2026-08-13T15:00:00+00:00",
+      "end_date": "2026-08-20T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Plug In Digital SAS"
     }
   ]
 }
