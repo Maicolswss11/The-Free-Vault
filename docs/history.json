@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-06T14:34:19.352966+00:00",
+  "updated_at": "2026-08-07T00:15:19.168931+00:00",
   "games": [
     {
       "epic_id": "0e44600a079e419abbb291ccf5af9ee7",
@@ -24,7 +24,7 @@
       "publisher": "Plug In Digital SAS",
       "promotion_key": "0e44600a079e419abbb291ccf5af9ee7|2026-08-13T15:00:00+00:00|2026-08-20T15:00:00+00:00",
       "first_seen_at": "2026-08-05T11:29:09.692426+00:00",
-      "last_seen_at": "2026-08-06T14:34:19.352966+00:00"
+      "last_seen_at": "2026-08-07T00:15:19.168931+00:00"
     },
     {
       "epic_id": "871cc4ff18444059890a4d28653a62d5",
@@ -34,22 +34,22 @@
       "image_url": "./assets/covers/501a556bebec86b6f92edc33.jpg",
       "store_url": "https://store.epicgames.com/it/p/beacon-pines-629fc3",
       "original_price": 1799,
-      "discount_price": 1799,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "17,99 €",
       "start_date": "2026-08-06T15:00:00+00:00",
       "end_date": "2026-08-13T15:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games",
       "promotion_key": "871cc4ff18444059890a4d28653a62d5|2026-08-06T15:00:00+00:00|2026-08-13T15:00:00+00:00",
       "first_seen_at": "2026-07-29T11:33:47.070699+00:00",
-      "last_seen_at": "2026-08-06T14:34:19.352966+00:00"
+      "last_seen_at": "2026-08-07T00:15:19.168931+00:00"
     },
     {
       "epic_id": "231e8f6d250a453f9c44c0adf3a34656",
@@ -59,22 +59,22 @@
       "image_url": "./assets/covers/91df7b792b5bbd14ebffa2ce.png",
       "store_url": "https://store.epicgames.com/it/p/we-were-here-together-6a6d66",
       "original_price": 1169,
-      "discount_price": 1169,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "11,69 €",
       "start_date": "2026-08-06T15:00:00+00:00",
       "end_date": "2026-08-13T15:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "TMG Studios B.V.",
       "promotion_key": "231e8f6d250a453f9c44c0adf3a34656|2026-08-06T15:00:00+00:00|2026-08-13T15:00:00+00:00",
       "first_seen_at": "2026-07-30T14:31:27.178061+00:00",
-      "last_seen_at": "2026-08-06T14:34:19.352966+00:00"
+      "last_seen_at": "2026-08-07T00:15:19.168931+00:00"
     },
     {
       "epic_id": "fb86769d4908427986ca9f7d94b581c2",
