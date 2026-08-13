@@ -1,52 +1,6 @@
 {
-  "generated_at": "2026-08-13T13:47:10.723188+00:00",
+  "generated_at": "2026-08-13T16:09:17.118164+00:00",
   "current": [
-    {
-      "epic_id": "871cc4ff18444059890a4d28653a62d5",
-      "namespace": "1c83ea77e736438f9852b31aeb4f7a20",
-      "title": "Beacon Pines",
-      "description": "Beacon Pines is a cute and creepy adventure game. Sneak out late, make new friends, uncover hidden truths, and collect words that will change the course of fate!",
-      "image_url": "./assets/covers/501a556bebec86b6f92edc33.jpg",
-      "store_url": "https://store.epicgames.com/it/p/beacon-pines-629fc3",
-      "original_price": 1799,
-      "discount_price": 0,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "17,99 €",
-      "start_date": "2026-08-06T15:00:00+00:00",
-      "end_date": "2026-08-13T15:00:00+00:00",
-      "promotion_type": "current",
-      "is_current": true,
-      "is_upcoming": false,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "Surprise Attack Pty Ltd DBA Fellow Traveller Games"
-    },
-    {
-      "epic_id": "231e8f6d250a453f9c44c0adf3a34656",
-      "namespace": "c5f6069e7dd644dab009294f0fddc7a7",
-      "title": "We Were Here Together",
-      "description": "Imbarcati in un'avventura ricca di rompicapi in cui tu e il tuo compagno dovrete dimostrare di saper comunicare e collaborare per scappare dal castello infestato di Castle Rock.",
-      "image_url": "./assets/covers/91df7b792b5bbd14ebffa2ce.png",
-      "store_url": "https://store.epicgames.com/it/p/we-were-here-together-6a6d66",
-      "original_price": 1169,
-      "discount_price": 0,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "11,69 €",
-      "start_date": "2026-08-06T15:00:00+00:00",
-      "end_date": "2026-08-13T15:00:00+00:00",
-      "promotion_type": "current",
-      "is_current": true,
-      "is_upcoming": false,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "TMG Studios B.V."
-    }
-  ],
-  "upcoming": [
     {
       "epic_id": "0e44600a079e419abbb291ccf5af9ee7",
       "namespace": "45b137b2ecd14e01a54b52e575f1632d",
@@ -55,20 +9,22 @@
       "image_url": "./assets/covers/efc535f552ddd4674e84ad9e.jpg",
       "store_url": "https://store.epicgames.com/it/p/caravan-sandwitch-05ff58",
       "original_price": 2499,
-      "discount_price": 2499,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "24,99 €",
       "start_date": "2026-08-13T15:00:00+00:00",
       "end_date": "2026-08-20T15:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Plug In Digital SAS"
-    },
+    }
+  ],
+  "upcoming": [
     {
       "epic_id": "b467b7d3570e44c0b84e59475f4a5636",
       "namespace": "2bfd5ca43ef443739ada168e017e1b78",
@@ -90,6 +46,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Gambrinous"
+    },
+    {
+      "epic_id": "a802acab90af4a07952a07a9fa677f2f",
+      "namespace": "72520902fc594621b6daa5a6217b4ee7",
+      "title": "Pacchetto Mago Epico",
+      "description": "Rivendica un Regalo Magico Gratuito del valore di oltre 55 dollari! Migliora il tuo viaggio su Albion con oggetti cosmetici incantati, due skin per cavalcatura uniche e un tesoro di ricompense essenziali per la progressione.",
+      "image_url": "./assets/covers/98f7e654f12f34ba02194248.png",
+      "store_url": "https://store.epicgames.com/it/p/albion-online-epic-mage-bundle-2ceb19",
+      "original_price": 0,
+      "discount_price": 0,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "0",
+      "start_date": "2026-08-20T15:00:00+00:00",
+      "end_date": "2026-08-27T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": true,
+      "offer_type": "ADD_ON",
+      "publisher": "Sandbox Interactive GmbH"
     }
   ]
 }
