@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-09-02T04:33:47.987947+00:00",
+  "generated_at": "2026-09-02T11:18:32.023249+00:00",
   "current": [
     {
       "epic_id": "8401414902e84f2cb9afa9142f051d32",
       "namespace": "08ae29e4f70a4b62aa055e383381aa82",
       "title": "Breathedge",
       "description": "Sopravvivi nello spazio! Assieme al tuo pollo immortale, scopri la verità che si nasconde dietro all'improvviso incidente dell'astronave. Crea strumenti, pilota veicoli e controlla le stazioni spaziali per sopravvivere ed esplorare il relitto.",
-      "image_url": "./assets/covers/d5a807fb6cf43ef945da14e9.jpg",
+      "image_url": null,
       "store_url": "https://store.epicgames.com/it/p/breathedge",
       "original_price": 2499,
       "discount_price": 0,
