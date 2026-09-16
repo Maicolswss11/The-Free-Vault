@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-16T11:33:52.747901+00:00",
+  "generated_at": "2026-09-16T16:55:25.061268+00:00",
   "current": [
     {
       "epic_id": "c76046dddcdb43619c33ce0395941033",
@@ -90,6 +90,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Goblinz Studio SAS"
+    },
+    {
+      "epic_id": "6d99eae44d724baf84d6261a7a0f05d2",
+      "namespace": "36074aa6badf45698cced1a44e837fa2",
+      "title": "Mechabellum",
+      "description": "Command massive armies in this epic mech auto-battler. Draft your troops, customize your units, master your formations, and crush enemies in spectacular 3D battles. All strategy, no clickfest. Outsmart opponents in 1v1, 2v2, free-for-all, or Survival Mode.",
+      "image_url": "./assets/covers/508f91917af48ad046b170f3.jpg",
+      "store_url": "https://store.epicgames.com/it/p/mechabellum-88a843",
+      "original_price": 1479,
+      "discount_price": 1479,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "14,79 €",
+      "start_date": "2026-09-24T15:00:00+00:00",
+      "end_date": "2026-10-01T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Dreamhaven, Inc."
     }
   ]
 }
