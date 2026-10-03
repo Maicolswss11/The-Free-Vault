@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T05:18:40.421547+00:00",
+  "updated_at": "2026-10-03T11:39:38.873354+00:00",
   "games": [
     {
       "epic_id": "cb733f3432db46bca94965b422c33ede",
@@ -49,7 +49,7 @@
       "publisher": "Bitfall Studios GmbH",
       "promotion_key": "af6b823b8698465f9aedc3bddf2e8686|2026-10-08T15:00:00+00:00|2026-10-15T15:00:00+00:00",
       "first_seen_at": "2026-10-01T18:25:10.852103+00:00",
-      "last_seen_at": "2026-10-03T05:18:40.421547+00:00"
+      "last_seen_at": "2026-10-03T11:39:38.873354+00:00"
     },
     {
       "epic_id": "7ae00c3e89174012b175cc73b4737723",
@@ -74,7 +74,7 @@
       "publisher": "Atari",
       "promotion_key": "7ae00c3e89174012b175cc73b4737723|2026-10-01T15:00:00+00:00|2026-10-08T15:00:00+00:00",
       "first_seen_at": "2026-09-24T17:11:17.148439+00:00",
-      "last_seen_at": "2026-10-03T05:18:40.421547+00:00"
+      "last_seen_at": "2026-10-03T11:39:38.873354+00:00"
     },
     {
       "epic_id": "af4c34934afe4db0870b8a1d82dceb94",
@@ -83,11 +83,11 @@
       "description": "A mystery adventure set at the collapse site of a live survival audition show.\nTrapped contestants communicate with each other—and the outside world through social media—as they wait for rescue. But trust begins to crack, and survival becomes far more complicated.",
       "image_url": "./assets/covers/177e496076da6034d918389f.jpg",
       "store_url": "https://store.epicgames.com/it/p/buried-stars-d7c88c",
-      "original_price": 3399,
-      "discount_price": 0,
-      "currency_code": "EUR",
+      "original_price": null,
+      "discount_price": null,
+      "currency_code": null,
       "currency_decimals": 2,
-      "fmt_original_price": "33,99 €",
+      "fmt_original_price": null,
       "start_date": "2026-10-01T15:00:00+00:00",
       "end_date": "2026-10-08T15:00:00+00:00",
       "promotion_type": "current",
@@ -99,7 +99,7 @@
       "publisher": "LINE Games Corporation",
       "promotion_key": "af4c34934afe4db0870b8a1d82dceb94|2026-10-01T15:00:00+00:00|2026-10-08T15:00:00+00:00",
       "first_seen_at": "2026-09-24T17:11:17.148439+00:00",
-      "last_seen_at": "2026-10-03T05:18:40.421547+00:00"
+      "last_seen_at": "2026-10-03T11:39:38.873354+00:00"
     },
     {
       "epic_id": "6d99eae44d724baf84d6261a7a0f05d2",
