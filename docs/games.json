@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-03T11:39:38.873354+00:00",
+  "generated_at": "2026-10-03T16:17:47.216730+00:00",
   "current": [
     {
       "epic_id": "7ae00c3e89174012b175cc73b4737723",
@@ -30,11 +30,11 @@
       "description": "A mystery adventure set at the collapse site of a live survival audition show.\nTrapped contestants communicate with each other—and the outside world through social media—as they wait for rescue. But trust begins to crack, and survival becomes far more complicated.",
       "image_url": "./assets/covers/177e496076da6034d918389f.jpg",
       "store_url": "https://store.epicgames.com/it/p/buried-stars-d7c88c",
-      "original_price": null,
-      "discount_price": null,
-      "currency_code": null,
+      "original_price": 3399,
+      "discount_price": 0,
+      "currency_code": "EUR",
       "currency_decimals": 2,
-      "fmt_original_price": null,
+      "fmt_original_price": "33,99 €",
       "start_date": "2026-10-01T15:00:00+00:00",
       "end_date": "2026-10-08T15:00:00+00:00",
       "promotion_type": "current",
@@ -47,6 +47,28 @@
     }
   ],
   "upcoming": [
+    {
+      "epic_id": "cb733f3432db46bca94965b422c33ede",
+      "namespace": "436099305a2249a8bbe4d9113fc41d53",
+      "title": "Out of Sight",
+      "description": "Out of Sight è un horror d'atmosfera che unisce le prospettive in prima e seconda persona a una recitazione coinvolgente, per farti vivere un terrificante viaggio ricco di emozioni.",
+      "image_url": "./assets/covers/3b19005ff571a3795d5f6fde.jpg",
+      "store_url": "https://store.epicgames.com/it/p/out-of-sight-b96ca8",
+      "original_price": 1399,
+      "discount_price": 1399,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "13,99 €",
+      "start_date": "2026-10-08T15:00:00+00:00",
+      "end_date": "2026-10-15T15:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "The Gang Studio AB"
+    },
     {
       "epic_id": "af6b823b8698465f9aedc3bddf2e8686",
       "namespace": "bfb80547289b477193ce3b14d83cd292",
