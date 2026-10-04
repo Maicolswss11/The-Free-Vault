@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-04T12:21:35.992998+00:00",
+  "generated_at": "2026-10-04T18:38:21.948195+00:00",
   "current": [
     {
       "epic_id": "7ae00c3e89174012b175cc73b4737723",
@@ -22,28 +22,6 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Atari"
-    },
-    {
-      "epic_id": "af4c34934afe4db0870b8a1d82dceb94",
-      "namespace": "9bd512d68e3143909842932ac45a4182",
-      "title": "BURIED STARS",
-      "description": "A mystery adventure set at the collapse site of a live survival audition show.\nTrapped contestants communicate with each other—and the outside world through social media—as they wait for rescue. But trust begins to crack, and survival becomes far more complicated.",
-      "image_url": "./assets/covers/177e496076da6034d918389f.jpg",
-      "store_url": "https://store.epicgames.com/it/p/buried-stars-d7c88c",
-      "original_price": 3399,
-      "discount_price": 0,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "33,99 €",
-      "start_date": "2026-10-01T15:00:00+00:00",
-      "end_date": "2026-10-08T15:00:00+00:00",
-      "promotion_type": "current",
-      "is_current": true,
-      "is_upcoming": false,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "LINE Games Corporation"
     }
   ],
   "upcoming": [
