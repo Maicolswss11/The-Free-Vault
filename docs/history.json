@@ -1,12 +1,12 @@
 {
-  "updated_at": "2026-10-30T22:19:30.145316+00:00",
+  "updated_at": "2026-10-31T05:40:31.596672+00:00",
   "games": [
     {
       "epic_id": "a9748abde1c94b66aae5250bb9fc5503",
       "namespace": "7e508f543b05465abe3a935960eb70ac",
       "title": "Idle Champions of the Forgotten Realms",
       "description": "Idle Champions è un videogioco autorizzato di gestione strategica di Dungeons & Dragons che unisce in un'unica epopea gli iconici personaggi dei romanzi, delle campagne e degli spettacoli.",
-      "image_url": "./assets/covers/fa8e11bdf54dd353d1f427dd.jpg",
+      "image_url": "./assets/covers/19d8ff3b74f16b5d3f50e1a4.jpg",
       "store_url": "https://store.epicgames.com/it/p/idle-champions-of-the-forgotten-realms",
       "original_price": 0,
       "discount_price": 0,
@@ -24,7 +24,7 @@
       "publisher": "Codename Entertainment",
       "promotion_key": "a9748abde1c94b66aae5250bb9fc5503|2026-11-05T16:00:00+00:00|2026-11-12T16:00:00+00:00",
       "first_seen_at": "2026-10-29T18:27:50.765408+00:00",
-      "last_seen_at": "2026-10-30T22:19:30.145316+00:00"
+      "last_seen_at": "2026-10-31T05:40:31.596672+00:00"
     },
     {
       "epic_id": "3be0a0d8479946d78f60d90c9442a0b4",
@@ -49,7 +49,7 @@
       "publisher": "Pajama Llama Games",
       "promotion_key": "3be0a0d8479946d78f60d90c9442a0b4|2026-11-05T16:00:00+00:00|2026-11-12T16:00:00+00:00",
       "first_seen_at": "2026-10-29T18:27:50.765408+00:00",
-      "last_seen_at": "2026-10-30T22:19:30.145316+00:00"
+      "last_seen_at": "2026-10-31T05:40:31.596672+00:00"
     },
     {
       "epic_id": "4e469c7d8bbf49bcabc2c07127d3d946",
@@ -74,7 +74,7 @@
       "publisher": "Akupara Games",
       "promotion_key": "4e469c7d8bbf49bcabc2c07127d3d946|2026-10-29T15:00:00+00:00|2026-11-05T16:00:00+00:00",
       "first_seen_at": "2026-10-22T17:10:31.067613+00:00",
-      "last_seen_at": "2026-10-30T22:19:30.145316+00:00"
+      "last_seen_at": "2026-10-31T05:40:31.596672+00:00"
     },
     {
       "epic_id": "6aab3ddef4f84fbc9dd81c60f9d8549c",
