@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-09T06:27:32.875178+00:00",
+  "generated_at": "2026-11-09T19:48:43.187790+00:00",
   "current": [
     {
       "epic_id": "a9748abde1c94b66aae5250bb9fc5503",
@@ -30,11 +30,11 @@
       "description": "Il gioco di sopravvivenza della città galleggiante di rifiuti! Recupera preziosi rifiuti dalla superficie dell'oceano e fai crescere la tua città mentre fai del tuo meglio per sopravvivere in questo colorato mondo post-apocalittico.",
       "image_url": "./assets/covers/8321b74f666cb919325b007e.jpg",
       "store_url": "https://store.epicgames.com/it/p/flotsam-266287",
-      "original_price": 1999,
+      "original_price": 2299,
       "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
-      "fmt_original_price": "19,99 €",
+      "fmt_original_price": "22,99 €",
       "start_date": "2026-11-05T16:00:00+00:00",
       "end_date": "2026-11-12T16:00:00+00:00",
       "promotion_type": "current",
