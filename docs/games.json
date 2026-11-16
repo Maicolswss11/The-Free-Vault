@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-16T06:28:42.802419+00:00",
+  "generated_at": "2026-11-16T19:36:07.614869+00:00",
   "current": [
     {
       "epic_id": "9975548b6d404a94b8a9bdb34cad49e9",
@@ -25,28 +25,6 @@
     }
   ],
   "upcoming": [
-    {
-      "epic_id": "d37f3694e7a04edb8347f3cb6320f9d3",
-      "namespace": "df37f065c3f14eadbf011177396e2966",
-      "title": "Alien: Isolation",
-      "description": "Prova la vera paura sulla tua pelle con Alien: Isolation, un horror di sopravvivenza ambientato in un'atmosfera di pericolo e suspense...   Sviluppato con il motore CATHODE™.",
-      "image_url": "./assets/covers/c26e28c7d36307d07e707b3f.jpg",
-      "store_url": "https://store.epicgames.com/it/p/alien-isolation",
-      "original_price": 3999,
-      "discount_price": 3999,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "39,99 €",
-      "start_date": "2026-11-19T16:00:00+00:00",
-      "end_date": "2026-11-26T16:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "SEGA of Europe"
-    },
     {
       "epic_id": "1f9a12b06b4f437790b6913ad136a08c",
       "namespace": "3d6441ab9d4246208bc97d7babf664b5",
