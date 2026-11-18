@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-18T11:41:42.614481+00:00",
+  "generated_at": "2026-11-18T20:30:47.277163+00:00",
   "current": [
     {
       "epic_id": "9975548b6d404a94b8a9bdb34cad49e9",
@@ -46,6 +46,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Light Up Games"
+    },
+    {
+      "epic_id": "0623017cf9f341efbe07557f46beb4e8",
+      "namespace": "bda8d2133655435982b9118972792328",
+      "title": "Firestone – Idle Clicker Online RPG",
+      "description": "Firestone: Online Idle RPG is a multiplayer fantasy game with idle rpg mechanics. Collect heroes🧙‍♂️, upgrade their gear & skills, and sent them in AFK battles or go on an incremental clicker frenzy to beat monstrous bosses! Chat with guild friends or engage in PVP⚔️.",
+      "image_url": "./assets/covers/464535b2a83385d176325869.jpg",
+      "store_url": "https://store.epicgames.com/it/p/firestone-online-idle-rpg-bfd04b",
+      "original_price": 0,
+      "discount_price": 0,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "0",
+      "start_date": "2026-11-26T16:00:00+00:00",
+      "end_date": "2026-12-03T16:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "AM Holyday Studios Ltd"
     }
   ]
 }
