@@ -1,30 +1,6 @@
 {
-  "generated_at": "2026-11-19T11:39:33.931882+00:00",
+  "generated_at": "2026-11-19T20:37:02.736581+00:00",
   "current": [
-    {
-      "epic_id": "9975548b6d404a94b8a9bdb34cad49e9",
-      "namespace": "02d659f31e1c43a78c43fd9fd9edc089",
-      "title": "Knightica",
-      "description": "Recruit units, place them strategically, and find the synergies in this Roguelike AutoBattler!\nKnightica lets you guide a warband through challenges to free the Kingdoms.\nDiscover combinations, weave powerful enchants, face dangerous monsters, and lead your army to victory!",
-      "image_url": "./assets/covers/e23cb2da82d7edf20ab1f84d.png",
-      "store_url": "https://store.epicgames.com/it/p/knightica-3be45c",
-      "original_price": 1349,
-      "discount_price": 0,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "13,49 €",
-      "start_date": "2026-11-12T16:00:00+00:00",
-      "end_date": "2026-11-19T16:00:00+00:00",
-      "promotion_type": "current",
-      "is_current": true,
-      "is_upcoming": false,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "Goblinz Studio SAS"
-    }
-  ],
-  "upcoming": [
     {
       "epic_id": "1f9a12b06b4f437790b6913ad136a08c",
       "namespace": "3d6441ab9d4246208bc97d7babf664b5",
@@ -33,26 +9,28 @@
       "image_url": "./assets/covers/45d3f0d2b41d5cb9e75f5660.png",
       "store_url": "https://store.epicgames.com/it/p/mark-of-the-deep-f7dc08",
       "original_price": 1950,
-      "discount_price": 1950,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "19,50 €",
       "start_date": "2026-11-19T16:00:00+00:00",
       "end_date": "2026-11-26T16:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "Light Up Games"
-    },
+    }
+  ],
+  "upcoming": [
     {
       "epic_id": "0623017cf9f341efbe07557f46beb4e8",
       "namespace": "bda8d2133655435982b9118972792328",
       "title": "Firestone – Idle Clicker Online RPG",
       "description": "Firestone: Online Idle RPG is a multiplayer fantasy game with idle rpg mechanics. Collect heroes🧙‍♂️, upgrade their gear & skills, and sent them in AFK battles or go on an incremental clicker frenzy to beat monstrous bosses! Chat with guild friends or engage in PVP⚔️.",
-      "image_url": "./assets/covers/464535b2a83385d176325869.jpg",
+      "image_url": "./assets/covers/d0e7e83fd60cf0fd89e02e22.jpg",
       "store_url": "https://store.epicgames.com/it/p/firestone-online-idle-rpg-bfd04b",
       "original_price": 0,
       "discount_price": 0,
@@ -68,6 +46,28 @@
       "is_dlc": false,
       "offer_type": "BASE_GAME",
       "publisher": "AM Holyday Studios Ltd"
+    },
+    {
+      "epic_id": "f0a333114190492c84a9decd2bb43875",
+      "namespace": "7e95faaa77054b80828dd7d64bbeb4ff",
+      "title": "Bread and Fred",
+      "description": "Grab your best bud for help in this new co-op challenge to help two adorable penguins, Bread and Fred, reach the top of the snowy summit. Time your jumps, cling to walls and swing across gaps to see how far you can make it before you tumble all the way back down the mountain.",
+      "image_url": "./assets/covers/813a6b9a456d59340ef5b37b.jpg",
+      "store_url": "https://store.epicgames.com/it/p/bread-and-fred-1db362",
+      "original_price": 1349,
+      "discount_price": 1349,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "13,49 €",
+      "start_date": "2026-11-26T16:00:00+00:00",
+      "end_date": "2026-12-03T16:00:00+00:00",
+      "promotion_type": "upcoming",
+      "is_current": false,
+      "is_upcoming": true,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Atari"
     }
   ]
 }
