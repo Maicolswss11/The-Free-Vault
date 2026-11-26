@@ -1,30 +1,6 @@
 {
-  "generated_at": "2026-11-26T03:34:02.052275+00:00",
+  "generated_at": "2026-11-26T16:53:50.893199+00:00",
   "current": [
-    {
-      "epic_id": "1f9a12b06b4f437790b6913ad136a08c",
-      "namespace": "3d6441ab9d4246208bc97d7babf664b5",
-      "title": "Mark of the Deep",
-      "description": "Mark of the Deep is an epic pirate-themed adventure with a strong narrative and a thrilling mix of Metroidvania and Souls-Like elements. Embark on this journey, explore the mysteries of a cursed island and find your missing pirate crew!",
-      "image_url": "./assets/covers/45d3f0d2b41d5cb9e75f5660.png",
-      "store_url": "https://store.epicgames.com/it/p/mark-of-the-deep-f7dc08",
-      "original_price": 1950,
-      "discount_price": 0,
-      "currency_code": "EUR",
-      "currency_decimals": 2,
-      "fmt_original_price": "19,50 €",
-      "start_date": "2026-11-19T16:00:00+00:00",
-      "end_date": "2026-11-26T16:00:00+00:00",
-      "promotion_type": "current",
-      "is_current": true,
-      "is_upcoming": false,
-      "is_mystery_game": false,
-      "is_dlc": false,
-      "offer_type": "BASE_GAME",
-      "publisher": "Light Up Games"
-    }
-  ],
-  "upcoming": [
     {
       "epic_id": "0623017cf9f341efbe07557f46beb4e8",
       "namespace": "bda8d2133655435982b9118972792328",
@@ -39,9 +15,9 @@
       "fmt_original_price": "0",
       "start_date": "2026-11-26T16:00:00+00:00",
       "end_date": "2026-12-03T16:00:00+00:00",
-      "promotion_type": "upcoming",
-      "is_current": false,
-      "is_upcoming": true,
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
@@ -55,19 +31,43 @@
       "image_url": "./assets/covers/813a6b9a456d59340ef5b37b.jpg",
       "store_url": "https://store.epicgames.com/it/p/bread-and-fred-1db362",
       "original_price": 1349,
-      "discount_price": 1349,
+      "discount_price": 0,
       "currency_code": "EUR",
       "currency_decimals": 2,
       "fmt_original_price": "13,49 €",
       "start_date": "2026-11-26T16:00:00+00:00",
       "end_date": "2026-12-03T16:00:00+00:00",
+      "promotion_type": "current",
+      "is_current": true,
+      "is_upcoming": false,
+      "is_mystery_game": false,
+      "is_dlc": false,
+      "offer_type": "BASE_GAME",
+      "publisher": "Atari"
+    }
+  ],
+  "upcoming": [
+    {
+      "epic_id": "72bd05148adb4e2cacb8b2efaa4c0297",
+      "namespace": "ca2e8ee2cacc4b69abd275a50422b010",
+      "title": "Strange Antiquities",
+      "description": "Strange Antiquities is a game set in Undermere, where you explore occult artifacts and solve dark mysteries. As an apprentice thaumaturge, you'll identify magical items and help townsfolk. A sequel to Strange Horticulture, it blends exploration to uncover strange secrets.",
+      "image_url": "./assets/covers/24a12b4df2436834e76926b7.png",
+      "store_url": "https://store.epicgames.com/it/p/strange-antiquities-e37660",
+      "original_price": 1619,
+      "discount_price": 1619,
+      "currency_code": "EUR",
+      "currency_decimals": 2,
+      "fmt_original_price": "16,19 €",
+      "start_date": "2026-12-03T16:00:00+00:00",
+      "end_date": "2026-12-10T16:00:00+00:00",
       "promotion_type": "upcoming",
       "is_current": false,
       "is_upcoming": true,
       "is_mystery_game": false,
       "is_dlc": false,
       "offer_type": "BASE_GAME",
-      "publisher": "Atari"
+      "publisher": "Iceberg Interactive"
     }
   ]
 }
